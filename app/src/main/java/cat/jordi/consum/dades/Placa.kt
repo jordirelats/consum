@@ -122,13 +122,15 @@ object Placa {
         return arrel
     }
 
-    /** Llegeix el text de la foto. Triga uns segons. */
-    fun llegeix(context: Context, foto: Bitmap): String {
+    /**
+     * Llegeix el text de la foto. Triga uns segons. Una placa té el text escampat en blocs; un [document]
+     * (contracte o factura) es llegeix per línies, que és com el lector de preus el necessita.
+     */
+    fun llegeix(context: Context, foto: Bitmap, document: Boolean = false): String {
         val api = TessBaseAPI()
         try {
             if (!api.init(dades(context).absolutePath, "eng")) throw IOException("No s'ha pogut engegar el lector de text")
-            // Les plaques tenen text escampat en blocs, no un paràgraf seguit
-            api.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SPARSE_TEXT)
+            api.setPageSegMode(if (document) TessBaseAPI.PageSegMode.PSM_SINGLE_COLUMN else TessBaseAPI.PageSegMode.PSM_SPARSE_TEXT)
             api.setImage(foto)
             return api.utF8Text ?: ""
         } finally {

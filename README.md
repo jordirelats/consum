@@ -18,6 +18,7 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
   - Països Baixos: fix, normaal/dal o dinàmic.
   - Un altre país: un preu únic.
   - Cada kWh es paga al preu de la seva hora. Els costos fixos van a part.
+  - Els preus es poden omplir fent una foto o triant el PDF del contracte o de la factura. L'app els hi busca i els ensenya abans de posar-los. Provat amb un contracte holandès i amb factures d'Endesa i d'Estabanell.
 - **Dues pinces:** la primera, la de tota la casa; la segona, una línia concreta, que es mesura per separat.
 
 ## Què cal
@@ -36,7 +37,7 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
 ## Les dades
 
 - **No hi ha cap servidor.** Les dades del Shelly es guarden només al mòbil.
-- **La foto de la placa es llegeix dins del mòbil** i no s'envia enlloc.
+- **Les fotos de la placa i els contractes o factures es llegeixen dins del mòbil** i no s'envien enlloc.
 - **A casa,** l'app llegeix el Shelly directament per la wifi.
 - **Des de fora,** fa servir el núvol de Shelly amb la teva clau, que no surt del mòbil.
 - **Les úniques connexions a internet són aquestes:**
@@ -77,6 +78,7 @@ Fa servir aquestes llibreries i dades, totes amb llicència Apache-2.0:
 - **Appliance inventory**: a room-by-room questionnaire, the EU energy label QR (EPREL), a photo of the rating plate (read on the device with Tesseract), or manual entry.
 - **Training**: tell the app when you switch an appliance on or off and it learns its power.
 - **Unexpected-consumption alerts**: the app asks what an unknown load is through a notification.
+- **Fill in prices from a contract or bill** (photo or PDF), read on the device.
 - **Privacy**: data stays on the phone. Remote access uses your own Shelly cloud key, which never leaves the device.
 
 Install the APK from [Releases](../../releases). Licence: GPL-3.0. Not affiliated with Shelly (Allterco Robotics).

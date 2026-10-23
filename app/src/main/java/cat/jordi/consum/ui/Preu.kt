@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -26,6 +27,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cat.jordi.consum.dades.Contracte
+import cat.jordi.consum.dades.Factura
+import cat.jordi.consum.dades.LecturaFactura
 import cat.jordi.consum.dades.HoraPreu
 import cat.jordi.consum.dades.Pais
 import cat.jordi.consum.dades.Tarifa
@@ -52,7 +55,7 @@ fun resumTarifa(t: Tarifa): String = when (t.pais) {
 
 /** Què hi ha dins dels costos fixos, segons el país. */
 fun quinsFixos(t: Tarifa) = when (t.pais) {
-    Pais.ES -> "potència i comptador"
+    Pais.ES -> "potència, comptador i bo social"
     Pais.NL -> "quotes i descompte d'impostos"
     Pais.ALTRE -> "quotes fixes"
 }
@@ -92,12 +95,29 @@ private fun franges(t: Tarifa): List<HoraPreu> {
 fun PantallaPreu(vm: ConsumViewModel) {
     var t by remember { mutableStateOf(vm.config.tarifa) }
     val desada = vm.infoPreu
+    // El que s'ha llegit d'un contracte o factura i s'està revisant; i quantes vegades se n'han posat preus,
+    // perquè els camps es tornin a crear amb els valors nous
+    var lectura by remember { mutableStateOf<LecturaFactura?>(null) }
+    var posats by remember { mutableIntStateOf(0) }
+
+    lectura?.let { l ->
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp)) {
+            RevisioDocument(l, enCancellar = { lectura = null }) { triats ->
+                t = Factura.aplica(t, l, triats)
+                posats++
+                lectura = null
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+        return
+    }
 
     Column(Modifier.fillMaxSize()) {
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            TargetaEscaneig { lectura = it }
             // En canviar de país es comença amb els valors per defecte d'aquell país: el dinàmic funciona sense escriure res
             Pestanyes(Pais.entries, t.pais, { it.nom }) { p ->
                 if (p != t.pais) t = Tarifa(pais = p, contracte = if (p == Pais.ALTRE) Contracte.FIX else Contracte.DINAMIC, potenciaKw = t.potenciaKw)
@@ -108,8 +128,8 @@ fun PantallaPreu(vm: ConsumViewModel) {
                     Pestanyes(Contracte.entries, t.contracte, { noms(t.pais)[it.ordinal] }) { t = t.copy(contracte = it) }
                 }
             }
-            // Els camps es tornen a crear quan canvia el país o el contracte
-            key(t.pais, t.contracte) {
+            // Els camps es tornen a crear quan canvia el país o el contracte, o quan s'hi posen preus d'un document
+            key(t.pais, t.contracte, posats) {
                 when (t.pais) {
                     Pais.ES -> Espanya(t, desada?.takeIf { it.tarifa.pais == Pais.ES && it.tarifa.dinamica }?.avui) { t = it }
                     Pais.NL -> PaisosBaixos(t, desada?.takeIf { it.tarifa.pais == Pais.NL && it.tarifa.dinamica }?.avui) { t = it }
@@ -162,6 +182,7 @@ private fun Espanya(t: Tarifa, mercat: List<HoraPreu>?, canvia: (Tarifa) -> Unit
         CampNum("Impost elèctric", t.iee * 100, "%") { canvia(t.copy(iee = it / 100)) }
         CampNum("IVA", t.iva * 100, "%") { canvia(t.copy(iva = it / 100)) }
         CampNum("Lloguer del comptador", t.comptadorMes, "€/mes", "Sense IVA. No va als aparells.") { canvia(t.copy(comptadorMes = it)) }
+        CampNum("Finançament del bo social", t.boSocialDia, "€/dia", "Sense impostos. No va als aparells.") { canvia(t.copy(boSocialDia = it)) }
     }
 }
 

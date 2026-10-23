@@ -46,6 +46,8 @@ data class Tarifa(
     val potP2: Double = 0.0020,
     /** Espanya: el lloguer del comptador, €/mes sense IVA. */
     val comptadorMes: Double = 0.81,
+    /** Espanya: el finançament del bo social, €/dia sense impostos (2026: 0,024688, a Endesa i a Estabanell). */
+    val boSocialDia: Double = 0.024688,
     val iee: Double = 0.0511269632,
     val iva: Double = 0.21,
     /** Països Baixos: l'energiebelasting per kWh, amb IVA (2026: 0,11085). Se suma al leveringstarief. */
@@ -107,7 +109,8 @@ data class Tarifa(
 
     /** Els costos fixos d'un dia, amb impostos. Als Països Baixos poden ser negatius: el descompte supera les quotes. */
     fun fixosDia(): Double = when (pais) {
-        Pais.ES -> ambImpostosEs(potenciaKw * (potP1 + potP2)) + comptadorMes * 12 / 365 * (1 + iva)
+        // El bo social porta l'impost elèctric (a la factura d'Estabanell entra a la base de l'impost); el comptador, només l'IVA
+        Pais.ES -> ambImpostosEs(potenciaKw * (potP1 + potP2) + boSocialDia) + comptadorMes * 12 / 365 * (1 + iva)
         Pais.NL -> proveidorDia + xarxaDia - descompteDia
         Pais.ALTRE -> fixosMes * 12 / 365
     }
@@ -116,7 +119,7 @@ data class Tarifa(
         put("pais", pais.name); put("contracte", contracte.name); put("preuFix", preuFix)
         put("punta", punta); put("pla", pla); put("vall", vall); put("normaal", normaal); put("dal", dal)
         put("recarrec", recarrec); put("potenciaKw", potenciaKw); put("potP1", potP1); put("potP2", potP2)
-        put("comptadorMes", comptadorMes); put("iee", iee); put("iva", iva); put("ebKwh", ebKwh)
+        put("comptadorMes", comptadorMes); put("boSocialDia", boSocialDia); put("iee", iee); put("iva", iva); put("ebKwh", ebKwh)
         put("proveidorDia", proveidorDia); put("xarxaDia", xarxaDia); put("descompteDia", descompteDia); put("fixosMes", fixosMes)
     }.toString()
 
@@ -138,6 +141,8 @@ data class Tarifa(
                     recarrec = o.optDouble("recarrec", d.recarrec), potenciaKw = o.optDouble("potenciaKw", d.potenciaKw),
                     potP1 = o.optDouble("potP1", d.potP1), potP2 = o.optDouble("potP2", d.potP2),
                     comptadorMes = o.optDouble("comptadorMes", d.comptadorMes), iee = o.optDouble("iee", d.iee),
+                    // Les tarifes desades abans de la 0.10 no el tenien: es queden sense, com fins ara
+                    boSocialDia = o.optDouble("boSocialDia", 0.0),
                     iva = o.optDouble("iva", d.iva),
                     ebKwh = if (antiga && pais == Pais.NL) 0.0 else o.optDouble("ebKwh", d.ebKwh),
                     proveidorDia = if (antiga) o.optDouble("proveidorMes", 10.59) * 12 / 365 else o.optDouble("proveidorDia", d.proveidorDia),
