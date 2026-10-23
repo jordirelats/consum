@@ -22,10 +22,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cat.jordi.consum.R
 import cat.jordi.consum.dades.Contracte
 import cat.jordi.consum.dades.Factura
 import cat.jordi.consum.dades.LecturaFactura
@@ -39,31 +41,44 @@ import java.time.ZoneId
 import kotlin.math.abs
 
 /** Una línia que resumeix la tarifa, per a la configuració. */
+@Composable
 fun resumTarifa(t: Tarifa): String = when (t.pais) {
-    Pais.ES -> "Espanya · " + when (t.contracte) {
-        Contracte.FIX -> "preu fix"
-        Contracte.FRANGES -> "3 franges"
-        Contracte.DINAMIC -> "PVPC"
-    } + " · ${num(t.potenciaKw, 1)} kW"
-    Pais.NL -> "Països Baixos · " + when (t.contracte) {
-        Contracte.FIX -> "preu fix"
-        Contracte.FRANGES -> "normaal i dal"
-        Contracte.DINAMIC -> "dinàmic"
-    }
-    Pais.ALTRE -> "Preu únic · ${num(t.preuFix, 3)} €/kWh"
+    Pais.ES -> stringResource(
+        when (t.contracte) {
+            Contracte.FIX -> R.string.preu_resum_es_fix
+            Contracte.FRANGES -> R.string.preu_resum_es_franges
+            Contracte.DINAMIC -> R.string.preu_resum_es_pvpc
+        },
+        num(t.potenciaKw, 1),
+    )
+    Pais.NL -> stringResource(
+        when (t.contracte) {
+            Contracte.FIX -> R.string.preu_resum_nl_fix
+            Contracte.FRANGES -> R.string.preu_resum_nl_franges
+            Contracte.DINAMIC -> R.string.preu_resum_nl_dinamic
+        }
+    )
+    Pais.ALTRE -> stringResource(R.string.preu_resum_altre, num(t.preuFix, 3))
 }
 
 /** Què hi ha dins dels costos fixos, segons el país. */
-fun quinsFixos(t: Tarifa) = when (t.pais) {
-    Pais.ES -> "potència, comptador i bo social"
-    Pais.NL -> "quotes i descompte d'impostos"
-    Pais.ALTRE -> "quotes fixes"
-}
+@Composable
+fun quinsFixos(t: Tarifa) = stringResource(
+    when (t.pais) {
+        Pais.ES -> R.string.preu_fixos_es
+        Pais.NL -> R.string.preu_fixos_nl
+        Pais.ALTRE -> R.string.preu_fixos_altre
+    }
+)
 
+@Composable
 private fun noms(pais: Pais) = when (pais) {
-    Pais.ES -> listOf("Fix", "3 franges", "PVPC")
-    Pais.NL -> listOf("Fix", "Normaal i dal", "Dinàmic")
-    Pais.ALTRE -> listOf("Fix")
+    Pais.ES -> listOf(stringResource(R.string.preu_contracte_fix), stringResource(R.string.preu_contracte_3_franges), "PVPC")
+    Pais.NL -> listOf(
+        stringResource(R.string.preu_contracte_fix), stringResource(R.string.preu_contracte_normaal_dal),
+        stringResource(R.string.preu_contracte_dinamic),
+    )
+    Pais.ALTRE -> listOf(stringResource(R.string.preu_contracte_fix))
 }
 
 /** Un número per editar: coma decimal, sense separador de milers ni zeros de més. */
@@ -119,12 +134,12 @@ fun PantallaPreu(vm: ConsumViewModel) {
         ) {
             TargetaEscaneig { lectura = it }
             // En canviar de país es comença amb els valors per defecte d'aquell país: el dinàmic funciona sense escriure res
-            Pestanyes(Pais.entries, t.pais, { it.nom }) { p ->
+            Pestanyes(Pais.entries, t.pais, { stringResource(it.nomId) }) { p ->
                 if (p != t.pais) t = Tarifa(pais = p, contracte = if (p == Pais.ALTRE) Contracte.FIX else Contracte.DINAMIC, potenciaKw = t.potenciaKw)
             }
             if (t.pais != Pais.ALTRE) {
                 Targeta {
-                    TitolTargeta("Quin contracte tens?")
+                    TitolTargeta(stringResource(R.string.preu_quin_contracte))
                     Pestanyes(Contracte.entries, t.contracte, { noms(t.pais)[it.ordinal] }) { t = t.copy(contracte = it) }
                 }
             }
@@ -134,14 +149,17 @@ fun PantallaPreu(vm: ConsumViewModel) {
                     Pais.ES -> Espanya(t, desada?.takeIf { it.tarifa.pais == Pais.ES && it.tarifa.dinamica }?.avui) { t = it }
                     Pais.NL -> PaisosBaixos(t, desada?.takeIf { it.tarifa.pais == Pais.NL && it.tarifa.dinamica }?.avui) { t = it }
                     Pais.ALTRE -> Targeta {
-                        CampNum("Preu del kWh, tot inclòs", t.preuFix, "€") { t = t.copy(preuFix = it) }
-                        CampNum("Costos fixos", t.fixosMes, "€/mes", "Quotes que pagues igualment, gastis o no.") { t = t.copy(fixosMes = it) }
+                        CampNum(stringResource(R.string.preu_kwh_tot_inclos), t.preuFix, "€") { t = t.copy(preuFix = it) }
+                        CampNum(
+                            stringResource(R.string.preu_costos_fixos), t.fixosMes, stringResource(R.string.preu_unitat_mes),
+                            stringResource(R.string.preu_costos_fixos_ajuda),
+                        ) { t = t.copy(fixosMes = it) }
                     }
                 }
             }
             Spacer(Modifier.height(8.dp))
         }
-        Button(onClick = { vm.desaTarifa(t) }, Modifier.fillMaxWidth().padding(12.dp)) { Text("Desa") }
+        Button(onClick = { vm.desaTarifa(t) }, Modifier.fillMaxWidth().padding(12.dp)) { Text(stringResource(R.string.preu_desa)) }
     }
 }
 
@@ -151,83 +169,96 @@ private fun Espanya(t: Tarifa, mercat: List<HoraPreu>?, canvia: (Tarifa) -> Unit
     Targeta {
         when (t.contracte) {
             Contracte.FIX -> {
-                TitolTargeta("Energia")
-                CampNum("Preu del kWh, sense impostos", t.preuFix, "€", "Com a la factura. S'hi sumen l'impost elèctric i l'IVA.") { canvia(t.copy(preuFix = it)) }
+                TitolTargeta(stringResource(R.string.preu_energia))
+                CampNum(
+                    stringResource(R.string.preu_kwh_sense_impostos), t.preuFix, "€", stringResource(R.string.preu_kwh_sense_impostos_ajuda),
+                ) { canvia(t.copy(preuFix = it)) }
             }
             Contracte.FRANGES -> {
-                TitolTargeta("Energia, per franges")
+                TitolTargeta(stringResource(R.string.preu_energia_franges))
                 TiraPreus(franges(t), null, 14.dp)
-                Nota("Punta 10–14 i 18–22 h · pla 8–10, 14–18 i 22–24 h · vall 0–8 h. Els caps de setmana i festius, tot vall.", Modifier.padding(vertical = 4.dp))
-                CampNum("Punta", t.punta, "€/kWh") { canvia(t.copy(punta = it)) }
-                CampNum("Pla", t.pla, "€/kWh") { canvia(t.copy(pla = it)) }
-                CampNum("Vall", t.vall, "€/kWh") { canvia(t.copy(vall = it)) }
-                Nota("Sense impostos, com a la factura. Amb impostos: ${num(ambImpostos(t.punta), 3)}, ${num(ambImpostos(t.pla), 3)} i ${num(ambImpostos(t.vall), 3)} €.")
+                Nota(stringResource(R.string.preu_franges_es_nota), Modifier.padding(vertical = 4.dp))
+                CampNum(stringResource(R.string.franja_punta), t.punta, "€/kWh") { canvia(t.copy(punta = it)) }
+                CampNum(stringResource(R.string.franja_pla), t.pla, "€/kWh") { canvia(t.copy(pla = it)) }
+                CampNum(stringResource(R.string.franja_vall), t.vall, "€/kWh") { canvia(t.copy(vall = it)) }
+                Nota(
+                    stringResource(
+                        R.string.preu_amb_impostos_franges,
+                        num(ambImpostos(t.punta), 3), num(ambImpostos(t.pla), 3), num(ambImpostos(t.vall), 3),
+                    )
+                )
             }
             Contracte.DINAMIC -> {
-                TitolTargeta("Energia, al preu de cada hora (PVPC)")
-                Nota("L'app baixa sola cada dia el PVPC de Red Eléctrica. Hi suma l'impost elèctric i l'IVA.", Modifier.padding(bottom = 6.dp))
-                if (mercat != null) BarresPreu(mercat, null) else Nota("Desa-ho i els preus es baixaran sols.")
+                TitolTargeta(stringResource(R.string.preu_energia_pvpc))
+                Nota(stringResource(R.string.preu_pvpc_nota), Modifier.padding(bottom = 6.dp))
+                if (mercat != null) BarresPreu(mercat, null) else Nota(stringResource(R.string.preu_desa_i_es_baixaran))
             }
         }
     }
     Targeta {
-        TitolTargeta("Potència contractada (no va als aparells)")
-        CampNum("Potència", t.potenciaKw, "kW") { canvia(t.copy(potenciaKw = it)) }
-        CampNum("P1", t.potP1, "€/kW i dia") { canvia(t.copy(potP1 = it)) }
-        CampNum("P2", t.potP2, "€/kW i dia", "Sense impostos, com a la factura.") { canvia(t.copy(potP2 = it)) }
-        Text("${euros(ambImpostos(t.potenciaKw * (t.potP1 + t.potP2)) * 365 / 12)} al mes, amb impostos", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        TitolTargeta(stringResource(R.string.preu_titol_potencia))
+        CampNum(stringResource(R.string.preu_potencia), t.potenciaKw, "kW") { canvia(t.copy(potenciaKw = it)) }
+        CampNum("P1", t.potP1, stringResource(R.string.preu_unitat_kw_dia)) { canvia(t.copy(potP1 = it)) }
+        CampNum("P2", t.potP2, stringResource(R.string.preu_unitat_kw_dia), stringResource(R.string.preu_sense_impostos)) { canvia(t.copy(potP2 = it)) }
+        Text(
+            stringResource(R.string.preu_potencia_al_mes, euros(ambImpostos(t.potenciaKw * (t.potP1 + t.potP2)) * 365 / 12)),
+            fontSize = 13.sp, fontWeight = FontWeight.Medium,
+        )
     }
     Targeta {
-        TitolTargeta("Impostos i altres")
-        CampNum("Impost elèctric", t.iee * 100, "%") { canvia(t.copy(iee = it / 100)) }
-        CampNum("IVA", t.iva * 100, "%") { canvia(t.copy(iva = it / 100)) }
-        CampNum("Lloguer del comptador", t.comptadorMes, "€/mes", "Sense IVA. No va als aparells.") { canvia(t.copy(comptadorMes = it)) }
-        CampNum("Finançament del bo social", t.boSocialDia, "€/dia", "Sense impostos. No va als aparells.") { canvia(t.copy(boSocialDia = it)) }
+        TitolTargeta(stringResource(R.string.preu_titol_impostos))
+        CampNum(stringResource(R.string.preu_impost_electric), t.iee * 100, "%") { canvia(t.copy(iee = it / 100)) }
+        CampNum(stringResource(R.string.preu_iva), t.iva * 100, "%") { canvia(t.copy(iva = it / 100)) }
+        CampNum(
+            stringResource(R.string.preu_comptador), t.comptadorMes, stringResource(R.string.preu_unitat_mes),
+            stringResource(R.string.preu_comptador_ajuda),
+        ) { canvia(t.copy(comptadorMes = it)) }
+        CampNum(
+            stringResource(R.string.preu_bo_social), t.boSocialDia, stringResource(R.string.preu_unitat_dia),
+            stringResource(R.string.preu_bo_social_ajuda),
+        ) { canvia(t.copy(boSocialDia = it)) }
     }
 }
 
 @Composable
 private fun PaisosBaixos(t: Tarifa, mercat: List<HoraPreu>?, canvia: (Tarifa) -> Unit) {
-    Nota(
-        "Els noms en neerlandès són els del contracte: copia-hi els números tal com hi surten. Els fixos, per dia.",
-        Modifier.padding(horizontal = 4.dp),
-    )
+    Nota(stringResource(R.string.preu_nl_nota), Modifier.padding(horizontal = 4.dp))
     Targeta {
         when (t.contracte) {
             Contracte.FIX -> {
                 TitolTargeta("Leveringstarief")
-                CampNum("Leveringstarief", t.preuFix, "€/kWh", "Amb IVA i sense l'energiebelasting, que va a sota.") { canvia(t.copy(preuFix = it)) }
+                CampNum("Leveringstarief", t.preuFix, "€/kWh", stringResource(R.string.preu_amb_iva_sense_eb)) { canvia(t.copy(preuFix = it)) }
             }
             Contracte.FRANGES -> {
-                TitolTargeta("Leveringstarief, normaal i dal")
+                TitolTargeta(stringResource(R.string.preu_titol_normaal_dal))
                 TiraPreus(franges(t), null, 14.dp)
-                Nota("Dal de 23 a 7 h els dies feiners, i tot el dia els caps de setmana i festius.", Modifier.padding(vertical = 4.dp))
+                Nota(stringResource(R.string.preu_dal_nota), Modifier.padding(vertical = 4.dp))
                 CampNum("Leveringstarief · Normaal", t.normaal, "€/kWh") { canvia(t.copy(normaal = it)) }
-                CampNum("Leveringstarief · Dal", t.dal, "€/kWh", "Amb IVA i sense l'energiebelasting, que va a sota.") { canvia(t.copy(dal = it)) }
+                CampNum("Leveringstarief · Dal", t.dal, "€/kWh", stringResource(R.string.preu_amb_iva_sense_eb)) { canvia(t.copy(dal = it)) }
             }
             Contracte.DINAMIC -> {
-                TitolTargeta("Energia, al preu de cada hora")
-                Nota(
-                    "L'app baixa sola cada dia el preu de mercat (EnergyZero), que ja porta l'energiebelasting i l'IVA. Hi suma el recàrrec del proveïdor.",
-                    Modifier.padding(bottom = 6.dp),
-                )
-                if (mercat != null) BarresPreu(mercat, null) else Nota("Desa-ho i els preus es baixaran sols.")
+                TitolTargeta(stringResource(R.string.preu_energia_hora))
+                Nota(stringResource(R.string.preu_dinamic_nl_nota), Modifier.padding(bottom = 6.dp))
+                if (mercat != null) BarresPreu(mercat, null) else Nota(stringResource(R.string.preu_desa_i_es_baixaran))
                 Spacer(Modifier.height(6.dp))
-                CampNum("Inkoopvergoeding", t.recarrec, "€/kWh", "El recàrrec del proveïdor, amb IVA.") { canvia(t.copy(recarrec = it)) }
+                CampNum("Inkoopvergoeding", t.recarrec, "€/kWh", stringResource(R.string.preu_recarrec_ajuda)) { canvia(t.copy(recarrec = it)) }
             }
         }
         if (t.contracte != Contracte.DINAMIC) {
-            CampNum("Energiebelasting (EB)", t.ebKwh, "€/kWh", "L'impost de l'energia, amb IVA. El 2026, 0,11085.") { canvia(t.copy(ebKwh = it)) }
-            val total = if (t.contracte == Contracte.FIX) num(t.preuFix + t.ebKwh, 3) else "${num(t.normaal + t.ebKwh, 3)} i ${num(t.dal + t.ebKwh, 3)}"
-            Text("Cada kWh: $total €, tot inclòs", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            CampNum("Energiebelasting (EB)", t.ebKwh, "€/kWh", stringResource(R.string.preu_eb_ajuda)) { canvia(t.copy(ebKwh = it)) }
+            val total = if (t.contracte == Contracte.FIX) stringResource(R.string.preu_cada_kwh, num(t.preuFix + t.ebKwh, 3))
+            else stringResource(R.string.preu_cada_kwh_dos, num(t.normaal + t.ebKwh, 3), num(t.dal + t.ebKwh, 3))
+            Text(total, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         }
     }
     Targeta {
-        TitolTargeta("Costos fixos (no van als aparells)")
-        CampNum("Vaste leveringskosten", t.proveidorDia, "€/dag") { canvia(t.copy(proveidorDia = it)) }
-        CampNum("Netbeheerkosten", t.xarxaDia, "€/dag") { canvia(t.copy(xarxaDia = it)) }
+        TitolTargeta(stringResource(R.string.preu_titol_fixos))
+        CampNum("Vaste leveringskosten", t.proveidorDia, stringResource(R.string.preu_unitat_dag)) { canvia(t.copy(proveidorDia = it)) }
+        CampNum("Netbeheerkosten", t.xarxaDia, stringResource(R.string.preu_unitat_dag)) { canvia(t.copy(xarxaDia = it)) }
         // Al contracte surt amb un menys davant («€- 1,72317»): es guarda sempre en positiu i es resta
-        CampNum("Vermindering energiebelasting", t.descompteDia, "€/dag", "Es resta dels altres dos.") { canvia(t.copy(descompteDia = abs(it))) }
-        Text("Total fixos: ${euros(t.fixosDia() * 365 / 12)} al mes", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        CampNum(
+            "Vermindering energiebelasting", t.descompteDia, stringResource(R.string.preu_unitat_dag), stringResource(R.string.preu_descompte_ajuda),
+        ) { canvia(t.copy(descompteDia = abs(it))) }
+        Text(stringResource(R.string.preu_total_fixos, euros(t.fixosDia() * 365 / 12)), fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }

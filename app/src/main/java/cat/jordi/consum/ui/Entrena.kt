@@ -40,10 +40,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
+import cat.jordi.consum.R
 import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Punt
@@ -69,35 +72,39 @@ fun PantallaEntrena(vm: ConsumViewModel) {
     ) {
         if (!avisos) {
             Targeta(color = DesconegutFluix) {
-                TitolTargeta("Avisos de consum inesperat")
-                Nota("Si s'encén alguna cosa que no reconec i dura més de 10 minuts, t'ho preguntaré amb una notificació.")
+                TitolTargeta(stringResource(R.string.entrena_avisos_titol))
+                Nota(stringResource(R.string.entrena_avisos_nota))
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = {
                     if (Build.VERSION.SDK_INT >= 33) demana.launch(Manifest.permission.POST_NOTIFICATIONS)
                     else context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
-                }) { Text("Activa els avisos") }
+                }) { Text(stringResource(R.string.entrena_activa_avisos)) }
             }
         }
 
         vm.preguntes.forEach { p -> TargetaPregunta(vm, p) }
 
         Targeta {
-            TitolTargeta("Ensenya-li en directe")
-            Nota("Encén o apaga un aparell i toca el botó de seguida. L'app mesura el salt en mig minut; millor si mentrestant no s'encén res més.")
+            TitolTargeta(stringResource(R.string.entrena_en_directe))
+            Nota(stringResource(R.string.entrena_instruccions))
             Spacer(Modifier.height(6.dp))
             val l = vm.lectura
             Pastilla(
-                if (l != null) "Ara ${num(vm.resta(l))} W" + (if (vm.config.teLinia) " sense la pinça 2" else "") else "Sense lectura del Shelly",
+                when {
+                    l == null -> stringResource(R.string.entrena_sense_lectura)
+                    vm.config.teLinia -> stringResource(R.string.entrena_ara_w_sense_pinca, num(vm.resta(l)))
+                    else -> stringResource(R.string.entrena_ara_w, num(vm.resta(l)))
+                },
                 if (l != null) Primari else Desconegut, if (l != null) PrimariFluix else DesconegutFluix, punt = if (l != null) Ok else Desconegut,
             )
             if (vm.missatgeDe == null) {
-                vm.missatgeEntrena?.let { Text(it, Modifier.padding(top = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Primari) }
+                vm.missatgeEntrena?.let { Text(it.text(), Modifier.padding(top = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Primari) }
             }
-            if (vm.aparellsAEntrenar.isEmpty()) Nota("Primer afegeix els aparells, a la pestanya Aparells.", Modifier.padding(top = 8.dp))
+            if (vm.aparellsAEntrenar.isEmpty()) Nota(stringResource(R.string.entrena_primer_afegeix), Modifier.padding(top = 8.dp))
             vm.aparellsAEntrenar.forEach { a -> FilaEntrena(vm, a, vm.referencies[a.id]) }
         }
         Nota(
-            "Funciona millor a casa, on el Shelly dona una lectura cada segon. Des de fora, pel núvol, n'arriba una cada 5 segons.",
+            stringResource(R.string.entrena_nota_casa),
             Modifier.padding(horizontal = 4.dp),
         )
         Spacer(Modifier.height(8.dp))
@@ -115,9 +122,9 @@ private fun FilaEntrena(vm: ConsumViewModel, a: Aparell, r: Referencia?) {
                 Text(a.nom, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(
                     when {
-                        r == null -> "encara cap mostra"
-                        r.apresa -> "${num(r.w)} W · après (${r.mostres} mostres)"
-                        else -> "${num(r.w)} W · ${r.mostres} de ${Referencia.PER_APRENDRE} mostres"
+                        r == null -> stringResource(R.string.entrena_cap_mostra)
+                        r.apresa -> pluralStringResource(R.plurals.entrena_apres, r.mostres, num(r.w), r.mostres)
+                        else -> stringResource(R.string.entrena_mostres_de, num(r.w), r.mostres, Referencia.PER_APRENDRE)
                     },
                     fontSize = 12.sp, color = if (r?.apresa == true) Ok else Suau,
                 )
@@ -125,15 +132,15 @@ private fun FilaEntrena(vm: ConsumViewModel, a: Aparell, r: Referencia?) {
             when {
                 vm.mesurant == a.id -> Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Text("  Mesurant…", fontSize = 13.sp, color = Suau)
+                    Text("  " + stringResource(R.string.entrena_mesurant), fontSize = 13.sp, color = Suau)
                 }
-                encès -> Button(onClick = { vm.ensenya(a, false) }, enabled = vm.mesurant == null && vm.lectura != null) { Text("L'he apagat") }
-                else -> OutlinedButton(onClick = { vm.ensenya(a, true) }, enabled = vm.mesurant == null && vm.lectura != null) { Text("L'he encès") }
+                encès -> Button(onClick = { vm.ensenya(a, false) }, enabled = vm.mesurant == null && vm.lectura != null) { Text(stringResource(R.string.entrena_he_apagat)) }
+                else -> OutlinedButton(onClick = { vm.ensenya(a, true) }, enabled = vm.mesurant == null && vm.lectura != null) { Text(stringResource(R.string.entrena_he_ences)) }
             }
         }
         // El resultat de la mesura, a sota de l'aparell que s'ha mesurat
         if (vm.missatgeDe == a.id && vm.mesurant == null) {
-            vm.missatgeEntrena?.let { Text(it, Modifier.padding(start = 50.dp, bottom = 4.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Primari) }
+            vm.missatgeEntrena?.let { Text(it.text(), Modifier.padding(start = 50.dp, bottom = 4.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Primari) }
         }
     }
 }
@@ -143,11 +150,11 @@ private fun TargetaPregunta(vm: ConsumViewModel, p: Pregunta) {
     var totes by remember { mutableStateOf(false) }
     Targeta {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Pastilla("Pregunta", Desconegut, DesconegutFluix)
+            Pastilla(stringResource(R.string.entrena_pregunta), Desconegut, DesconegutFluix)
             Spacer(Modifier.width(8.dp))
-            Text("Què era això?", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.entrena_que_era), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
-        Text("Des de les ${hora(p.ts)} · +${num(p.dp)} W que no reconeixia", Modifier.padding(top = 6.dp), fontSize = 14.sp)
+        Text(stringResource(R.string.entrena_pregunta_text, hora(p.ts), num(p.dp)), Modifier.padding(top = 6.dp), fontSize = 14.sp)
         val punts = vm.serie.filter { it.ts in (p.ts - 15 * 60)..(p.ts + 60 * 60) }
         if (punts.size > 5) MiniGrafica(punts, p.ts)
         val ordenats = endevina(p.dp, vm.aparellsAEntrenar, vm.referencies, vm.aparellsAEntrenar.size)
@@ -155,8 +162,8 @@ private fun TargetaPregunta(vm: ConsumViewModel, p: Pregunta) {
             (if (totes) ordenats else ordenats.take(5)).forEach { a ->
                 SuggestionChip(onClick = { vm.respon(p, a.id) }, label = { Text(a.nom) })
             }
-            if (!totes && ordenats.size > 5) SuggestionChip(onClick = { totes = true }, label = { Text("Un altre…") })
-            SuggestionChip(onClick = { vm.respon(p, null) }, label = { Text("No ho sé") })
+            if (!totes && ordenats.size > 5) SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
+            SuggestionChip(onClick = { vm.respon(p, null) }, label = { Text(stringResource(R.string.entrena_no_ho_se)) })
         }
     }
 }

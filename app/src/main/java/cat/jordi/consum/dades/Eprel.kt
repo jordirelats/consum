@@ -1,9 +1,10 @@
 package cat.jordi.consum.dades
 
+import cat.jordi.consum.R
 import org.json.JSONObject
-import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.NumberFormat
 
 /** El que diu l'etiqueta energètica d'un aparell, tret de l'EPREL (la base de dades europea). */
 data class FitxaEprel(
@@ -17,7 +18,7 @@ data class FitxaEprel(
     val kwhAny: Double?,
     val esperaW: Double?,
     /** Com s'ha calculat el consum anual, per ensenyar-ho. */
-    val explicacio: String,
+    val explicacio: TextRecurs,
 ) {
     fun comAparell(nom: String) = Aparell(
         nom = nom, categoria = categoria, font = Font.ETIQUETA, kwhAny = kwhAny ?: categoria.kwhAnyTipic,
@@ -45,8 +46,8 @@ object Eprel {
         c.readTimeout = 8000
         c.setRequestProperty("Accept", "application/json")
         val text = try {
-            if (c.responseCode == 404) throw IOException("No hi ha cap aparell amb el número $numero")
-            if (c.responseCode !in 200..299) throw IOException("L'EPREL ha respost ${c.responseCode}")
+            if (c.responseCode == 404) throw ErrorUsuari(R.string.error_eprel_no_hi_es, numero)
+            if (c.responseCode !in 200..299) throw ErrorUsuari(R.string.error_eprel_resposta, c.responseCode)
             c.inputStream.bufferedReader().readText()
         } finally {
             c.disconnect()
@@ -79,17 +80,17 @@ object Eprel {
         val (kwh, explicacio) = when {
             // Les neveres noves el porten a energyConsAnnualV2 (energyConsAnnual hi és, però buit)
             o.num("energyConsAnnual", "energyConsAnnualV2", "consolidatedEnergyConsAnnual") != null ->
-                o.num("energyConsAnnual", "energyConsAnnualV2", "consolidatedEnergyConsAnnual") to "consum anual de l'etiqueta"
+                o.num("energyConsAnnual", "energyConsAnnualV2", "consolidatedEnergyConsAnnual") to TextRecurs(R.string.eprel_consum_anual)
             cat == Categoria.RENTADORA && o.num("energyConsPer100Cycle") != null ->
-                o.num("energyConsPer100Cycle")!! * 2.2 to "${fmt(o.num("energyConsPer100Cycle")!!)} kWh cada 100 rentades, a 220 rentades l'any"
+                o.num("energyConsPer100Cycle")!! * 2.2 to TextRecurs(R.string.eprel_cada_100_rentades, fmt(o.num("energyConsPer100Cycle")!!), 220)
             cat == Categoria.RENTAPLATS && o.num("energyCons100") != null ->
-                o.num("energyCons100")!! * 2.8 to "${fmt(o.num("energyCons100")!!)} kWh cada 100 rentades, a 280 rentades l'any"
+                o.num("energyCons100")!! * 2.8 to TextRecurs(R.string.eprel_cada_100_rentades, fmt(o.num("energyCons100")!!), 280)
             o.num("powerOnModeSDR", "powerOnMode") != null -> {
                 val w = o.num("powerOnModeSDR", "powerOnMode")!!
                 val hores = if (cat == Categoria.LLUMS) 3 else 4
-                w * hores * 365 / 1000 to "${fmt(w)} W encès, $hores hores al dia"
+                w * hores * 365 / 1000 to TextRecurs(R.string.eprel_w_hores, fmt(w), hores)
             }
-            else -> null to "l'etiqueta no dona un consum anual: s'ha posat un valor típic"
+            else -> null to TextRecurs(R.string.eprel_sense_consum)
         }
         return FitxaEprel(
             numero = numero, grup = grup, categoria = cat,
@@ -100,5 +101,5 @@ object Eprel {
         )
     }
 
-    private fun fmt(x: Double) = if (x % 1.0 == 0.0) x.toInt().toString() else x.toString().replace('.', ',')
+    private fun fmt(x: Double) = NumberFormat.getNumberInstance(Idioma.locale).apply { maximumFractionDigits = 3 }.format(x)
 }

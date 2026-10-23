@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import cat.jordi.consum.R
 import cat.jordi.consum.dades.CampFactura
 import cat.jordi.consum.dades.Contracte
 import cat.jordi.consum.dades.Document
@@ -56,27 +58,27 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** Com es diu cada preu a la pantalla de revisió, i en quina unitat. */
-private fun nomCamp(c: CampFactura): Pair<String, String> = when (c) {
-    CampFactura.NL_NORMAAL -> "Leveringstarief · Normaal" to "€/kWh"
-    CampFactura.NL_DAL -> "Leveringstarief · Dal" to "€/kWh"
-    CampFactura.NL_ENKEL -> "Leveringstarief" to "€/kWh"
-    CampFactura.NL_EB -> "Energiebelasting (EB)" to "€/kWh"
-    CampFactura.NL_VASTE -> "Vaste leveringskosten" to "€/dag"
-    CampFactura.NL_NETBEHEER -> "Netbeheerkosten" to "€/dag"
-    CampFactura.NL_VERMINDERING -> "Vermindering energiebelasting" to "€/dag"
-    CampFactura.NL_INKOOP -> "Inkoopvergoeding" to "€/kWh"
-    CampFactura.ES_POTENCIA -> "Potència contractada" to "kW"
-    CampFactura.ES_P1 -> "Potència P1" to "€/kW i dia"
-    CampFactura.ES_P2 -> "Potència P2 (vall)" to "€/kW i dia"
-    CampFactura.ES_PUNTA -> "Energia, punta" to "€/kWh"
-    CampFactura.ES_PLA -> "Energia, pla" to "€/kWh"
-    CampFactura.ES_VALL -> "Energia, vall" to "€/kWh"
-    CampFactura.ES_FIX -> "Energia, preu únic" to "€/kWh"
-    CampFactura.ES_IEE -> "Impost elèctric" to "%"
-    CampFactura.ES_IVA -> "IVA" to "%"
-    CampFactura.ES_COMPTADOR -> "Lloguer del comptador" to "€/mes"
-    CampFactura.ES_BO_SOCIAL -> "Finançament del bo social" to "€/dia"
+/** Com es diu cada preu a la pantalla de revisió, i el número amb la seva unitat (els dos, recursos). */
+private fun nomCamp(c: CampFactura): Pair<Int, Int> = when (c) {
+    CampFactura.NL_NORMAAL -> R.string.escaneig_camp_nl_normaal to R.string.escaneig_unitat_eur_kwh
+    CampFactura.NL_DAL -> R.string.escaneig_camp_nl_dal to R.string.escaneig_unitat_eur_kwh
+    CampFactura.NL_ENKEL -> R.string.escaneig_camp_nl_enkel to R.string.escaneig_unitat_eur_kwh
+    CampFactura.NL_EB -> R.string.escaneig_camp_nl_eb to R.string.escaneig_unitat_eur_kwh
+    CampFactura.NL_VASTE -> R.string.escaneig_camp_nl_vaste to R.string.escaneig_unitat_eur_dag
+    CampFactura.NL_NETBEHEER -> R.string.escaneig_camp_nl_netbeheer to R.string.escaneig_unitat_eur_dag
+    CampFactura.NL_VERMINDERING -> R.string.escaneig_camp_nl_vermindering to R.string.escaneig_unitat_eur_dag
+    CampFactura.NL_INKOOP -> R.string.escaneig_camp_nl_inkoop to R.string.escaneig_unitat_eur_kwh
+    CampFactura.ES_POTENCIA -> R.string.escaneig_camp_es_potencia to R.string.escaneig_unitat_kw
+    CampFactura.ES_P1 -> R.string.escaneig_camp_es_p1 to R.string.escaneig_unitat_eur_kw_dia
+    CampFactura.ES_P2 -> R.string.escaneig_camp_es_p2 to R.string.escaneig_unitat_eur_kw_dia
+    CampFactura.ES_PUNTA -> R.string.escaneig_camp_es_punta to R.string.escaneig_unitat_eur_kwh
+    CampFactura.ES_PLA -> R.string.escaneig_camp_es_pla to R.string.escaneig_unitat_eur_kwh
+    CampFactura.ES_VALL -> R.string.escaneig_camp_es_vall to R.string.escaneig_unitat_eur_kwh
+    CampFactura.ES_FIX -> R.string.escaneig_camp_es_fix to R.string.escaneig_unitat_eur_kwh
+    CampFactura.ES_IEE -> R.string.escaneig_camp_es_iee to R.string.escaneig_unitat_percent
+    CampFactura.ES_IVA -> R.string.escaneig_camp_es_iva to R.string.escaneig_unitat_percent
+    CampFactura.ES_COMPTADOR -> R.string.escaneig_camp_es_comptador to R.string.escaneig_unitat_eur_mes
+    CampFactura.ES_BO_SOCIAL -> R.string.escaneig_camp_es_bo_social to R.string.escaneig_unitat_eur_dia
 }
 
 /** Els preus que hauria de tenir un document d'aquest país i contracte, per dir quins no s'han trobat. */
@@ -94,14 +96,21 @@ private fun esperats(l: LecturaFactura): List<CampFactura> = when (l.pais) {
     } + listOf(CampFactura.ES_IEE, CampFactura.ES_IVA, CampFactura.ES_COMPTADOR, CampFactura.ES_BO_SOCIAL)
 }
 
-private fun nomContracte(l: LecturaFactura) = when (l.pais) {
-    Pais.NL -> "Països Baixos · " + when (l.contracte) {
-        Contracte.FIX -> "preu fix"; Contracte.FRANGES -> "normaal i dal"; Contracte.DINAMIC -> "dinàmic"
+@Composable
+private fun nomContracte(l: LecturaFactura) = stringResource(
+    when (l.pais) {
+        Pais.NL -> when (l.contracte) {
+            Contracte.FIX -> R.string.escaneig_contracte_nl_fix
+            Contracte.FRANGES -> R.string.escaneig_contracte_nl_franges
+            Contracte.DINAMIC -> R.string.escaneig_contracte_nl_dinamic
+        }
+        else -> when (l.contracte) {
+            Contracte.FIX -> R.string.escaneig_contracte_es_fix
+            Contracte.FRANGES -> R.string.escaneig_contracte_es_franges
+            Contracte.DINAMIC -> R.string.escaneig_contracte_es_pvpc
+        }
     }
-    else -> "Espanya · " + when (l.contracte) {
-        Contracte.FIX -> "preu fix"; Contracte.FRANGES -> "per franges"; Contracte.DINAMIC -> "PVPC"
-    }
-}
+)
 
 /**
  * «Omple-ho amb el contracte»: una foto o un PDF del contracte o de la factura. Es llegeix dins del mòbil amb
@@ -116,13 +125,13 @@ fun TargetaEscaneig(enLlegir: (LecturaFactura?) -> Unit) {
 
     fun llegeix(uri: Uri) {
         error = null
-        progres = "Obrint el document…"
+        progres = context.getString(R.string.escaneig_obrint)
         abast.launch {
             val r = withContext(Dispatchers.Default) {
                 runCatching {
                     val pagines = Document.pagines(context, uri)
                     val text = pagines.mapIndexed { i, p ->
-                        withContext(Dispatchers.Main) { progres = "Llegint la pàgina ${i + 1} de ${pagines.size}…" }
+                        withContext(Dispatchers.Main) { progres = context.getString(R.string.escaneig_llegint_pagina, i + 1, pagines.size) }
                         Placa.llegeix(context, p, document = true)
                     }.joinToString("\n")
                     // Només a la versió de prova: el text llegit, per afinar el lector amb factures noves
@@ -131,8 +140,8 @@ fun TargetaEscaneig(enLlegir: (LecturaFactura?) -> Unit) {
                 }
             }
             progres = null
-            r.onSuccess { l -> if (l == null) error = "No hi he trobat cap preu. Prova amb el PDF, o amb una foto més de prop." else enLlegir(l) }
-                .onFailure { error = "No he pogut llegir el document." }
+            r.onSuccess { l -> if (l == null) error = context.getString(R.string.escaneig_cap_preu) else enLlegir(l) }
+                .onFailure { error = context.getString(R.string.escaneig_error_document) }
         }
     }
 
@@ -142,7 +151,7 @@ fun TargetaEscaneig(enLlegir: (LecturaFactura?) -> Unit) {
     }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { feta -> if (feta) llegeix(uriFoto) }
     val permis = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { si ->
-        if (si) camera.launch(uriFoto) else error = "Sense permís de càmera. Pots triar el PDF."
+        if (si) camera.launch(uriFoto) else error = context.getString(R.string.escaneig_sense_permis_camera)
     }
     val fitxer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(::llegeix) }
 
@@ -151,9 +160,9 @@ fun TargetaEscaneig(enLlegir: (LecturaFactura?) -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Description, null, tint = Primari, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(6.dp))
-                TitolTargeta("Omple-ho amb el contracte o la factura", Modifier.padding(top = 6.dp))
+                TitolTargeta(stringResource(R.string.escaneig_titol), Modifier.padding(top = 6.dp))
             }
-            Nota("Fes-ne una foto o tria'n el PDF. L'app hi busca els preus i te'ls ensenya abans de posar-los. Tot es llegeix dins del mòbil.")
+            Nota(stringResource(R.string.escaneig_nota))
             Spacer(Modifier.height(10.dp))
             if (progres != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -168,9 +177,9 @@ fun TargetaEscaneig(enLlegir: (LecturaFactura?) -> Unit) {
                     }) {
                         Icon(Icons.Outlined.PhotoCamera, null)
                         Spacer(Modifier.width(6.dp))
-                        Text("Foto")
+                        Text(stringResource(R.string.escaneig_foto))
                     }
-                    OutlinedButton(onClick = { fitxer.launch(arrayOf("application/pdf", "image/*")) }) { Text("Tria un PDF o una foto") }
+                    OutlinedButton(onClick = { fitxer.launch(arrayOf("application/pdf", "image/*")) }) { Text(stringResource(R.string.escaneig_tria)) }
                 }
             }
             error?.let { Text(it, Modifier.padding(top = 8.dp), color = Desconegut, fontSize = 13.sp) }
@@ -186,8 +195,8 @@ fun RevisioDocument(l: LecturaFactura, enCancellar: () -> Unit, enPosar: (Set<Ca
     val falten = esperats(l).filter { it !in trobats }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Targeta {
-            TitolTargeta("He trobat al document")
-            Text("Contracte: ${nomContracte(l)}", fontSize = 13.sp, color = Suau)
+            TitolTargeta(stringResource(R.string.escaneig_he_trobat))
+            Text(stringResource(R.string.escaneig_contracte, nomContracte(l)), fontSize = 13.sp, color = Suau)
             Spacer(Modifier.height(4.dp))
             // En el mateix ordre que el formulari, no en el que surten al document
             l.trobats.sortedBy { it.camp.ordinal }.forEach { p ->
@@ -195,25 +204,26 @@ fun RevisioDocument(l: LecturaFactura, enCancellar: () -> Unit, enPosar: (Set<Ca
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = p.camp in triats, onCheckedChange = { si -> triats = if (si) triats + p.camp else triats - p.camp })
                     Column(Modifier.weight(1f)) {
-                        Text(nom, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text(stringResource(nom), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         Text(
-                            if (p.deduit) "La factura només té dos preus: el del pla també per a la vall" else "«${p.fragment}»",
+                            if (p.deduit) stringResource(R.string.escaneig_vall_deduida) else stringResource(R.string.escaneig_fragment, p.fragment),
                             fontSize = 11.sp, color = Suau, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             fontFamily = if (p.deduit) FontFamily.Default else FontFamily.Monospace,
                         )
                     }
-                    Text("${textValor(p.camp, p.valor)} $unitat", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(unitat, textValor(p.camp, p.valor)), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
             }
-            Nota("Sota cada número hi ha el tros del document d'on surt. Desmarca el que no sigui bo.", Modifier.padding(top = 4.dp))
+            Nota(stringResource(R.string.escaneig_nota_revisio), Modifier.padding(top = 4.dp))
         }
         Targeta {
-            TitolTargeta("No ho he trobat")
-            Nota(if (falten.isEmpty()) "Res: hi havia tot el que cal." else falten.joinToString(", ") { nomCamp(it).first } + ". Es queda el que ja hi havia.")
+            TitolTargeta(stringResource(R.string.escaneig_no_trobat))
+            val noms = falten.map { stringResource(nomCamp(it).first) }
+            Nota(if (noms.isEmpty()) stringResource(R.string.escaneig_no_falta_res) else stringResource(R.string.escaneig_falten, noms.joinToString(", ")))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = enCancellar, Modifier.weight(1f)) { Text("Cancel·la") }
-            Button(onClick = { enPosar(triats) }, Modifier.weight(1f), enabled = triats.isNotEmpty()) { Text("Posa'ls") }
+            OutlinedButton(onClick = enCancellar, Modifier.weight(1f)) { Text(stringResource(R.string.escaneig_cancella)) }
+            Button(onClick = { enPosar(triats) }, Modifier.weight(1f), enabled = triats.isNotEmpty()) { Text(stringResource(R.string.escaneig_posa_ls)) }
         }
     }
 }

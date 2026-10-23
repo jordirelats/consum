@@ -12,8 +12,8 @@ android {
         applicationId = "cat.jordi.consum"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "0.10"
+        versionCode = 11
+        versionName = "0.11"
         // Tesseract porta codi natiu: només el dels mòbils (a la versió de prova, també el de l'emulador)
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
@@ -38,6 +38,14 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    // Els idiomes de l'app surten de les carpetes res/values-xx: per afegir-ne un, n'hi ha prou amb la carpeta
+    androidResources {
+        generateLocaleConfig = true
+    }
+    // Una traducció a mitges no ha d'aturar la compilació: el que falta surt en català
+    lint {
+        warning += "MissingTranslation"
     }
     // El codi natiu comprimit dins de l'APK: es baixa la meitat i Android el descomprimeix en instal·lar
     packaging {

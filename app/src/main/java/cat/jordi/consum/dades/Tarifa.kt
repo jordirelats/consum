@@ -1,17 +1,20 @@
 package cat.jordi.consum.dades
 
+import androidx.annotation.StringRes
+import cat.jordi.consum.R
 import org.json.JSONObject
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-enum class Pais(val nom: String) { ES("Espanya"), NL("Països Baixos"), ALTRE("Un altre") }
+enum class Pais(@StringRes val nomId: Int) { ES(R.string.pais_es), NL(R.string.pais_nl), ALTRE(R.string.pais_altre) }
 
 enum class Contracte { FIX, FRANGES, DINAMIC }
 
-enum class Franja(val nom: String) {
-    PUNTA("Punta"), PLA("Pla"), VALL("Vall"), NORMAAL("Normaal"), DAL("Dal"), UNICA("Preu únic"), MERCAT("Preu de mercat")
+enum class Franja(@StringRes val nomId: Int) {
+    PUNTA(R.string.franja_punta), PLA(R.string.franja_pla), VALL(R.string.franja_vall), NORMAAL(R.string.franja_normaal),
+    DAL(R.string.franja_dal), UNICA(R.string.franja_unica), MERCAT(R.string.franja_mercat)
 }
 
 /**

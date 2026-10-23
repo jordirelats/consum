@@ -59,6 +59,18 @@ Cal el JDK 17 i l'SDK d'Android 35:
 ./gradlew assembleRelease
 ```
 
+## Llengües
+
+L'app és en català i en neerlandès. Si el mòbil és en neerlandès, surt en neerlandès, i si no, en català. A Android 13 o més nou, la llengua també es pot triar a la Configuració de l'app.
+
+**Per traduir-la a una altra llengua:**
+1. Copia [`app/src/main/res/values/strings.xml`](app/src/main/res/values/strings.xml) a `app/src/main/res/values-<codi>/strings.xml`, per exemple `values-es` o `values-en`.
+2. Tradueix cada text. No canviïs els `name` ni els `%1$s`, `%2$d`… del text.
+3. A `codi_idioma`, posa-hi el codi de la teva llengua (decideix com s'escriuen els números).
+4. Obre una *pull request*. La llengua nova surt sola a l'app; no cal tocar cap més fitxer.
+
+Si deixes textos sense traduir, l'app els ensenya en català.
+
 ## Llicència
 
 [GPL-3.0](LICENSE).
@@ -82,3 +94,5 @@ Fa servir aquestes llibreries i dades, totes amb llicència Apache-2.0:
 - **Privacy**: data stays on the phone. Remote access uses your own Shelly cloud key, which never leaves the device.
 
 Install the APK from [Releases](../../releases). Licence: GPL-3.0. Not affiliated with Shelly (Allterco Robotics).
+
+**Languages:** Catalan and Dutch. To add one, copy `app/src/main/res/values/strings.xml` to `app/src/main/res/values-<code>/strings.xml`, translate the texts (keep the names and the `%1$s` placeholders), set `codi_idioma` to your language code and open a pull request. Nothing else needs changing; untranslated texts fall back to Catalan.

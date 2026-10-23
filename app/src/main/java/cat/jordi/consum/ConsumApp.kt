@@ -1,6 +1,7 @@
 package cat.jordi.consum
 
 import android.app.Application
+import android.content.res.Configuration
 import android.content.Context
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -11,6 +12,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import cat.jordi.consum.dades.BaseDades
 import cat.jordi.consum.dades.Config
+import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.dades.Repositori
 import java.util.concurrent.TimeUnit
 
@@ -20,9 +22,16 @@ class ConsumApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Idioma.actualitza(this)
         repo = Repositori(Config(this), BaseDades(this))
         Avisos.creaCanal(this)
         programaSincronitzacio(this)
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        Idioma.actualitza(this)
+        Avisos.creaCanal(this)
     }
 }
 

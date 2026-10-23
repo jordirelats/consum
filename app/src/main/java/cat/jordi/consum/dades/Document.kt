@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
-import java.io.IOException
+import cat.jordi.consum.R
 
 /**
  * Un contracte o una factura per llegir amb l'OCR: les pàgines d'un PDF (convertides en imatge a 200 ppp,
@@ -20,7 +20,7 @@ object Document {
         else listOf(Placa.carrega(context.contentResolver, uri))
 
     private fun pdf(context: Context, uri: Uri): List<Bitmap> {
-        val fd = context.contentResolver.openFileDescriptor(uri, "r") ?: throw IOException("No es pot obrir el PDF")
+        val fd = context.contentResolver.openFileDescriptor(uri, "r") ?: throw ErrorUsuari(R.string.error_pdf)
         return fd.use {
             PdfRenderer(it).use { pdf ->
                 (0 until minOf(pdf.pageCount, MAX_PAGINES)).map { i ->

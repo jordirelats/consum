@@ -1,5 +1,6 @@
 package cat.jordi.consum.dades
 
+import cat.jordi.consum.R
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -45,7 +46,7 @@ object Mercat {
                 "https://apidatos.ree.es/es/datos/mercados/precios-mercados-tiempo-real?start_date=${dia}T00:00&end_date=${dia}T23:59&time_trunc=hour"
             ).getJSONArray("included")
             val pvpc = (0 until inclosos.length()).map { inclosos.getJSONObject(it) }.firstOrNull { it.optString("type") == "PVPC" }
-                ?: throw IOException("Red Eléctrica no ha donat el PVPC del $dia")
+                ?: throw ErrorUsuari(R.string.error_pvpc, dia.toString())
             val valors = pvpc.getJSONObject("attributes").getJSONArray("values")
             List(valors.length()) { i ->
                 val v = valors.getJSONObject(i)

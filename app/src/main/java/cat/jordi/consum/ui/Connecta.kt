@@ -1,7 +1,14 @@
 package cat.jordi.consum.ui
 
+import android.app.LocaleConfig
+import android.app.LocaleManager
+import android.os.Build
+import android.os.LocaleList
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +25,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
@@ -36,11 +44,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cat.jordi.consum.Actualitzacio
+import cat.jordi.consum.R
+import cat.jordi.consum.dades.missatge
 import cat.jordi.consum.shelly.InfoShelly
 import cat.jordi.consum.shelly.ShellyLocal
 import cat.jordi.consum.shelly.ShellyNuvol
@@ -49,6 +60,7 @@ import cat.jordi.consum.shelly.descobreix
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 /** El primer cop, i després com a configuració: on és el Shelly, les pinces, el núvol i el preu. */
 @Composable
@@ -85,7 +97,7 @@ fun PantallaConnecta(vm: ConsumViewModel) {
             val r = withContext(Dispatchers.IO) { runCatching { ShellyLocal(host.trim()).info() } }
             provant = false
             r.onSuccess { info = it; idNuvol = it.idDispositiu }
-                .onFailure { error = "No hi arribo. Comprova l'adreça i que el mòbil és a la wifi de casa." }
+                .onFailure { error = context.getString(R.string.connecta_no_hi_arribo) }
         }
     }
 
@@ -102,9 +114,11 @@ fun PantallaConnecta(vm: ConsumViewModel) {
             provantNuvol = false
             r.onSuccess { l ->
                 nuvolOk = l != null
-                nuvol = if (l != null) "El núvol respon: ara ${num(l.total.w)} W" else "El núvol no coneix aquest Shelly. Mira l'ID."
+                nuvol = if (l != null) context.getString(R.string.connecta_nuvol_respon, num(l.total.w))
+                else context.getString(R.string.connecta_nuvol_no_coneix)
             }.onFailure {
-                nuvol = if (it.message?.contains("401") == true) "La clau no és bona." else "No arribo al núvol: ${it.message}"
+                nuvol = if (it.message?.contains("401") == true) context.getString(R.string.connecta_clau_dolenta)
+                else context.getString(R.string.connecta_no_arribo_nuvol, it.missatge(context).orEmpty())
             }
         }
     }
@@ -118,8 +132,8 @@ fun PantallaConnecta(vm: ConsumViewModel) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Targeta {
-                TitolTargeta("1. El Shelly a la wifi de casa")
-                if (trobats.isEmpty()) Nota("Buscant Shelly a la wifi… Si no surt, escriu-ne l'adreça (és a l'app de Shelly).")
+                TitolTargeta(stringResource(R.string.connecta_titol_shelly))
+                if (trobats.isEmpty()) Nota(stringResource(R.string.connecta_buscant))
                 trobats.forEach { t ->
                     TextButton(onClick = { host = t.host; info = null }) {
                         Icon(Icons.Outlined.Wifi, null)
@@ -129,92 +143,91 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
-                        host, { host = it; info = null }, Modifier.weight(1f), label = { Text("Adreça del Shelly") },
+                        host, { host = it; info = null }, Modifier.weight(1f), label = { Text(stringResource(R.string.connecta_adreca)) },
                         placeholder = { Text("192.168.1.40") }, singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     )
                     Spacer(Modifier.width(8.dp))
-                    OutlinedButton(onClick = ::prova, enabled = host.isNotBlank() && !provant) { Text("Prova") }
+                    OutlinedButton(onClick = ::prova, enabled = host.isNotBlank() && !provant) { Text(stringResource(R.string.connecta_prova)) }
                 }
                 if (provant) CircularProgressIndicator(Modifier.padding(top = 8.dp))
                 info?.let {
                     Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Check, null, tint = Ok)
-                        Text("  ${it.nom} · ${it.model} · versió ${it.versio}", fontSize = 13.sp, color = Ok)
+                        Text("  " + stringResource(R.string.connecta_info_shelly, it.nom, it.model, it.versio), fontSize = 13.sp, color = Ok)
                     }
                 }
                 error?.let { Text(it, Modifier.padding(top = 8.dp), color = Desconegut, fontSize = 13.sp) }
             }
 
             Targeta {
-                TitolTargeta("2. Les pinces")
-                Text("Pinça 1: tota la casa", fontSize = 14.sp)
+                TitolTargeta(stringResource(R.string.connecta_titol_pinces))
+                Text(stringResource(R.string.connecta_pinca_1), fontSize = 14.sp)
                 Spacer(Modifier.height(6.dp))
                 OutlinedTextField(
-                    nomLinia, { nomLinia = it }, Modifier.fillMaxWidth(), label = { Text("Pinça 2: què mesura?") },
-                    placeholder = { Text("Per exemple: Cuina, Rentadora, Termo") }, singleLine = true,
-                    supportingText = { Text("Deixa-ho buit si només hi ha una pinça.") },
+                    nomLinia, { nomLinia = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.connecta_pinca_2)) },
+                    placeholder = { Text(stringResource(R.string.connecta_pinca_2_exemple)) }, singleLine = true,
+                    supportingText = { Text(stringResource(R.string.connecta_pinca_2_ajuda)) },
                 )
             }
 
             Targeta {
-                TitolTargeta("3. Per veure-ho des de fora de casa")
-                Nota("És opcional. A l'app de Shelly: Configuració → Llar → Accés i permisos → Cloud Key. Hi ha la clau i el servidor. La clau es queda només en aquest mòbil.")
+                TitolTargeta(stringResource(R.string.connecta_titol_nuvol))
+                Nota(stringResource(R.string.connecta_nuvol_nota))
                 Spacer(Modifier.height(6.dp))
                 OutlinedTextField(
-                    servidor, { servidor = it }, Modifier.fillMaxWidth(), label = { Text("Servidor") },
+                    servidor, { servidor = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.connecta_servidor)) },
                     placeholder = { Text("shelly-00-eu.shelly.cloud") }, singleLine = true,
                 )
                 OutlinedTextField(
-                    clau, { clau = it; nuvolOk = false }, Modifier.fillMaxWidth(), label = { Text("Clau del núvol") }, singleLine = true,
+                    clau, { clau = it; nuvolOk = false }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.connecta_clau)) }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                 )
                 OutlinedTextField(
-                    idNuvol, { idNuvol = it; nuvolOk = false }, Modifier.fillMaxWidth(), label = { Text("ID del Shelly") },
+                    idNuvol, { idNuvol = it; nuvolOk = false }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.connecta_id)) },
                     placeholder = { Text("a1b2c3d4e5f6") }, singleLine = true,
-                    supportingText = { Text("Es posa sol si l'has provat a casa. Si no, és a la informació del dispositiu de l'app de Shelly.") },
+                    supportingText = { Text(stringResource(R.string.connecta_id_ajuda)) },
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedButton(
                         onClick = ::provaNuvol,
                         enabled = servidor.isNotBlank() && clau.isNotBlank() && idNuvol.isNotBlank() && !provantNuvol,
-                    ) { Text("Prova el núvol") }
+                    ) { Text(stringResource(R.string.connecta_prova_nuvol)) }
                     if (provantNuvol) CircularProgressIndicator(Modifier.padding(start = 12.dp).size(24.dp), strokeWidth = 2.dp)
                 }
                 nuvol?.let { Text(it, Modifier.padding(top = 6.dp), color = if (nuvolOk) Ok else Desconegut, fontSize = 13.sp) }
             }
 
             Targeta {
-                TitolTargeta("4. El preu de la llum")
+                TitolTargeta(stringResource(R.string.connecta_titol_preu))
                 Text(resumTarifa(config.tarifa), fontSize = 14.sp)
                 if (config.configurat) {
-                    TextButton(onClick = { vm.pantalla = Pantalla.PREU }) { Text("Canvia el preu") }
+                    TextButton(onClick = { vm.pantalla = Pantalla.PREU }) { Text(stringResource(R.string.connecta_canvia_preu)) }
                 } else {
-                    Nota("El posaràs després de connectar el Shelly, des d'aquí mateix o tocant el preu a la pantalla Ara.")
+                    Nota(stringResource(R.string.connecta_preu_despres))
                 }
             }
+            // Abans d'Android 13 no hi ha idioma per app: fa com el mòbil
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) TargetaIdioma()
             Targeta {
-                TitolTargeta("Actualitzacions")
+                TitolTargeta(stringResource(R.string.connecta_actualitzacions))
                 val versio = remember { Actualitzacio.versioActual(context) }
-                Text("Tens la versió $versio.", fontSize = 14.sp)
+                Text(stringResource(R.string.connecta_versio_actual, versio), fontSize = 14.sp)
                 val nova = vm.versioNova
                 val progres = vm.progresActualitzacio
                 when {
                     progres != null -> {
-                        Nota("Baixant la versió ${nova?.versio}…", Modifier.padding(top = 6.dp))
+                        Nota(stringResource(R.string.connecta_baixant, nova?.versio.orEmpty()), Modifier.padding(top = 6.dp))
                         LinearProgressIndicator(progress = { progres }, Modifier.fillMaxWidth().padding(top = 4.dp))
                     }
                     nova != null -> {
-                        Text("Hi ha la versió ${nova.versio}.", Modifier.padding(top = 4.dp), fontSize = 14.sp, color = Primari)
-                        Button(onClick = vm::actualitza, Modifier.padding(top = 6.dp)) { Text("Actualitza") }
-                        Nota(
-                            "En un Samsung, si surt «S'ha bloquejat una aplicació desconeguda», desactiva Ajustaments → Seguretat i privadesa → Bloquejador automàtic i torna-ho a provar.",
-                            Modifier.padding(top = 6.dp),
-                        )
+                        Text(stringResource(R.string.connecta_versio_nova, nova.versio), Modifier.padding(top = 4.dp), fontSize = 14.sp, color = Primari)
+                        Button(onClick = vm::actualitza, Modifier.padding(top = 6.dp)) { Text(stringResource(R.string.connecta_actualitza)) }
+                        Nota(stringResource(R.string.connecta_samsung), Modifier.padding(top = 6.dp))
                     }
-                    else -> TextButton(onClick = { vm.comprovaVersio(forcat = true) }) { Text("Mira si n'hi ha de noves") }
+                    else -> TextButton(onClick = { vm.comprovaVersio(forcat = true) }) { Text(stringResource(R.string.connecta_mira_noves)) }
                 }
-                vm.missatgeActualitzacio?.let { Nota(it, Modifier.padding(top = 4.dp)) }
+                vm.missatgeActualitzacio?.let { Nota(it.text(), Modifier.padding(top = 4.dp)) }
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -231,11 +244,48 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                     vm.sincronitza()
                 },
                 Modifier.fillMaxWidth(), enabled = potDesar,
-            ) { Text(if (config.configurat) "Desa" else "Comença") }
+            ) { Text(stringResource(if (config.configurat) R.string.connecta_desa else R.string.connecta_comenca)) }
             if (!potDesar) {
-                Nota("Prova primer el Shelly a casa, o el núvol.", Modifier.align(Alignment.CenterHorizontally))
+                Nota(stringResource(R.string.connecta_prova_primer), Modifier.align(Alignment.CenterHorizontally))
             }
 
+        }
+    }
+}
+
+/**
+ * L'idioma de l'app: com el mòbil o una de les llengües que té traduïdes (les carpetes values-xx).
+ * En triar-ne un, Android torna a crear l'activitat.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@Composable
+private fun TargetaIdioma() {
+    val context = LocalContext.current
+    val gestor = remember { context.getSystemService(LocaleManager::class.java) } ?: return
+    val llengues = remember {
+        val l = LocaleConfig(context).supportedLocales ?: LocaleList.getEmptyLocaleList()
+        (0 until l.size()).map { l[it] }
+    }
+    var triada by remember { mutableStateOf(gestor.applicationLocales.let { if (it.isEmpty) null else it[0] }) }
+    // La triada pot venir de la configuració d'Android amb el país (nl-NL): si no hi és igual, per la llengua
+    val marcada = triada?.let { t -> llengues.firstOrNull { it == t } ?: llengues.firstOrNull { it.language == t.language } }
+
+    fun tria(l: Locale?) {
+        triada = l
+        gestor.applicationLocales = if (l == null) LocaleList.getEmptyLocaleList() else LocaleList(l)
+    }
+
+    Targeta {
+        TitolTargeta(stringResource(R.string.connecta_idioma))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FilterChip(selected = triada == null, onClick = { tria(null) }, label = { Text(stringResource(R.string.connecta_idioma_mobil)) })
+            llengues.forEach { l ->
+                FilterChip(
+                    selected = l == marcada, onClick = { tria(l) },
+                    label = { Text(l.getDisplayName(l).replaceFirstChar { it.titlecase(l) }) },
+                )
+            }
         }
     }
 }

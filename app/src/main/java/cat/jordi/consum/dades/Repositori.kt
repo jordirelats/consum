@@ -1,5 +1,7 @@
 package cat.jordi.consum.dades
 
+import androidx.annotation.StringRes
+import cat.jordi.consum.R
 import cat.jordi.consum.shelly.Lectura
 import cat.jordi.consum.shelly.ShellyLocal
 import cat.jordi.consum.shelly.ShellyNuvol
@@ -11,11 +13,10 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.TextStyle
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 
-enum class Periode(val nom: String) { DIA("Dia"), SETMANA("Setmana"), MES("Mes") }
+enum class Periode(@StringRes val nomId: Int) { DIA(R.string.periode_dia), SETMANA(R.string.periode_setmana), MES(R.string.periode_mes) }
 
 /** Una barra de l'historial: una hora o un dia. */
 data class Barra(val etiqueta: String, val hora: Hora)
@@ -54,8 +55,6 @@ data class Repartiment(val kwh: Map<Long, Double>, val euros: Map<Long, Double>,
 
 /** Què costaria la línia de la segona pinça si gastés a les hores barates. */
 data class ConsellLinia(val estalviMes: Double, val percentCar: Int)
-
-private val CATALA: Locale = Locale.forLanguageTag("ca")
 
 class Repositori(val config: Config, private val bd: BaseDades) {
     private val zona get() = ZoneId.systemDefault()
@@ -172,7 +171,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
                     val dia = primer.plusDays(i.toLong())
                     val hores = perDia[dia].orEmpty()
                     val etiqueta = if (periode == Periode.SETMANA)
-                        dia.dayOfWeek.getDisplayName(TextStyle.SHORT, CATALA).removeSuffix(".")
+                        dia.dayOfWeek.getDisplayName(TextStyle.SHORT, Idioma.locale).removeSuffix(".")
                     else dia.dayOfMonth.toString()
                     Barra(etiqueta, Hora(iniciDia(dia), hores.sumOf { it.sempre }, hores.sumOf { it.linia }, hores.sumOf { it.desconegut }))
                 } to Preus(iniciDia(primer), ara()).euros(llista, dies.toDouble())

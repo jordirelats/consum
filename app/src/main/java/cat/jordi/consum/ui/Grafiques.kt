@@ -11,11 +11,14 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cat.jordi.consum.R
 import cat.jordi.consum.dades.Barra
 import cat.jordi.consum.dades.Punt
 import java.time.Instant
@@ -33,11 +36,13 @@ private fun sostre(maxim: Double): Double {
 fun GraficaPotencia(serie: List<Punt>, ambLinia: Boolean) {
     val mesura = rememberTextMeasurer()
     val estil = TextStyle(fontSize = 10.sp, color = Suau)
+    val context = LocalContext.current
+    val senseDades = stringResource(R.string.grafiques_sense_dades)
     Canvas(Modifier.fillMaxWidth().height(150.dp)) {
         val peu = 16.dp.toPx()
         val alt = size.height - peu
         if (serie.size < 2) {
-            drawText(mesura, "Encara no hi ha dades", Offset(0f, alt / 2), estil)
+            drawText(mesura, senseDades, Offset(0f, alt / 2), estil)
             return@Canvas
         }
         val t0 = serie.first().ts.toFloat()
@@ -76,7 +81,7 @@ fun GraficaPotencia(serie: List<Punt>, ambLinia: Boolean) {
         while (ts <= serie.last().ts) {
             val h = Instant.ofEpochSecond(ts).atZone(zona).hour
             if (h % 6 == 0) {
-                val etiqueta = "$h h"
+                val etiqueta = context.getString(R.string.grafiques_hora, h)
                 val mida = mesura.measure(etiqueta, estil).size
                 drawText(mesura, etiqueta, Offset(x(ts) - mida.width / 2, alt + 3), estil)
             }

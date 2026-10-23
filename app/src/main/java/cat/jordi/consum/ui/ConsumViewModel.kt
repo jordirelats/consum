@@ -1,6 +1,7 @@
 package cat.jordi.consum.ui
 
 import android.app.Application
+import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -8,20 +9,23 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.Avisos
-import cat.jordi.consum.VersioNova
 import cat.jordi.consum.ConsumApp
+import cat.jordi.consum.R
+import cat.jordi.consum.VersioNova
 import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.ConsellLinia
 import cat.jordi.consum.dades.Explicador
 import cat.jordi.consum.dades.InfoPreu
 import cat.jordi.consum.dades.Periode
 import cat.jordi.consum.dades.Pregunta
+import cat.jordi.consum.dades.Punt
 import cat.jordi.consum.dades.Referencia
 import cat.jordi.consum.dades.Repartiment
-import cat.jordi.consum.dades.mediana
-import cat.jordi.consum.dades.Punt
 import cat.jordi.consum.dades.Resum
 import cat.jordi.consum.dades.Tarifa
+import cat.jordi.consum.dades.TextRecurs
+import cat.jordi.consum.dades.mediana
+import cat.jordi.consum.dades.missatge
 import cat.jordi.consum.shelly.Lectura
 import cat.jordi.consum.shelly.Origen
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +37,9 @@ import kotlinx.coroutines.withContext
 
 enum class Pantalla { CONNECTA, PRINCIPAL, AFEGIR, QUESTIONARI, PREU }
 
-enum class Pestanya(val nom: String) { ARA("Ara"), APARELLS("Aparells"), ENTRENA("Entrena"), HISTORIAL("Historial") }
+enum class Pestanya(@StringRes val nomId: Int) {
+    ARA(R.string.pestanya_ara), APARELLS(R.string.pestanya_aparells), ENTRENA(R.string.pestanya_entrena), HISTORIAL(R.string.pestanya_historial)
+}
 
 class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     val repo = (app as ConsumApp).repo
@@ -70,7 +76,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var sincronitzant by mutableStateOf(false)
         private set
-    var errorSincronitzacio by mutableStateOf<String?>(null)
+    var errorSincronitzacio by mutableStateOf<TextRecurs?>(null)
         private set
 
     // ---------- Entrenament ----------
@@ -88,7 +94,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     /** L'aparell que s'està mesurant ara (si n'hi ha) i el missatge del resultat de l'últim. */
     var mesurant by mutableStateOf<Long?>(null)
         private set
-    var missatgeEntrena by mutableStateOf<String?>(null)
+    var missatgeEntrena by mutableStateOf<TextRecurs?>(null)
         private set
 
     /** De quin aparell és el missatge, perquè surti a sota seu (null: és general). */
@@ -107,7 +113,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var progresActualitzacio by mutableStateOf<Float?>(null)
         private set
-    var missatgeActualitzacio by mutableStateOf<String?>(null)
+    var missatgeActualitzacio by mutableStateOf<TextRecurs?>(null)
         private set
 
     private var bucles: Job? = null
@@ -127,8 +133,10 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
             config.darreraComprovacio = ara
             r.onSuccess {
                 versioNova = it
-                if (forcat && it == null) missatgeActualitzacio = "Ja tens l'última versió."
-            }.onFailure { if (forcat) missatgeActualitzacio = "No he pogut mirar-ho: ${it.message}" }
+                if (forcat && it == null) missatgeActualitzacio = TextRecurs(R.string.vm_ultima_versio)
+            }.onFailure {
+                if (forcat) missatgeActualitzacio = TextRecurs(R.string.vm_no_he_pogut_mirar, it.missatge(getApplication<Application>()).orEmpty())
+            }
         }
     }
 
@@ -137,7 +145,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
         val v = versioNova ?: return
         val context = getApplication<Application>()
         if (!Actualitzacio.potInstallar(context)) {
-            missatgeActualitzacio = "Permet que Consum instal·li apps, torna aquí i prem «Actualitza» un altre cop."
+            missatgeActualitzacio = TextRecurs(R.string.vm_permet_installar)
             return
         }
         viewModelScope.launch {
@@ -147,7 +155,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
             }
             progresActualitzacio = null
             r.onSuccess { Actualitzacio.installa(context, it) }
-                .onFailure { missatgeActualitzacio = "No s'ha pogut baixar: ${it.message}" }
+                .onFailure { missatgeActualitzacio = TextRecurs(R.string.vm_no_s_ha_pogut_baixar, it.missatge(context).orEmpty()) }
         }
     }
 
@@ -193,7 +201,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun sincronitzaAra() {
         enCurs++
         sincronitzant = true
-        errorSincronitzacio = runCatching { repo.sincronitza() }.exceptionOrNull()?.let { "No arribo al Shelly de casa" }
+        errorSincronitzacio = runCatching { repo.sincronitza() }.exceptionOrNull()?.let { TextRecurs(R.string.vm_error_sincronitzacio) }
         runCatching { repo.actualitzaPreus() }
         enCurs--
         sincronitzant = enCurs > 0
@@ -287,7 +295,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
         val abans = medianaDes(ara - 10_000)
         missatgeDe = aparell.id
         if (abans == null) {
-            missatgeEntrena = "Encara no tinc prou lectures. Espera uns segons i torna-ho a provar."
+            missatgeEntrena = TextRecurs(R.string.vm_entrena_poques_lectures)
             return
         }
         mesurant = aparell.id
@@ -297,15 +305,18 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
             val despres = medianaDes(System.currentTimeMillis() - 8_000)
             val salt = if (despres == null) null else if (encen) despres - abans else abans - despres
             missatgeEntrena = when {
-                salt == null -> "No arribo al Shelly. Torna-ho a provar."
-                salt < 15 -> "No he vist cap canvi (${num(salt)} W). Torna-ho a provar."
+                salt == null -> TextRecurs(R.string.vm_entrena_no_arribo)
+                salt < 15 -> TextRecurs(R.string.vm_entrena_cap_canvi, num(salt))
                 else -> {
                     val durada = if (encen) null else encesos[aparell.id]?.let { (ara - it) / 1000 }
                     withContext(Dispatchers.IO) { repo.desaMostra(aparell.id, salt, durada) }
                     // Només canvia d'encès a apagat (o al revés) si s'ha vist el salt
                     encesos = if (encen) encesos + (aparell.id to ara) else encesos - aparell.id
                     val n = (referencies[aparell.id]?.mostres ?: 0) + 1
-                    "${aparell.nom}: ${if (encen) "+" else "−"}${num(salt)} W. Desat ($n de ${Referencia.PER_APRENDRE})."
+                    TextRecurs(
+                        if (encen) R.string.vm_entrena_desat_encen else R.string.vm_entrena_desat_apaga,
+                        aparell.nom, num(salt), n, Referencia.PER_APRENDRE,
+                    )
                 }
             }
             mesurant = null

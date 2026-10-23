@@ -1,4 +1,643 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">Consum</string>
+<!--
+    Els textos de l'app Consum, en català (la llengua per defecte).
+
+    Per traduir l'app a una altra llengua:
+    1. Copia aquest fitxer a res/values-<codi>/strings.xml (per exemple values-es o values-en).
+    2. Tradueix el text de cada <string> i de cada <item>. No canviïs els name.
+    3. Deixa igual els %1$s, %2$d... (són els valors que hi posa l'app).
+    4. Els apòstrofs i les cometes van amb una barra al davant: l\'app, \"text\".
+    5. A codi_idioma, posa-hi el codi de la teva llengua.
+    La llengua nova surt sola a l'app i a la configuració d'Android (Aplicacions → Consum → Idioma).
+    Hi ha una altra traducció a res/values-nl/strings.xml (neerlandès).
+
+    To translate the app: copy this file to res/values-<code>/strings.xml, translate every <string>
+    and <item> without changing the names, keep %1$s, %2$d... as they are, escape apostrophes and
+    quotes (\', \") and set codi_idioma to your language code. A Dutch version is in res/values-nl.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="ca">
+    <string name="app_name" translatable="false">Consum</string>
+
+    <!-- La llengua -->
+    <!-- El codi de la llengua d'aquesta traducció (BCP 47). Decideix com s'escriuen els números i els dies: posa-hi el teu, per exemple en-GB o es-ES. -->
+    <string name="codi_idioma">ca-ES</string>
+    <!-- Com s'escriu un import en euros: %1$s és el número ja escrit (12,50). -->
+    <string name="format_euros">%1$s €</string>
+
+    <!-- Els tipus d'aparell -->
+    <string name="categoria_nevera">Nevera</string>
+    <string name="categoria_congelador">Congelador</string>
+    <string name="categoria_forn">Forn</string>
+    <!-- La placa de cuina (vitroceràmica o d'inducció) -->
+    <string name="categoria_placa">Placa</string>
+    <string name="categoria_microones">Microones</string>
+    <string name="categoria_rentaplats">Rentaplats</string>
+    <string name="categoria_campana">Campana</string>
+    <string name="categoria_cafetera">Cafetera</string>
+    <string name="categoria_bullidor">Bullidor</string>
+    <string name="categoria_torradora">Torradora</string>
+    <string name="categoria_robot">Robot de cuina</string>
+    <string name="categoria_rentadora">Rentadora</string>
+    <string name="categoria_assecadora">Assecadora</string>
+    <string name="categoria_planxa">Planxa</string>
+    <string name="categoria_televisor">Televisor</string>
+    <string name="categoria_consola">Consola</string>
+    <string name="categoria_router">Router</string>
+    <string name="categoria_llums">Llums</string>
+    <string name="categoria_ordinador">Ordinador</string>
+    <string name="categoria_assecador_cabells">Assecador de cabells</string>
+    <string name="categoria_tovalloler">Tovalloler elèctric</string>
+    <string name="categoria_estufa">Estufa elèctrica</string>
+    <string name="categoria_aire">Aire condicionat</string>
+    <string name="categoria_bomba_calor">Bomba de calor</string>
+    <string name="categoria_termo">Termo elèctric</string>
+    <string name="categoria_caldera">Caldera de gas (la part elèctrica)</string>
+    <string name="categoria_cotxe">Cotxe elèctric</string>
+    <string name="categoria_bomba_aigua">Bomba d\'aigua</string>
+    <!-- La bomba i el filtre de la piscina -->
+    <string name="categoria_depuradora">Depuradora</string>
+    <!-- Un aparell que no és de cap dels tipus de la llista -->
+    <string name="categoria_altres">Un altre</string>
+
+    <!-- D'on surt el consum teòric d'un aparell -->
+    <string name="font_etiqueta">Etiqueta (QR)</string>
+    <!-- La placa de característiques de l'aparell -->
+    <string name="font_placa">Placa</string>
+    <string name="font_manual">Escrit a mà</string>
+    <string name="font_tipic">Valor típic</string>
+
+    <!-- Els països de la tarifa -->
+    <string name="pais_es">Espanya</string>
+    <string name="pais_nl">Països Baixos</string>
+    <string name="pais_altre">Un altre</string>
+
+    <!-- Les franges horàries del preu -->
+    <!-- Espanya, tarifa 2.0TD: les hores cares (punta) -->
+    <string name="franja_punta">Punta</string>
+    <!-- Espanya, tarifa 2.0TD: les hores de preu mitjà (llano) -->
+    <string name="franja_pla">Pla</string>
+    <!-- Espanya, tarifa 2.0TD: les hores barates (valle) -->
+    <string name="franja_vall">Vall</string>
+    <!-- Països Baixos: el tarief normaal, com al contracte -->
+    <string name="franja_normaal">Normaal</string>
+    <!-- Països Baixos: el daltarief, com al contracte -->
+    <string name="franja_dal">Dal</string>
+    <!-- Un sol preu a totes les hores -->
+    <string name="franja_unica">Preu únic</string>
+    <!-- Contracte dinàmic: cada hora té el preu del mercat -->
+    <string name="franja_mercat">Preu de mercat</string>
+
+    <!-- Les pestanyes de baix -->
+    <string name="pestanya_ara">Ara</string>
+    <string name="pestanya_aparells">Aparells</string>
+    <!-- On s'ensenya a l'app quin aparell s'encén -->
+    <string name="pestanya_entrena">Entrena</string>
+    <string name="pestanya_historial">Historial</string>
+
+    <!-- Els períodes de l'historial -->
+    <string name="periode_dia">Dia</string>
+    <string name="periode_setmana">Setmana</string>
+    <string name="periode_mes">Mes</string>
+
+    <!-- Comú a diverses pantalles -->
+    <!-- %1$s i %2$s són imports en euros -->
+    <string name="comu_consum_mes_fixos">%1$s de consum + %2$s de fixos</string>
+    <!-- Als Països Baixos els fixos poden ser negatius -->
+    <string name="comu_consum_menys_fixos">%1$s de consum − %2$s de fixos (el descompte d\'impostos supera les quotes)</string>
+    <string name="comu_sense_preus_avui">Encara no tinc els preus d\'avui. Es baixen sols quan hi ha internet.</string>
+    <!-- L'inici de l'eix de les hores (les 0 hores) -->
+    <string name="comu_hora_zero">0 h</string>
+
+    <!-- L'etiqueta energètica (EPREL) -->
+    <string name="eprel_consum_anual">consum anual de l\'etiqueta</string>
+    <string name="eprel_cada_100_rentades">%1$s kWh cada 100 rentades, a %2$d rentades l\'any</string>
+    <string name="eprel_w_hores">%1$s W encès, %2$d hores al dia</string>
+    <string name="eprel_sense_consum">l\'etiqueta no dona un consum anual: s\'ha posat un valor típic</string>
+
+    <!-- Errors -->
+    <string name="error_eprel_no_hi_es">No hi ha cap aparell amb el número %1$s</string>
+    <!-- %1$d és el codi HTTP -->
+    <string name="error_eprel_resposta">L\'EPREL ha respost %1$d</string>
+    <string name="error_foto">No puc obrir la foto</string>
+    <string name="error_ocr">No s\'ha pogut engegar el lector de text</string>
+    <string name="error_pdf">No es pot obrir el PDF</string>
+    <!-- %1$s és una data -->
+    <string name="error_pvpc">Red Eléctrica no ha donat el PVPC del %1$s</string>
+    <!-- %1$d és el codi HTTP -->
+    <string name="error_github">GitHub ha respost %1$d</string>
+    <string name="error_baixada">No s\'ha pogut baixar (HTTP %1$d)</string>
+
+    <!-- La notificació de consum inesperat -->
+    <!-- El nom del canal de notificacions, a la configuració d'Android -->
+    <string name="avis_canal">Consum inesperat</string>
+    <string name="avis_canal_descripcio">Quan s\'encén una cosa que l\'app no reconeix</string>
+    <string name="avis_titol">Hi ha +%1$s W que no reconec</string>
+    <!-- %1$s és l'hora (17:05) -->
+    <string name="avis_text">Des de les %1$s. No s\'assembla a cap aparell que m\'hagis ensenyat. Què és?</string>
+    <!-- El botó de la notificació per triar un aparell que no és cap dels proposats -->
+    <string name="avis_un_altre">Un altre…</string>
+    <!-- %1$s és el nom de l'aparell -->
+    <string name="avis_respost">Has respost «%1$s». L\'he après.</string>
+    <string name="avis_respost_sense_nom">Has respost. L\'he après.</string>
+
+    <!-- Pantalla principal: títols de dalt i botons -->
+    <string name="principal_configuracio">Configuració</string>
+    <string name="principal_connecta">Connecta el Shelly</string>
+    <string name="principal_afegeix_aparell">Afegeix un aparell</string>
+    <!-- Títol del qüestionari, que repassa la casa estança per estança -->
+    <string name="principal_revisem_casa">Revisem la casa</string>
+    <string name="principal_preu_llum">Preu de la llum</string>
+    <!-- Títol de dalt a la pestanya Ara -->
+    <string name="principal_casa">Casa</string>
+    <!-- Descripció del botó de tornar enrere (per a TalkBack) -->
+    <string name="principal_enrere">Enrere</string>
+    <!-- Descripció del botó de sincronitzar (per a TalkBack) -->
+    <string name="principal_recull_dades">Recull les dades del Shelly</string>
+
+    <!-- Pantalla Ara -->
+    <!-- La pastilla de dalt: d'on arriba la lectura -->
+    <string name="ara_origen_local">A casa · directe, cada segon</string>
+    <string name="ara_origen_nuvol">Des de fora · núvol de Shelly</string>
+    <string name="ara_connectant">Connectant…</string>
+    <string name="ara_sense_connexio">No arribo al Shelly ni al núvol</string>
+    <string name="ara_falta_clau">Fora de casa: posa la clau del núvol per veure-ho</string>
+    <!-- %1$s és el número de la versió (0.9) -->
+    <string name="ara_versio_nova">Hi ha una versió nova de l\'app (%1$s).</string>
+    <string name="ara_actualitza">Actualitza</string>
+    <!-- A sota dels watts d'ara: %1$s és el que costa una hora al ritme d'ara, %2$s els kWh d'avui i %3$s el que han costat -->
+    <string name="ara_resum_amb_preu">Ara gastes %1$s l\'hora · avui %2$s kWh, %3$s</string>
+    <!-- El mateix, quan no se sap el preu d'ara: %1$s són els kWh d'avui i %2$s el que han costat -->
+    <string name="ara_resum">avui %1$s kWh, %2$s</string>
+    <string name="ara_ultimes_24h">Últimes 24 hores</string>
+    <string name="ara_dades_wifi">Les dades es recullen del Shelly quan el mòbil és a la wifi de casa.</string>
+    <string name="ara_mes_barat_avui">Quan és més barat avui</string>
+    <string name="ara_que_hi_ha_ences">Què hi ha encès ara</string>
+    <!-- La línia que mesura la segona pinça del Shelly -->
+    <string name="ara_linia_subtitol">%1$s W · segona pinça, mesurat</string>
+    <!-- El consum que no s'apaga mai (fons) -->
+    <string name="ara_sempre_ences">Sempre encès</string>
+    <string name="ara_sempre_subtitol">%1$s W · nevera, router, espera…</string>
+    <!-- Un aparell que l'app ja ha après a reconèixer -->
+    <string name="ara_aparell_apres">%1$s W · après</string>
+    <!-- Un aparell que l'app encara està aprenent (té alguna mostra, però no prou) -->
+    <string name="ara_aparell_aprenent">%1$s W · aprenent</string>
+    <string name="ara_sense_identificar">Sense identificar</string>
+    <string name="ara_residu_sense_fons">%1$s W · cal un dia de dades per saber el fons</string>
+    <string name="ara_residu_entrena">%1$s W · entrena l\'app</string>
+    <!-- El que costa una hora: %1$s és un import en euros -->
+    <string name="ara_euros_hora">%1$s/h</string>
+    <!-- %1$s són volt-amperes, %2$s el factor de potència (0,95) i %3$s la tensió en volts -->
+    <string name="ara_detall">Ara: %1$s VA · factor de potència %2$s · %3$s V</string>
+    <string name="ara_comprova_wifi">Comprova que el mòbil és a la wifi de casa i que l\'adreça del Shelly és bona (Configuració).</string>
+    <!-- La pastilla del preu: %1$s és el nom de la franja (Punta, Normaal...) i %2$d l'hora en què canvia -->
+    <string name="ara_franja_fins_a">%1$s fins a les %2$d h</string>
+    <!-- %1$s és la franja (amb el «fins a les» si n'hi ha) i %2$s el preu d'un kWh, amb 3 decimals -->
+    <string name="ara_pastilla_preu">%1$s · el kWh a %2$s €</string>
+    <string name="ara_pastilla_sense_preu">%1$s · encara sense preu</string>
+    <string name="ara_ja_barat">Ara ja és de les hores barates.</string>
+    <!-- %1$d és l'hora més barata, %2$s el seu preu i %3$s quant per cent menys que ara -->
+    <string name="ara_mes_barata">La més barata de les properes 24 h, a les %1$d h: %2$s €/kWh (%3$s %% menys).</string>
+    <string name="ara_avis_car_titol">Molt consum en una hora cara</string>
+    <!-- %1$s són els watts d'ara, %2$s el preu del kWh d'ara, %3$d l'hora més barata, %4$s el que costaria una hora aleshores i %5$s el que costa ara -->
+    <string name="ara_avis_car_text">Ara gastes %1$s W a %2$s €/kWh. Si ho poguessis fer a les %3$d h, cada hora així costaria %4$s en lloc de %5$s.</string>
+
+    <!-- Gràfiques -->
+    <string name="grafiques_sense_dades">Encara no hi ha dades</string>
+    <!-- Les hores de l'eix de baix de la gràfica (6 h, 12 h...) -->
+    <string name="grafiques_hora">%1$d h</string>
+
+    <!-- Pantalla Historial -->
+    <string name="historial_ultimes_24h">Últimes 24 hores</string>
+    <string name="historial_ultims_7_dies">Últims 7 dies</string>
+    <string name="historial_ultims_30_dies">Últims 30 dies</string>
+    <!-- El consum que no s'apaga mai (fons) -->
+    <string name="historial_sempre_ences">Sempre encès</string>
+    <!-- %1$s són els watts de fons, %2$s el percentatge del total (25 %) i %3$s el que ha costat -->
+    <string name="historial_fons">%1$s W de fons · %2$s · %3$s</string>
+    <string name="historial_cal_un_dia">cal un dia de dades</string>
+    <string name="historial_sense_identificar">Sense identificar</string>
+    <string name="historial_costos_fixos">Costos fixos</string>
+    <string name="historial_no_depenen_us">no depenen de l\'ús</string>
+    <string name="historial_nota_aparells">Quan l\'app hagi après els aparells, aquí sortirà cadascun amb el seu color.</string>
+
+    <!-- Pantalla Aparells -->
+    <string name="aparells_aquest_mes">Aquest mes, fins ara</string>
+    <!-- La llegenda dels punts: com de segur és cada número -->
+    <string name="aparells_llegenda_mesurat">mesurat o après</string>
+    <string name="aparells_llegenda_etiqueta">etiqueta</string>
+    <string name="aparells_llegenda_tipic">típic o sense identificar</string>
+    <!-- %1$s són els watts que no s'apaguen mai i %2$s el que costen en un any -->
+    <string name="aparells_consell_fons">Sempre encès: %1$s W dia i nit són %2$s € l\'any. Mira quins aparells es queden en espera.</string>
+    <!-- %1$s és el nom de la línia de la segona pinça, %2$d el percentatge en hores cares i %3$s l'estalvi en euros -->
+    <string name="aparells_consell_linia">%1$s: el %2$d %% del consum és en hores cares. A les hores barates, aquest mes hauria costat uns %3$s menys.</string>
+    <plurals name="aparells_consell_tipics">
+        <item quantity="one">%1$d aparell té un valor típic. Escaneja\'n l\'etiqueta perquè el número sigui més segur.</item>
+        <item quantity="other">%1$d aparells tenen un valor típic. Escaneja\'n l\'etiqueta perquè el número sigui més segur.</item>
+    </plurals>
+    <string name="aparells_que_pots_fer">Què pots fer</string>
+    <string name="aparells_mesurat_mes">Mesurat aquest mes</string>
+    <!-- La línia que mesura la segona pinça del Shelly -->
+    <string name="aparells_linia_subtitol">%1$s kWh · segona pinça</string>
+    <!-- El consum que no s'apaga mai (fons) -->
+    <string name="aparells_sempre_ences">Sempre encès</string>
+    <!-- %1$s són els kWh repartits a l'aparell aquest mes i %2$s els que diu l'etiqueta per a un mes -->
+    <string name="aparells_aparell_apres">%1$s kWh · après · l\'etiqueta diu %2$s kWh/mes</string>
+    <string name="aparells_aparell_aprenent">%1$s kWh · aprenent · l\'etiqueta diu %2$s kWh/mes</string>
+    <string name="aparells_sense_identificar">Sense identificar</string>
+    <string name="aparells_residu">%1$s kWh · entrena per separar-ho</string>
+    <string name="aparells_costos_fixos">Costos fixos</string>
+    <!-- %1$s diu què hi ha als costos fixos (potència, comptador i bo social...) -->
+    <string name="aparells_fixos_subtitol">%1$s · no depenen de l\'ús</string>
+    <string name="aparells_cap_aparell">Encara no hi ha cap aparell</string>
+    <string name="aparells_comenca_questionari">Comença pel qüestionari: anirem estança per estança perquè no te\'n deixis cap.</string>
+    <!-- El botó que obre el qüestionari -->
+    <string name="aparells_revisem_casa">Revisem la casa</string>
+    <string name="aparells_segons_etiqueta">Els teus aparells, segons l\'etiqueta</string>
+    <!-- %1$s és el preu mitjà del kWh i %2$s el que sumen al mes els aparells encara no entrenats -->
+    <string name="aparells_nota_etiqueta">Encara no entrenats: és el que haurien de gastar, no el que gasten, a %1$s €/kWh de mitjana. Sumen %2$s al mes.</string>
+    <!-- L'aparell que es diu com la línia de la segona pinça: es mesura directament -->
+    <string name="aparells_mesurat_pinca2">mesurat a la pinça 2 · l\'etiqueta diu %1$s kWh/any</string>
+    <!-- %1$s són els kWh l'any i %2$s d'on surt el valor (Etiqueta, Placa, Valor típic...) -->
+    <string name="aparells_kwh_any_font">%1$s kWh/any · %2$s</string>
+    <!-- %1$s és un import en euros -->
+    <string name="aparells_euros_mes">%1$s/mes</string>
+    <string name="aparells_torna_questionari">Torna a fer el qüestionari</string>
+    <!-- La fitxa d'un aparell: %1$s és la classe de l'etiqueta (A, B...) -->
+    <string name="aparells_classe">Classe energètica %1$s</string>
+    <string name="aparells_kwh_euros_any">%1$s kWh l\'any ≈ %2$s € l\'any</string>
+    <!-- El consum en espera (stand-by) -->
+    <string name="aparells_en_espera">En espera: %1$s W</string>
+    <!-- %1$s són els watts de la referència i %2$d les mostres que l'usuari ha ensenyat -->
+    <plurals name="aparells_referencia">
+        <item quantity="one">Referència apresa: %1$s W, d\'%2$d mostra</item>
+        <item quantity="other">Referència apresa: %1$s W, de %2$d mostres</item>
+    </plurals>
+    <!-- El mateix, i %3$s són els minuts que sol estar encès -->
+    <plurals name="aparells_referencia_durada">
+        <item quantity="one">Referència apresa: %1$s W, d\'%2$d mostra · sol estar encès %3$s min</item>
+        <item quantity="other">Referència apresa: %1$s W, de %2$d mostres · sol estar encès %3$s min</item>
+    </plurals>
+    <string name="aparells_torna_entrenar">Torna a entrenar-lo</string>
+    <string name="aparells_es_tipic">És un valor típic: escaneja l\'etiqueta per afinar-lo.</string>
+    <string name="aparells_dacord">D\'acord</string>
+    <string name="aparells_esborra">Esborra\'l</string>
+
+    <!-- Pantalla Entrena -->
+    <string name="entrena_avisos_titol">Avisos de consum inesperat</string>
+    <string name="entrena_avisos_nota">Si s\'encén alguna cosa que no reconec i dura més de 10 minuts, t\'ho preguntaré amb una notificació.</string>
+    <string name="entrena_activa_avisos">Activa els avisos</string>
+    <string name="entrena_en_directe">Ensenya-li en directe</string>
+    <string name="entrena_instruccions">Encén o apaga un aparell i toca el botó de seguida. L\'app mesura el salt en mig minut; millor si mentrestant no s\'encén res més.</string>
+    <!-- La potència d'ara: %1$s són watts -->
+    <string name="entrena_ara_w">Ara %1$s W</string>
+    <!-- La potència d'ara sense la línia que mesura la segona pinça -->
+    <string name="entrena_ara_w_sense_pinca">Ara %1$s W sense la pinça 2</string>
+    <string name="entrena_sense_lectura">Sense lectura del Shelly</string>
+    <string name="entrena_primer_afegeix">Primer afegeix els aparells, a la pestanya Aparells.</string>
+    <string name="entrena_nota_casa">Funciona millor a casa, on el Shelly dona una lectura cada segon. Des de fora, pel núvol, n\'arriba una cada 5 segons.</string>
+    <string name="entrena_cap_mostra">encara cap mostra</string>
+    <!-- %1$s són els watts de la referència i %2$d les mostres -->
+    <plurals name="entrena_apres">
+        <item quantity="one">%1$s W · après (%2$d mostra)</item>
+        <item quantity="other">%1$s W · après (%2$d mostres)</item>
+    </plurals>
+    <!-- %1$s són els watts, %2$d les mostres que hi ha i %3$d les que calen per aprendre'l -->
+    <string name="entrena_mostres_de">%1$s W · %2$d de %3$d mostres</string>
+    <string name="entrena_mesurant">Mesurant…</string>
+    <string name="entrena_he_apagat">L\'he apagat</string>
+    <string name="entrena_he_ences">L\'he encès</string>
+    <!-- La pregunta sobre un consum inesperat -->
+    <string name="entrena_pregunta">Pregunta</string>
+    <string name="entrena_que_era">Què era això?</string>
+    <!-- %1$s és l'hora (17:05) i %2$s els watts de més -->
+    <string name="entrena_pregunta_text">Des de les %1$s · +%2$s W que no reconeixia</string>
+    <!-- Per triar un aparell que no és cap dels proposats -->
+    <string name="entrena_un_altre">Un altre…</string>
+    <string name="entrena_no_ho_se">No ho sé</string>
+
+    <!-- Pantalla Afegir -->
+    <!-- Les tres pestanyes de dalt: com s'afegeix l'aparell -->
+    <string name="afegir_via_qr">QR etiqueta</string>
+    <!-- La placa de característiques de l'aparell -->
+    <string name="afegir_via_placa">Placa</string>
+    <string name="afegir_via_model">Model</string>
+    <string name="afegir_qr_no_etiqueta">Aquest QR no és d\'una etiqueta energètica europea.</string>
+    <string name="afegir_error_eprel">No he pogut llegir l\'EPREL</string>
+    <string name="afegir_qr_titol">Escaneja el QR de l\'etiqueta energètica</string>
+    <string name="afegir_qr_nota">Les etiquetes noves (des del 2021) porten un QR a dalt a la dreta. L\'app en treu el consum de la base de dades europea (EPREL).</string>
+    <!-- Surt a la pantalla de l'escàner, sobre la càmera -->
+    <string name="afegir_qr_apunta">Apunta al QR de l\'etiqueta energètica</string>
+    <string name="afegir_escaneja">Escaneja</string>
+    <!-- El camp per escriure a mà el número de registre de l'etiqueta -->
+    <string name="afegir_numero_eprel">O el número EPREL</string>
+    <string name="afegir_busca">Busca</string>
+    <!-- %1$s és el número de registre EPREL -->
+    <string name="afegir_trobat_eprel">Trobat a l\'EPREL (%1$s)</string>
+    <!-- %1$s és el tipus d'aparell; %2$s, la classe energètica (A, B... G) -->
+    <string name="afegir_tipus_i_classe">%1$s · classe %2$s</string>
+    <string name="afegir_kwh_any">%1$s kWh l\'any</string>
+    <string name="afegir_sense_consum_anual">Sense consum anual</string>
+    <!-- El consum en espera (stand-by) -->
+    <string name="afegir_en_espera">En espera: %1$s W</string>
+    <string name="afegir_nom_app">Nom a l\'app</string>
+    <string name="afegir_afegeix_lo">Afegeix-lo</string>
+    <string name="afegir_quin_aparell">Quin aparell és?</string>
+    <string name="afegir_nom_i_model">Nom (i model, si el saps)</string>
+    <string name="afegir_consum_kwh_any">Consum, kWh l\'any</string>
+    <!-- Sota el consum anual, si l'usuari l'ha canviat -->
+    <string name="afegir_escrit_per_tu">El que has escrit tu</string>
+    <!-- Sota el consum anual, si encara és el valor típic del tipus d'aparell -->
+    <string name="afegir_valor_tipic">És un valor típic: canvia\'l si el saps</string>
+    <string name="afegir_error_foto">No he pogut llegir la foto</string>
+    <string name="afegir_sense_permis_camera">Sense permís de càmera. Pots triar una foto que ja tinguis.</string>
+    <string name="afegir_placa_titol">Foto de la placa de característiques</string>
+    <string name="afegir_placa_nota">És l\'etiqueta platejada o blanca del darrere o de dins de la porta. Fes-la de prop, recta i sense reflexos. La foto es llegeix dins del mòbil i no s\'envia enlloc.</string>
+    <string name="afegir_fes_la_foto">Fes la foto</string>
+    <!-- Botó per triar una foto de la galeria -->
+    <string name="afegir_tria_foto">Tria\'n una</string>
+    <string name="afegir_llegint_placa">Llegint la placa…</string>
+    <!-- Descripció de la imatge per a l'accessibilitat -->
+    <string name="afegir_foto_placa">La foto de la placa</string>
+    <!-- %1$s és la potència que l'app ha llegit a la foto -->
+    <string name="afegir_he_llegit">He llegit %1$s W</string>
+    <!-- La placa no diu els watts: s'han calculat amb els amperes i la tensió -->
+    <string name="afegir_he_llegit_amperes">He llegit %1$s W, calculats amb els amperes</string>
+    <!-- %1$s és el tros de text de la placa d'on surt la potència -->
+    <string name="afegir_a_la_placa">A la placa: «%1$s»</string>
+    <string name="afegir_sense_potencia">No he trobat la potència. Escriu-la tu, o torna a fer la foto més de prop.</string>
+    <string name="afegir_amaga_llegit">Amaga el que he llegit</string>
+    <string name="afegir_mira_llegit">Mira tot el que he llegit</string>
+    <!-- Quan l'app no ha llegit cap text a la foto -->
+    <string name="afegir_res">(res)</string>
+    <string name="afegir_nom">Nom</string>
+    <string name="afegir_potencia">Potència</string>
+    <string name="afegir_hores_al_dia">Hores al dia que funciona, de mitjana</string>
+    <string name="afegir_hores_ajuda">Comptant només quan escalfa o fa força. Per exemple, un bullidor uns 7 minuts: 0,1.</string>
+    <string name="afegir_kwh_any_aprox">≈ %1$s kWh l\'any</string>
+
+    <!-- Pantalla Qüestionari -->
+    <!-- Les estances del qüestionari, una per pas -->
+    <string name="questionari_estanca_calefaccio">Calefacció i aigua calenta</string>
+    <string name="questionari_estanca_cuina">Cuina</string>
+    <!-- On hi ha la rentadora i l'assecadora -->
+    <string name="questionari_estanca_rentador">Rentador</string>
+    <string name="questionari_estanca_sala">Sala</string>
+    <string name="questionari_estanca_habitacions">Habitacions i despatx</string>
+    <string name="questionari_estanca_bany">Bany</string>
+    <string name="questionari_estanca_exterior">Exterior, garatge i cotxe</string>
+    <!-- Les preguntes -->
+    <string name="questionari_com_escalfa">Com s\'escalfa la casa?</string>
+    <string name="questionari_aigua_calenta">I l\'aigua calenta?</string>
+    <string name="questionari_aire">Hi ha aire condicionat?</string>
+    <string name="questionari_que_cuina">Què tens a la cuina?</string>
+    <!-- La placa de cuina; les respostes són Inducció, Vitroceràmica i Gas -->
+    <string name="questionari_placa_es">La placa és…</string>
+    <string name="questionari_que_rentador">Què hi ha al rentador?</string>
+    <string name="questionari_que_sala">Què hi ha a la sala?</string>
+    <string name="questionari_que_habitacions">Què hi ha a les habitacions i al despatx?</string>
+    <string name="questionari_que_bany">Què hi ha al bany?</string>
+    <string name="questionari_que_fora">I a fora?</string>
+    <!-- Les respostes. Les que són un aparell es desen com a nom de l'aparell -->
+    <string name="questionari_caldera_gas">Caldera de gas</string>
+    <string name="questionari_estufes_radiadors">Estufes o radiadors elèctrics</string>
+    <!-- La calefacció central del barri o de la ciutat (district heating) -->
+    <string name="questionari_calefaccio_barri">Calefacció de barri</string>
+    <!-- Resposta a «Com s'escalfa la casa?»: no hi ha calefacció -->
+    <string name="questionari_no_n_hi_ha">No n\'hi ha</string>
+    <!-- Resposta a «I l'aigua calenta?» -->
+    <string name="questionari_mateixa_caldera">La mateixa caldera o bomba</string>
+    <!-- L'aparell de gas que escalfa l'aigua a l'instant -->
+    <string name="questionari_escalfador_gas">Escalfador de gas</string>
+    <string name="questionari_induccio">Inducció</string>
+    <string name="questionari_vitroceramica">Vitroceràmica</string>
+    <string name="questionari_gas">Gas</string>
+    <string name="questionari_altre_congelador">Un altre congelador</string>
+    <string name="questionari_altaveus">Altaveus</string>
+    <string name="questionari_altre_televisor">Un altre televisor</string>
+    <string name="questionari_impressora">Impressora</string>
+    <string name="questionari_estufa_bany">Estufa de bany</string>
+    <string name="questionari_depuradora_piscina">Depuradora de piscina</string>
+    <string name="questionari_eines">Eines</string>
+    <!-- El nom de l'aparell que es crea si la placa de cuina és d'inducció o vitroceràmica -->
+    <string name="questionari_placa_induccio">Placa (inducció)</string>
+    <string name="questionari_placa_vitroceramica">Placa (vitroceràmica)</string>
+    <!-- %1$d és el pas, %2$d quants n'hi ha i %3$s el nom de l'estança -->
+    <string name="questionari_estanca_n">Estança %1$d de %2$d · %3$s</string>
+    <string name="questionari_nota">Cada aparell que marquis queda a la llista amb un valor típic, i en pots escanejar l\'etiqueta quan vulguis.</string>
+    <string name="questionari_enrere">Enrere</string>
+    <!-- %1$s és el nom de l'estança següent, en minúscules -->
+    <string name="questionari_seguent">Següent: %1$s</string>
+    <string name="questionari_fet">Fet</string>
+
+    <!-- Pantalla Preu: escanejar el contracte o la factura -->
+    <!-- Els preus del contracte dels Països Baixos: es diuen com al contracte, en neerlandès -->
+    <string name="escaneig_camp_nl_normaal">Leveringstarief · Normaal</string>
+    <string name="escaneig_camp_nl_dal">Leveringstarief · Dal</string>
+    <string name="escaneig_camp_nl_enkel">Leveringstarief</string>
+    <string name="escaneig_camp_nl_eb">Energiebelasting (EB)</string>
+    <string name="escaneig_camp_nl_vaste">Vaste leveringskosten</string>
+    <string name="escaneig_camp_nl_netbeheer">Netbeheerkosten</string>
+    <string name="escaneig_camp_nl_vermindering">Vermindering energiebelasting</string>
+    <string name="escaneig_camp_nl_inkoop">Inkoopvergoeding</string>
+    <!-- Els preus de la factura d'Espanya (tarifa 2.0TD) -->
+    <string name="escaneig_camp_es_potencia">Potència contractada</string>
+    <string name="escaneig_camp_es_p1">Potència P1</string>
+    <string name="escaneig_camp_es_p2">Potència P2 (vall)</string>
+    <string name="escaneig_camp_es_punta">Energia, punta</string>
+    <string name="escaneig_camp_es_pla">Energia, pla</string>
+    <string name="escaneig_camp_es_vall">Energia, vall</string>
+    <string name="escaneig_camp_es_fix">Energia, preu únic</string>
+    <!-- L'impuesto especial sobre la electricidad -->
+    <string name="escaneig_camp_es_iee">Impost elèctric</string>
+    <string name="escaneig_camp_es_iva">IVA</string>
+    <string name="escaneig_camp_es_comptador">Lloguer del comptador</string>
+    <string name="escaneig_camp_es_bo_social">Finançament del bo social</string>
+    <!-- Cada preu amb la seva unitat: %1$s és el número -->
+    <string name="escaneig_unitat_eur_kwh">%1$s €/kWh</string>
+    <!-- Els fixos per dia del contracte dels Països Baixos (com al contracte) -->
+    <string name="escaneig_unitat_eur_dag">%1$s €/dag</string>
+    <string name="escaneig_unitat_kw">%1$s kW</string>
+    <string name="escaneig_unitat_eur_kw_dia">%1$s €/kW i dia</string>
+    <string name="escaneig_unitat_percent">%1$s %%</string>
+    <string name="escaneig_unitat_eur_mes">%1$s €/mes</string>
+    <string name="escaneig_unitat_eur_dia">%1$s €/dia</string>
+    <!-- %1$s és el país i el tipus de contracte -->
+    <string name="escaneig_contracte">Contracte: %1$s</string>
+    <string name="escaneig_contracte_nl_fix">Països Baixos · preu fix</string>
+    <string name="escaneig_contracte_nl_franges">Països Baixos · normaal i dal</string>
+    <string name="escaneig_contracte_nl_dinamic">Països Baixos · dinàmic</string>
+    <string name="escaneig_contracte_es_fix">Espanya · preu fix</string>
+    <string name="escaneig_contracte_es_franges">Espanya · per franges</string>
+    <string name="escaneig_contracte_es_pvpc">Espanya · PVPC</string>
+    <string name="escaneig_obrint">Obrint el document…</string>
+    <!-- %1$d és la pàgina que es llegeix i %2$d quantes en té el document -->
+    <string name="escaneig_llegint_pagina">Llegint la pàgina %1$d de %2$d…</string>
+    <string name="escaneig_cap_preu">No hi he trobat cap preu. Prova amb el PDF, o amb una foto més de prop.</string>
+    <string name="escaneig_error_document">No he pogut llegir el document.</string>
+    <string name="escaneig_sense_permis_camera">Sense permís de càmera. Pots triar el PDF.</string>
+    <string name="escaneig_titol">Omple-ho amb el contracte o la factura</string>
+    <string name="escaneig_nota">Fes-ne una foto o tria\'n el PDF. L\'app hi busca els preus i te\'ls ensenya abans de posar-los. Tot es llegeix dins del mòbil.</string>
+    <string name="escaneig_foto">Foto</string>
+    <string name="escaneig_tria">Tria un PDF o una foto</string>
+    <string name="escaneig_he_trobat">He trobat al document</string>
+    <!-- Surt sota el preu de la vall quan la factura només en té dos (punta i pla/vall junts) -->
+    <string name="escaneig_vall_deduida">La factura només té dos preus: el del pla també per a la vall</string>
+    <!-- %1$s és el tros del document d'on surt el preu, entre cometes -->
+    <string name="escaneig_fragment">«%1$s»</string>
+    <string name="escaneig_nota_revisio">Sota cada número hi ha el tros del document d\'on surt. Desmarca el que no sigui bo.</string>
+    <string name="escaneig_no_trobat">No ho he trobat</string>
+    <string name="escaneig_no_falta_res">Res: hi havia tot el que cal.</string>
+    <!-- %1$s és la llista dels preus que no s'han trobat, separats per comes -->
+    <string name="escaneig_falten">%1$s. Es queda el que ja hi havia.</string>
+    <string name="escaneig_cancella">Cancel·la</string>
+    <!-- Posa els preus marcats al formulari -->
+    <string name="escaneig_posa_ls">Posa\'ls</string>
+
+    <!-- Pantalla Configuració (la primera, per connectar el Shelly) -->
+    <string name="connecta_titol_shelly">1. El Shelly a la wifi de casa</string>
+    <string name="connecta_buscant">Buscant Shelly a la wifi… Si no surt, escriu-ne l\'adreça (és a l\'app de Shelly).</string>
+    <string name="connecta_adreca">Adreça del Shelly</string>
+    <!-- El botó per comprovar que s'arriba al Shelly -->
+    <string name="connecta_prova">Prova</string>
+    <string name="connecta_no_hi_arribo">No hi arribo. Comprova l\'adreça i que el mòbil és a la wifi de casa.</string>
+    <!-- El Shelly trobat: %1$s és el nom, %2$s el model i %3$s la versió del firmware -->
+    <string name="connecta_info_shelly">%1$s · %2$s · versió %3$s</string>
+    <string name="connecta_titol_pinces">2. Les pinces</string>
+    <string name="connecta_pinca_1">Pinça 1: tota la casa</string>
+    <string name="connecta_pinca_2">Pinça 2: què mesura?</string>
+    <!-- Exemples del nom de la línia que mesura la segona pinça -->
+    <string name="connecta_pinca_2_exemple">Per exemple: Cuina, Rentadora, Termo</string>
+    <string name="connecta_pinca_2_ajuda">Deixa-ho buit si només hi ha una pinça.</string>
+    <string name="connecta_titol_nuvol">3. Per veure-ho des de fora de casa</string>
+    <!-- Els noms del camí són els menús de l'app de Shelly -->
+    <string name="connecta_nuvol_nota">És opcional. A l\'app de Shelly: Configuració → Llar → Accés i permisos → Cloud Key. Hi ha la clau i el servidor. La clau es queda només en aquest mòbil.</string>
+    <string name="connecta_servidor">Servidor</string>
+    <string name="connecta_clau">Clau del núvol</string>
+    <string name="connecta_id">ID del Shelly</string>
+    <string name="connecta_id_ajuda">Es posa sol si l\'has provat a casa. Si no, és a la informació del dispositiu de l\'app de Shelly.</string>
+    <string name="connecta_prova_nuvol">Prova el núvol</string>
+    <!-- %1$s són els watts que marca ara el Shelly -->
+    <string name="connecta_nuvol_respon">El núvol respon: ara %1$s W</string>
+    <string name="connecta_nuvol_no_coneix">El núvol no coneix aquest Shelly. Mira l\'ID.</string>
+    <string name="connecta_clau_dolenta">La clau no és bona.</string>
+    <!-- %1$s és l'error tècnic (sovint en anglès) -->
+    <string name="connecta_no_arribo_nuvol">No arribo al núvol: %1$s</string>
+    <string name="connecta_titol_preu">4. El preu de la llum</string>
+    <string name="connecta_canvia_preu">Canvia el preu</string>
+    <string name="connecta_preu_despres">El posaràs després de connectar el Shelly, des d\'aquí mateix o tocant el preu a la pantalla Ara.</string>
+    <!-- El selector de la llengua de l'app (Android 13 o més nou) -->
+    <string name="connecta_idioma">Idioma</string>
+    <!-- L'opció de fer servir la llengua del mòbil -->
+    <string name="connecta_idioma_mobil">Com el mòbil</string>
+    <string name="connecta_actualitzacions">Actualitzacions</string>
+    <!-- %1$s és un número de versió (0.10) -->
+    <string name="connecta_versio_actual">Tens la versió %1$s.</string>
+    <string name="connecta_baixant">Baixant la versió %1$s…</string>
+    <string name="connecta_versio_nova">Hi ha la versió %1$s.</string>
+    <string name="connecta_actualitza">Actualitza</string>
+    <!-- Els noms entre «» i del camí són els textos d'un Samsung en aquesta llengua -->
+    <string name="connecta_samsung">En un Samsung, si surt «S\'ha bloquejat una aplicació desconeguda», desactiva Ajustaments → Seguretat i privadesa → Bloquejador automàtic i torna-ho a provar.</string>
+    <string name="connecta_mira_noves">Mira si n\'hi ha de noves</string>
+    <string name="connecta_desa">Desa</string>
+    <!-- El botó de desar, el primer cop que es configura l'app -->
+    <string name="connecta_comenca">Comença</string>
+    <string name="connecta_prova_primer">Prova primer el Shelly a casa, o el núvol.</string>
+
+    <!-- Pantalla del preu de la llum -->
+    <!-- El resum de la tarifa a la Configuració; %1$s és la potència contractada en kW -->
+    <string name="preu_resum_es_fix">Espanya · preu fix · %1$s kW</string>
+    <string name="preu_resum_es_franges">Espanya · 3 franges · %1$s kW</string>
+    <string name="preu_resum_es_pvpc">Espanya · PVPC · %1$s kW</string>
+    <string name="preu_resum_nl_fix">Països Baixos · preu fix</string>
+    <string name="preu_resum_nl_franges">Països Baixos · normaal i dal</string>
+    <string name="preu_resum_nl_dinamic">Països Baixos · dinàmic</string>
+    <!-- Un altre país: %1$s és el preu del kWh -->
+    <string name="preu_resum_altre">Preu únic · %1$s €/kWh</string>
+    <!-- Què hi ha dins dels costos fixos, en minúscula: a la pantalla Aparells hi va al darrere « · no depenen de l'ús» -->
+    <string name="preu_fixos_es">potència, comptador i bo social</string>
+    <string name="preu_fixos_nl">quotes i descompte d\'impostos</string>
+    <string name="preu_fixos_altre">quotes fixes</string>
+    <string name="preu_quin_contracte">Quin contracte tens?</string>
+    <!-- Els tipus de contracte (pestanyes). Fix: un sol preu a totes les hores -->
+    <string name="preu_contracte_fix">Fix</string>
+    <!-- Espanya: punta, pla i vall -->
+    <string name="preu_contracte_3_franges">3 franges</string>
+    <!-- Països Baixos: els noms del contracte -->
+    <string name="preu_contracte_normaal_dal">Normaal i dal</string>
+    <!-- Cada hora al preu del mercat -->
+    <string name="preu_contracte_dinamic">Dinàmic</string>
+    <!-- Les unitats que surten a la dreta dels camps -->
+    <string name="preu_unitat_mes">€/mes</string>
+    <string name="preu_unitat_dia">€/dia</string>
+    <string name="preu_unitat_kw_dia">€/kW i dia</string>
+    <!-- La unitat dels costos fixos del contracte holandès, com surt al contracte -->
+    <string name="preu_unitat_dag">€/dag</string>
+    <string name="preu_kwh_tot_inclos">Preu del kWh, tot inclòs</string>
+    <string name="preu_costos_fixos">Costos fixos</string>
+    <string name="preu_costos_fixos_ajuda">Quotes que pagues igualment, gastis o no.</string>
+    <string name="preu_desa">Desa</string>
+    <!-- Espanya -->
+    <string name="preu_energia">Energia</string>
+    <string name="preu_kwh_sense_impostos">Preu del kWh, sense impostos</string>
+    <string name="preu_kwh_sense_impostos_ajuda">Com a la factura. S\'hi sumen l\'impost elèctric i l\'IVA.</string>
+    <string name="preu_energia_franges">Energia, per franges</string>
+    <!-- Les hores de cada franja de la tarifa 2.0TD -->
+    <string name="preu_franges_es_nota">Punta 10–14 i 18–22 h · pla 8–10, 14–18 i 22–24 h · vall 0–8 h. Els caps de setmana i festius, tot vall.</string>
+    <!-- %1$s, %2$s i %3$s són els preus del kWh de punta, pla i vall amb impostos -->
+    <string name="preu_amb_impostos_franges">Sense impostos, com a la factura. Amb impostos: %1$s, %2$s i %3$s €.</string>
+    <string name="preu_energia_pvpc">Energia, al preu de cada hora (PVPC)</string>
+    <string name="preu_pvpc_nota">L\'app baixa sola cada dia el PVPC de Red Eléctrica. Hi suma l\'impost elèctric i l\'IVA.</string>
+    <string name="preu_desa_i_es_baixaran">Desa-ho i els preus es baixaran sols.</string>
+    <string name="preu_titol_potencia">Potència contractada (no va als aparells)</string>
+    <string name="preu_potencia">Potència</string>
+    <string name="preu_sense_impostos">Sense impostos, com a la factura.</string>
+    <!-- El cost de la potència contractada; %1$s és un import en euros -->
+    <string name="preu_potencia_al_mes">%1$s al mes, amb impostos</string>
+    <string name="preu_titol_impostos">Impostos i altres</string>
+    <!-- L'impuesto especial sobre la electricidad d'Espanya -->
+    <string name="preu_impost_electric">Impost elèctric</string>
+    <string name="preu_iva">IVA</string>
+    <string name="preu_comptador">Lloguer del comptador</string>
+    <string name="preu_comptador_ajuda">Sense IVA. No va als aparells.</string>
+    <string name="preu_bo_social">Finançament del bo social</string>
+    <string name="preu_bo_social_ajuda">Sense impostos. No va als aparells.</string>
+    <!-- Països Baixos. Els noms dels camps (Leveringstarief, Energiebelasting...) són els del contracte i no es tradueixen -->
+    <string name="preu_nl_nota">Els noms en neerlandès són els del contracte: copia-hi els números tal com hi surten. Els fixos, per dia.</string>
+    <!-- Ajuda del camp Leveringstarief -->
+    <string name="preu_amb_iva_sense_eb">Amb IVA i sense l\'energiebelasting, que va a sota.</string>
+    <string name="preu_titol_normaal_dal">Leveringstarief, normaal i dal</string>
+    <string name="preu_dal_nota">Dal de 23 a 7 h els dies feiners, i tot el dia els caps de setmana i festius.</string>
+    <string name="preu_energia_hora">Energia, al preu de cada hora</string>
+    <string name="preu_dinamic_nl_nota">L\'app baixa sola cada dia el preu de mercat (EnergyZero), que ja porta l\'energiebelasting i l\'IVA. Hi suma el recàrrec del proveïdor.</string>
+    <!-- Ajuda del camp Inkoopvergoeding -->
+    <string name="preu_recarrec_ajuda">El recàrrec del proveïdor, amb IVA.</string>
+    <!-- Ajuda del camp Energiebelasting (EB) -->
+    <string name="preu_eb_ajuda">L\'impost de l\'energia, amb IVA. El 2026, 0,11085.</string>
+    <!-- %1$s és el preu del kWh amb tot -->
+    <string name="preu_cada_kwh">Cada kWh: %1$s €, tot inclòs</string>
+    <!-- %1$s és el preu del kWh normaal i %2$s el del dal, amb tot -->
+    <string name="preu_cada_kwh_dos">Cada kWh: %1$s i %2$s €, tot inclòs</string>
+    <string name="preu_titol_fixos">Costos fixos (no van als aparells)</string>
+    <!-- Ajuda del camp Vermindering energiebelasting -->
+    <string name="preu_descompte_ajuda">Es resta dels altres dos.</string>
+    <!-- %1$s és un import en euros -->
+    <string name="preu_total_fixos">Total fixos: %1$s al mes</string>
+
+    <!-- Missatges d'estat (Configuració i Entrena) -->
+    <string name="vm_ultima_versio">Ja tens l\'última versió.</string>
+    <!-- En mirar si hi ha versió nova; %1$s és l'error -->
+    <string name="vm_no_he_pogut_mirar">No he pogut mirar-ho: %1$s</string>
+    <!-- «Actualitza» és el botó connecta_actualitza -->
+    <string name="vm_permet_installar">Permet que Consum instal·li apps, torna aquí i prem «Actualitza» un altre cop.</string>
+    <!-- %1$s és l'error -->
+    <string name="vm_no_s_ha_pogut_baixar">No s\'ha pogut baixar: %1$s</string>
+    <string name="vm_error_sincronitzacio">No arribo al Shelly de casa</string>
+    <!-- A Entrena, després de prémer «L'he encès» o «L'he apagat» -->
+    <string name="vm_entrena_poques_lectures">Encara no tinc prou lectures. Espera uns segons i torna-ho a provar.</string>
+    <string name="vm_entrena_no_arribo">No arribo al Shelly. Torna-ho a provar.</string>
+    <!-- %1$s és el canvi de potència que s'ha vist, massa petit -->
+    <string name="vm_entrena_cap_canvi">No he vist cap canvi (%1$s W). Torna-ho a provar.</string>
+    <!-- Mostra desada: %1$s és el nom de l'aparell, %2$s el salt de potència, %3$d quantes mostres té i %4$d quantes en calen -->
+    <string name="vm_entrena_desat_encen">%1$s: +%2$s W. Desat (%3$d de %4$d).</string>
+    <string name="vm_entrena_desat_apaga">%1$s: −%2$s W. Desat (%3$d de %4$d).</string>
 </resources>

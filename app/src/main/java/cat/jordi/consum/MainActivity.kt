@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import cat.jordi.consum.dades.Idioma
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -58,6 +60,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Idioma.actualitza(this)
         enableEdgeToEdge()
         obre(intent)
         setContent { TemaConsum { Arrel(vm) } }
@@ -95,11 +98,11 @@ private fun Arrel(vm: ConsumViewModel) {
     BackHandler(enabled = !principal && vm.config.configurat) { vm.pantalla = Pantalla.PRINCIPAL }
 
     val titol = when (vm.pantalla) {
-        Pantalla.CONNECTA -> if (vm.config.configurat) "Configuració" else "Connecta el Shelly"
-        Pantalla.AFEGIR -> "Afegeix un aparell"
-        Pantalla.QUESTIONARI -> "Revisem la casa"
-        Pantalla.PREU -> "Preu de la llum"
-        Pantalla.PRINCIPAL -> if (vm.pestanya == Pestanya.ARA) "Casa" else vm.pestanya.nom
+        Pantalla.CONNECTA -> stringResource(if (vm.config.configurat) R.string.principal_configuracio else R.string.principal_connecta)
+        Pantalla.AFEGIR -> stringResource(R.string.principal_afegeix_aparell)
+        Pantalla.QUESTIONARI -> stringResource(R.string.principal_revisem_casa)
+        Pantalla.PREU -> stringResource(R.string.principal_preu_llum)
+        Pantalla.PRINCIPAL -> stringResource(if (vm.pestanya == Pestanya.ARA) R.string.principal_casa else vm.pestanya.nomId)
     }
     Scaffold(
         containerColor = Fons,
@@ -110,7 +113,7 @@ private fun Arrel(vm: ConsumViewModel) {
                 navigationIcon = {
                     if (!principal && vm.config.configurat) {
                         IconButton(onClick = { vm.pantalla = Pantalla.PRINCIPAL }) {
-                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Enrere")
+                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.principal_enrere))
                         }
                     }
                 },
@@ -119,9 +122,9 @@ private fun Arrel(vm: ConsumViewModel) {
                         if (vm.sincronitzant) {
                             Box(Modifier.padding(12.dp)) { CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) }
                         } else {
-                            IconButton(onClick = vm::sincronitza) { Icon(Icons.Outlined.Sync, "Recull les dades del Shelly") }
+                            IconButton(onClick = vm::sincronitza) { Icon(Icons.Outlined.Sync, stringResource(R.string.principal_recull_dades)) }
                         }
-                        IconButton(onClick = { vm.pantalla = Pantalla.CONNECTA }) { Icon(Icons.Outlined.Settings, "Configuració") }
+                        IconButton(onClick = { vm.pantalla = Pantalla.CONNECTA }) { Icon(Icons.Outlined.Settings, stringResource(R.string.principal_configuracio)) }
                     }
                 },
             )
@@ -129,11 +132,12 @@ private fun Arrel(vm: ConsumViewModel) {
         floatingActionButton = {
             if (principal && vm.pestanya == Pestanya.APARELLS) {
                 // Sense la descripció, l'accessibilitat (TalkBack) el llegeix buit.
+                val afegeix = stringResource(R.string.principal_afegeix_aparell)
                 ExtendedFloatingActionButton(
                     onClick = { vm.pantalla = Pantalla.AFEGIR },
-                    modifier = Modifier.semantics { contentDescription = "Afegeix un aparell" },
+                    modifier = Modifier.semantics { contentDescription = afegeix },
                     containerColor = Primari, contentColor = Color.White,
-                    icon = { Icon(Icons.Outlined.Add, null) }, text = { Text("Afegeix un aparell") },
+                    icon = { Icon(Icons.Outlined.Add, null) }, text = { Text(afegeix) },
                 )
             }
         },
@@ -155,7 +159,7 @@ private fun Arrel(vm: ConsumViewModel) {
                                     null,
                                 )
                             },
-                            label = { Text(p.nom) },
+                            label = { Text(stringResource(p.nomId)) },
                             colors = NavigationBarItemDefaults.colors(selectedIconColor = Primari, indicatorColor = PrimariFluix),
                         )
                     }

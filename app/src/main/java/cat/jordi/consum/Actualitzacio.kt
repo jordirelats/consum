@@ -5,9 +5,9 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.core.content.FileProvider
+import cat.jordi.consum.dades.ErrorUsuari
 import org.json.JSONObject
 import java.io.File
-import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -44,7 +44,7 @@ object Actualitzacio {
         c.setRequestProperty("Accept", "application/vnd.github+json")
         val o = try {
             if (c.responseCode == 404) return null
-            if (c.responseCode !in 200..299) throw IOException("GitHub ha respost ${c.responseCode}")
+            if (c.responseCode !in 200..299) throw ErrorUsuari(R.string.error_github, c.responseCode)
             JSONObject(c.inputStream.bufferedReader().readText())
         } finally {
             c.disconnect()
@@ -66,7 +66,7 @@ object Actualitzacio {
         c.connectTimeout = 10_000
         c.readTimeout = 30_000
         try {
-            if (c.responseCode !in 200..299) throw IOException("No s'ha pogut baixar (HTTP ${c.responseCode})")
+            if (c.responseCode !in 200..299) throw ErrorUsuari(R.string.error_baixada, c.responseCode)
             val total = c.contentLengthLong.takeIf { it > 0 }
             var llegit = 0L
             c.inputStream.use { entrada ->

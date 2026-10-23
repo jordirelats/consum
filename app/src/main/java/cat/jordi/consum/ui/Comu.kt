@@ -29,15 +29,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cat.jordi.consum.R
 import cat.jordi.consum.dades.Categoria
 import cat.jordi.consum.dades.Franja
 import cat.jordi.consum.dades.HoraPreu
+import cat.jordi.consum.dades.Idioma
+import cat.jordi.consum.dades.TextRecurs
 import java.text.NumberFormat
-import java.util.Locale
 
 val Primari = Color(0xFF0F766E)
 val PrimariFluix = Color(0xFFCCFBF1)
@@ -65,21 +69,24 @@ fun TemaConsum(contingut: @Composable () -> Unit) {
     )
 }
 
-private val CATALA: Locale = Locale.forLanguageTag("ca-ES")
-
-/** Un número en català: punt de milers i coma decimal. */
+/** Un número com s'escriu en la llengua de l'app (en català, punt de milers i coma decimal). */
 fun num(x: Double, decimals: Int = 0): String =
-    NumberFormat.getNumberInstance(CATALA).apply {
+    NumberFormat.getNumberInstance(Idioma.locale).apply {
         minimumFractionDigits = decimals
         maximumFractionDigits = decimals
     }.format(x)
 
-fun euros(x: Double) = "${num(x, 2)} €"
+fun euros(x: Double) = Idioma.euros(num(x, 2))
+
+/** Un text fet fora de la interfície (al ViewModel o a les dades), en la llengua d'ara. */
+@Composable
+fun TextRecurs.text(): String = text(LocalContext.current)
 
 /** «X € de consum + Y € de fixos»; als Països Baixos els fixos poden ser negatius, i llavors es resten. */
+@Composable
 fun consumIFixos(consum: Double, fixos: Double) =
-    if (fixos >= 0) "${euros(consum)} de consum + ${euros(fixos)} de fixos"
-    else "${euros(consum)} de consum − ${euros(-fixos)} de fixos (el descompte d'impostos supera les quotes)"
+    if (fixos >= 0) stringResource(R.string.comu_consum_mes_fixos, euros(consum), euros(fixos))
+    else stringResource(R.string.comu_consum_menys_fixos, euros(consum), euros(-fixos))
 
 fun icona(c: Categoria): ImageVector = when (c) {
     Categoria.NEVERA -> Icons.Outlined.Kitchen
@@ -177,7 +184,7 @@ fun Pastilla(text: String, color: Color, fons: Color, punt: Color? = null) {
 
 /** Unes pestanyes petites com les de la maqueta (Dia, Setmana, Mes...). */
 @Composable
-fun <T> Pestanyes(opcions: List<T>, triada: T, nom: (T) -> String, enTriar: (T) -> Unit) {
+fun <T> Pestanyes(opcions: List<T>, triada: T, nom: @Composable (T) -> String, enTriar: (T) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         for (o in opcions) {
             val actiu = o == triada
@@ -236,7 +243,7 @@ fun TiraPreus(hores: List<HoraPreu>, ara: Long?, alcada: androidx.compose.ui.uni
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            listOf("0 h", "6", "12", "18", "24").forEach { Text(it, fontSize = 10.sp, color = Suau) }
+            listOf(stringResource(R.string.comu_hora_zero), "6", "12", "18", "24").forEach { Text(it, fontSize = 10.sp, color = Suau) }
         }
     }
 }
@@ -246,7 +253,7 @@ fun TiraPreus(hores: List<HoraPreu>, ara: Long?, alcada: androidx.compose.ui.uni
 fun BarresPreu(hores: List<HoraPreu>, ara: Long?) {
     val preus = hores.mapNotNull { it.preu }
     if (preus.isEmpty()) {
-        Nota("Encara no tinc els preus d'avui. Es baixen sols quan hi ha internet.")
+        Nota(stringResource(R.string.comu_sense_preus_avui))
         return
     }
     val maxim = preus.max() * 1.08
@@ -262,6 +269,6 @@ fun BarresPreu(hores: List<HoraPreu>, ara: Long?) {
         }
     }
     Row(Modifier.fillMaxWidth().padding(top = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        listOf("0 h", "6", "12", "18", "24").forEach { Text(it, fontSize = 10.sp, color = Suau) }
+        listOf(stringResource(R.string.comu_hora_zero), "6", "12", "18", "24").forEach { Text(it, fontSize = 10.sp, color = Suau) }
     }
 }

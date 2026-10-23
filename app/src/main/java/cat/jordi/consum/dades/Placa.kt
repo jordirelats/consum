@@ -11,9 +11,9 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.media.ExifInterface
 import android.net.Uri
+import cat.jordi.consum.R
 import com.googlecode.tesseract.android.TessBaseAPI
 import java.io.File
-import java.io.IOException
 
 /** El que s'ha trobat a la placa: la potència (W), el tros de text d'on surt i si és calculada amb els amperes. */
 data class LecturaPlaca(val w: Double?, val fragment: String?, val delsAmperes: Boolean, val text: String)
@@ -65,7 +65,7 @@ object Placa {
         var mostreig = 1
         while (maxOf(mida.outWidth, mida.outHeight) / mostreig > 2000) mostreig *= 2
         val original = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = mostreig }) }
-            ?: throw IOException("No puc obrir la foto")
+            ?: throw ErrorUsuari(R.string.error_foto)
         val graus = resolver.openInputStream(uri)?.use {
             when (ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
                 ExifInterface.ORIENTATION_ROTATE_90 -> 90f
@@ -129,7 +129,7 @@ object Placa {
     fun llegeix(context: Context, foto: Bitmap, document: Boolean = false): String {
         val api = TessBaseAPI()
         try {
-            if (!api.init(dades(context).absolutePath, "eng")) throw IOException("No s'ha pogut engegar el lector de text")
+            if (!api.init(dades(context).absolutePath, "eng")) throw ErrorUsuari(R.string.error_ocr)
             api.setPageSegMode(if (document) TessBaseAPI.PageSegMode.PSM_SINGLE_COLUMN else TessBaseAPI.PageSegMode.PSM_SPARSE_TEXT)
             api.setImage(foto)
             return api.utF8Text ?: ""

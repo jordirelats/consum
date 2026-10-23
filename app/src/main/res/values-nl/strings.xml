@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    De teksten van de app Consum, in het Nederlands. Uitleg over vertalen staat bovenaan res/values/strings.xml.
+-->
+<resources>
+
+    <!-- La llengua -->
+    <string name="codi_idioma">nl-NL</string>
+    <string name="format_euros">€ %1$s</string>
+
+    <!-- Els tipus d'aparell -->
+    <string name="categoria_nevera">Koelkast</string>
+    <string name="categoria_congelador">Vriezer</string>
+    <string name="categoria_forn">Oven</string>
+    <string name="categoria_placa">Kookplaat</string>
+    <string name="categoria_microones">Magnetron</string>
+    <string name="categoria_rentaplats">Vaatwasser</string>
+    <string name="categoria_campana">Afzuigkap</string>
+    <string name="categoria_cafetera">Koffiezetapparaat</string>
+    <string name="categoria_bullidor">Waterkoker</string>
+    <string name="categoria_torradora">Broodrooster</string>
+    <string name="categoria_robot">Keukenmachine</string>
+    <string name="categoria_rentadora">Wasmachine</string>
+    <string name="categoria_assecadora">Wasdroger</string>
+    <string name="categoria_planxa">Strijkijzer</string>
+    <string name="categoria_televisor">Televisie</string>
+    <string name="categoria_consola">Spelcomputer</string>
+    <string name="categoria_router">Router</string>
+    <string name="categoria_llums">Verlichting</string>
+    <string name="categoria_ordinador">Computer</string>
+    <string name="categoria_assecador_cabells">Föhn</string>
+    <string name="categoria_tovalloler">Elektrische handdoekradiator</string>
+    <string name="categoria_estufa">Elektrische kachel</string>
+    <string name="categoria_aire">Airco</string>
+    <string name="categoria_bomba_calor">Warmtepomp</string>
+    <string name="categoria_termo">Elektrische boiler</string>
+    <string name="categoria_caldera">Cv-ketel (het elektrische deel)</string>
+    <string name="categoria_cotxe">Elektrische auto</string>
+    <string name="categoria_bomba_aigua">Waterpomp</string>
+    <string name="categoria_depuradora">Zwembadpomp</string>
+    <string name="categoria_altres">Iets anders</string>
+
+    <!-- D'on surt el consum teòric d'un aparell -->
+    <string name="font_etiqueta">Energielabel (QR)</string>
+    <string name="font_placa">Typeplaatje</string>
+    <string name="font_manual">Zelf ingevuld</string>
+    <string name="font_tipic">Gemiddelde waarde</string>
+
+    <!-- Els països de la tarifa -->
+    <string name="pais_es">Spanje</string>
+    <string name="pais_nl">Nederland</string>
+    <string name="pais_altre">Ander land</string>
+
+    <!-- Les franges horàries del preu -->
+    <string name="franja_punta">Piek</string>
+    <string name="franja_pla">Midden</string>
+    <string name="franja_vall">Dal</string>
+    <string name="franja_normaal">Normaal</string>
+    <string name="franja_dal">Dal</string>
+    <string name="franja_unica">Enkel tarief</string>
+    <string name="franja_mercat">Marktprijs</string>
+
+    <!-- Les pestanyes de baix -->
+    <string name="pestanya_ara">Nu</string>
+    <string name="pestanya_aparells">Apparaten</string>
+    <string name="pestanya_entrena">Aanleren</string>
+    <string name="pestanya_historial">Geschiedenis</string>
+
+    <!-- Els períodes de l'historial -->
+    <string name="periode_dia">Dag</string>
+    <string name="periode_setmana">Week</string>
+    <string name="periode_mes">Maand</string>
+
+    <!-- Comú a diverses pantalles -->
+    <string name="comu_consum_mes_fixos">%1$s verbruik + %2$s vaste kosten</string>
+    <string name="comu_consum_menys_fixos">%1$s verbruik − %2$s vaste kosten (de belastingvermindering is hoger dan de vaste kosten)</string>
+    <string name="comu_sense_preus_avui">Ik heb de prijzen van vandaag nog niet. Ze worden vanzelf gedownload als er internet is.</string>
+    <string name="comu_hora_zero">0 u</string>
+
+    <!-- L'etiqueta energètica (EPREL) -->
+    <string name="eprel_consum_anual">jaarverbruik volgens het energielabel</string>
+    <string name="eprel_cada_100_rentades">%1$s kWh per 100 wasbeurten, bij %2$d wasbeurten per jaar</string>
+    <string name="eprel_w_hores">%1$s W aan, %2$d uur per dag</string>
+    <string name="eprel_sense_consum">het label geeft geen jaarverbruik: er is een gemiddelde waarde gebruikt</string>
+
+    <!-- Errors -->
+    <string name="error_eprel_no_hi_es">Er is geen apparaat met nummer %1$s</string>
+    <string name="error_eprel_resposta">EPREL antwoordde met %1$d</string>
+    <string name="error_foto">Ik kan de foto niet openen</string>
+    <string name="error_ocr">De tekstherkenning kon niet starten</string>
+    <string name="error_pdf">De pdf kan niet worden geopend</string>
+    <string name="error_pvpc">Red Eléctrica heeft de PVPC-prijzen van %1$s niet gegeven</string>
+    <string name="error_github">GitHub antwoordde met %1$d</string>
+    <string name="error_baixada">Downloaden is mislukt (HTTP %1$d)</string>
+
+    <!-- La notificació de consum inesperat -->
+    <string name="avis_canal">Onverwacht verbruik</string>
+    <string name="avis_canal_descripcio">Als er iets aangaat dat de app niet herkent</string>
+    <string name="avis_titol">Er is +%1$s W die ik niet herken</string>
+    <string name="avis_text">Sinds %1$s. Het lijkt op geen enkel apparaat dat je me hebt geleerd. Wat is het?</string>
+    <string name="avis_un_altre">Iets anders…</string>
+    <string name="avis_respost">Je antwoordde ‘%1$s’. Dat heb ik geleerd.</string>
+    <string name="avis_respost_sense_nom">Bedankt, dat heb ik geleerd.</string>
+
+    <!-- Pantalla principal: títols de dalt i botons -->
+    <string name="principal_configuracio">Instellingen</string>
+    <string name="principal_connecta">Shelly verbinden</string>
+    <string name="principal_afegeix_aparell">Apparaat toevoegen</string>
+    <string name="principal_revisem_casa">Je huis doorlopen</string>
+    <string name="principal_preu_llum">Stroomprijs</string>
+    <string name="principal_casa">Thuis</string>
+    <string name="principal_enrere">Terug</string>
+    <string name="principal_recull_dades">Gegevens van de Shelly ophalen</string>
+
+    <!-- Pantalla Ara -->
+    <string name="ara_origen_local">Thuis · live, elke seconde</string>
+    <string name="ara_origen_nuvol">Op afstand · via de Shelly Cloud</string>
+    <string name="ara_connectant">Verbinden…</string>
+    <string name="ara_sense_connexio">Ik kan de Shelly en de Shelly Cloud niet bereiken</string>
+    <string name="ara_falta_clau">Niet thuis: vul de Cloud Key in om het te zien</string>
+    <string name="ara_versio_nova">Er is een nieuwe versie van de app (%1$s).</string>
+    <string name="ara_actualitza">Bijwerken</string>
+    <string name="ara_resum_amb_preu">Nu %1$s per uur · vandaag %2$s kWh, %3$s</string>
+    <string name="ara_resum">Vandaag %1$s kWh, %2$s</string>
+    <string name="ara_ultimes_24h">Afgelopen 24 uur</string>
+    <string name="ara_dades_wifi">De gegevens worden van de Shelly opgehaald als je telefoon thuis op de wifi zit.</string>
+    <string name="ara_mes_barat_avui">Wanneer is het vandaag het goedkoopst</string>
+    <string name="ara_que_hi_ha_ences">Wat staat er nu aan</string>
+    <string name="ara_linia_subtitol">%1$s W · tweede meetklem, gemeten</string>
+    <string name="ara_sempre_ences">Altijd aan</string>
+    <string name="ara_sempre_subtitol">%1$s W · koelkast, router, stand-by…</string>
+    <string name="ara_aparell_apres">%1$s W · aangeleerd</string>
+    <string name="ara_aparell_aprenent">%1$s W · wordt nog aangeleerd</string>
+    <string name="ara_sense_identificar">Niet herkend</string>
+    <string name="ara_residu_sense_fons">%1$s W · na een dag gegevens weet ik het basisverbruik</string>
+    <string name="ara_residu_entrena">%1$s W · leer de app je apparaten aan</string>
+    <string name="ara_euros_hora">%1$s/u</string>
+    <string name="ara_detall">Nu: %1$s VA · arbeidsfactor %2$s · %3$s V</string>
+    <string name="ara_comprova_wifi">Controleer of je telefoon thuis op de wifi zit en of het adres van de Shelly klopt (Instellingen).</string>
+    <string name="ara_franja_fins_a">%1$s tot %2$d uur</string>
+    <string name="ara_pastilla_preu">%1$s · € %2$s per kWh</string>
+    <string name="ara_pastilla_sense_preu">%1$s · nog geen prijs</string>
+    <string name="ara_ja_barat">Dit is al een van de goedkope uren.</string>
+    <string name="ara_mes_barata">Het goedkoopste uur van de komende 24 uur is om %1$d uur: € %2$s/kWh (%3$s%% minder).</string>
+    <string name="ara_avis_car_titol">Hoog verbruik in een duur uur</string>
+    <string name="ara_avis_car_text">Je verbruikt nu %1$s W tegen € %2$s/kWh. Kun je het om %3$d uur doen, dan kost elk uur zo %4$s in plaats van %5$s.</string>
+
+    <!-- Gràfiques -->
+    <string name="grafiques_sense_dades">Nog geen gegevens</string>
+    <string name="grafiques_hora">%1$d u</string>
+
+    <!-- Pantalla Historial -->
+    <string name="historial_ultimes_24h">Afgelopen 24 uur</string>
+    <string name="historial_ultims_7_dies">Afgelopen 7 dagen</string>
+    <string name="historial_ultims_30_dies">Afgelopen 30 dagen</string>
+    <string name="historial_sempre_ences">Altijd aan</string>
+    <string name="historial_fons">%1$s W basisverbruik · %2$s · %3$s</string>
+    <string name="historial_cal_un_dia">een dag aan gegevens nodig</string>
+    <string name="historial_sense_identificar">Niet herkend</string>
+    <string name="historial_costos_fixos">Vaste kosten</string>
+    <string name="historial_no_depenen_us">los van je verbruik</string>
+    <string name="historial_nota_aparells">Zodra de app je apparaten heeft aangeleerd, zie je ze hier elk met een eigen kleur.</string>
+
+    <!-- Pantalla Aparells -->
+    <string name="aparells_aquest_mes">Deze maand tot nu toe</string>
+    <string name="aparells_llegenda_mesurat">gemeten of aangeleerd</string>
+    <string name="aparells_llegenda_etiqueta">energielabel</string>
+    <string name="aparells_llegenda_tipic">gemiddeld of niet herkend</string>
+    <string name="aparells_consell_fons">Altijd aan: %1$s W dag en nacht kost € %2$s per jaar. Kijk welke apparaten op stand-by blijven staan.</string>
+    <string name="aparells_consell_linia">%1$s: %2$d%% van het verbruik valt in de dure uren. In de goedkope uren had het deze maand zo\'n %3$s minder gekost.</string>
+    <plurals name="aparells_consell_tipics">
+        <item quantity="one">%1$d apparaat heeft een gemiddelde waarde. Scan het energielabel, dan wordt het getal betrouwbaarder.</item>
+        <item quantity="other">%1$d apparaten hebben een gemiddelde waarde. Scan hun energielabel, dan wordt het getal betrouwbaarder.</item>
+    </plurals>
+    <string name="aparells_que_pots_fer">Wat je kunt doen</string>
+    <string name="aparells_mesurat_mes">Gemeten deze maand</string>
+    <string name="aparells_linia_subtitol">%1$s kWh · tweede meetklem</string>
+    <string name="aparells_sempre_ences">Altijd aan</string>
+    <string name="aparells_aparell_apres">%1$s kWh · aangeleerd · label: %2$s kWh/maand</string>
+    <string name="aparells_aparell_aprenent">%1$s kWh · wordt nog aangeleerd · label: %2$s kWh/maand</string>
+    <string name="aparells_sense_identificar">Niet herkend</string>
+    <string name="aparells_residu">%1$s kWh · leer apparaten aan om dit te splitsen</string>
+    <string name="aparells_costos_fixos">Vaste kosten</string>
+    <string name="aparells_fixos_subtitol">%1$s · los van je verbruik</string>
+    <string name="aparells_cap_aparell">Nog geen apparaten</string>
+    <string name="aparells_comenca_questionari">Begin met de vragenlijst: we lopen ruimte voor ruimte langs, zodat je er geen vergeet.</string>
+    <string name="aparells_revisem_casa">Je huis doorlopen</string>
+    <string name="aparells_segons_etiqueta">Je apparaten, volgens het energielabel</string>
+    <string name="aparells_nota_etiqueta">Nog niet aangeleerd: dit is wat ze zouden moeten verbruiken, niet wat ze echt verbruiken, bij gemiddeld € %1$s/kWh. Samen %2$s per maand.</string>
+    <string name="aparells_mesurat_pinca2">gemeten met meetklem 2 · label: %1$s kWh/jaar</string>
+    <string name="aparells_kwh_any_font">%1$s kWh/jaar · %2$s</string>
+    <string name="aparells_euros_mes">%1$s/maand</string>
+    <string name="aparells_torna_questionari">Vragenlijst opnieuw invullen</string>
+    <string name="aparells_classe">Energieklasse %1$s</string>
+    <string name="aparells_kwh_euros_any">%1$s kWh per jaar ≈ € %2$s per jaar</string>
+    <string name="aparells_en_espera">Stand-by: %1$s W</string>
+    <plurals name="aparells_referencia">
+        <item quantity="one">Aangeleerde referentie: %1$s W, uit %2$d meting</item>
+        <item quantity="other">Aangeleerde referentie: %1$s W, uit %2$d metingen</item>
+    </plurals>
+    <plurals name="aparells_referencia_durada">
+        <item quantity="one">Aangeleerde referentie: %1$s W, uit %2$d meting · staat meestal %3$s min aan</item>
+        <item quantity="other">Aangeleerde referentie: %1$s W, uit %2$d metingen · staat meestal %3$s min aan</item>
+    </plurals>
+    <string name="aparells_torna_entrenar">Opnieuw aanleren</string>
+    <string name="aparells_es_tipic">Dit is een gemiddelde waarde: scan het energielabel voor een nauwkeuriger getal.</string>
+    <string name="aparells_dacord">Oké</string>
+    <string name="aparells_esborra">Verwijderen</string>
+
+    <!-- Pantalla Entrena -->
+    <string name="entrena_avisos_titol">Meldingen bij onverwacht verbruik</string>
+    <string name="entrena_avisos_nota">Gaat er iets aan dat ik niet herken en duurt het langer dan 10 minuten, dan vraag ik je met een melding wat het is.</string>
+    <string name="entrena_activa_avisos">Meldingen aanzetten</string>
+    <string name="entrena_en_directe">Live aanleren</string>
+    <string name="entrena_instruccions">Zet een apparaat aan of uit en tik meteen op de knop. De app meet de sprong in een halve minuut; het liefst gaat er intussen niets anders aan.</string>
+    <string name="entrena_ara_w">Nu %1$s W</string>
+    <string name="entrena_ara_w_sense_pinca">Nu %1$s W zonder meetklem 2</string>
+    <string name="entrena_sense_lectura">Geen gegevens van de Shelly</string>
+    <string name="entrena_primer_afegeix">Voeg eerst je apparaten toe, op het tabblad Apparaten.</string>
+    <string name="entrena_nota_casa">Dit werkt het best thuis, waar de Shelly elke seconde een meetwaarde geeft. Op afstand, via de Shelly Cloud, komt er elke 5 seconden een binnen.</string>
+    <string name="entrena_cap_mostra">nog geen metingen</string>
+    <plurals name="entrena_apres">
+        <item quantity="one">%1$s W · aangeleerd (%2$d meting)</item>
+        <item quantity="other">%1$s W · aangeleerd (%2$d metingen)</item>
+    </plurals>
+    <string name="entrena_mostres_de">%1$s W · %2$d van %3$d metingen</string>
+    <string name="entrena_mesurant">Meten…</string>
+    <string name="entrena_he_apagat">Ik heb het uitgezet</string>
+    <string name="entrena_he_ences">Ik heb het aangezet</string>
+    <string name="entrena_pregunta">Vraag</string>
+    <string name="entrena_que_era">Wat was dit?</string>
+    <string name="entrena_pregunta_text">Sinds %1$s · +%2$s W die ik niet herkende</string>
+    <string name="entrena_un_altre">Iets anders…</string>
+    <string name="entrena_no_ho_se">Weet ik niet</string>
+
+    <!-- Pantalla Afegir -->
+    <string name="afegir_via_qr">QR-label</string>
+    <string name="afegir_via_placa">Typeplaatje</string>
+    <string name="afegir_via_model">Model</string>
+    <string name="afegir_qr_no_etiqueta">Deze QR-code hoort niet bij een Europees energielabel.</string>
+    <string name="afegir_error_eprel">Ik kon de gegevens van EPREL niet ophalen</string>
+    <string name="afegir_qr_titol">Scan de QR-code op het energielabel</string>
+    <string name="afegir_qr_nota">Nieuwe energielabels (sinds 2021) hebben rechtsboven een QR-code. De app haalt het verbruik uit de Europese database (EPREL).</string>
+    <string name="afegir_qr_apunta">Richt de camera op de QR-code van het energielabel</string>
+    <string name="afegir_escaneja">Scannen</string>
+    <string name="afegir_numero_eprel">Of het EPREL-nummer</string>
+    <string name="afegir_busca">Zoeken</string>
+    <string name="afegir_trobat_eprel">Gevonden in EPREL (%1$s)</string>
+    <string name="afegir_tipus_i_classe">%1$s · klasse %2$s</string>
+    <string name="afegir_kwh_any">%1$s kWh per jaar</string>
+    <string name="afegir_sense_consum_anual">Geen jaarverbruik</string>
+    <string name="afegir_en_espera">Stand-by: %1$s W</string>
+    <string name="afegir_nom_app">Naam in de app</string>
+    <string name="afegir_afegeix_lo">Toevoegen</string>
+    <string name="afegir_quin_aparell">Welk apparaat is het?</string>
+    <string name="afegir_nom_i_model">Naam (en model, als je dat weet)</string>
+    <string name="afegir_consum_kwh_any">Verbruik, kWh per jaar</string>
+    <string name="afegir_escrit_per_tu">Wat je zelf hebt ingevuld</string>
+    <string name="afegir_valor_tipic">Gemiddelde waarde: pas aan als je het precies weet</string>
+    <string name="afegir_error_foto">Ik kon de foto niet lezen</string>
+    <string name="afegir_sense_permis_camera">Geen toegang tot de camera. Je kunt ook een foto kiezen die je al hebt.</string>
+    <string name="afegir_placa_titol">Foto van het typeplaatje</string>
+    <string name="afegir_placa_nota">Dat is het zilveren of witte plaatje op de achterkant of aan de binnenkant van de deur. Maak de foto van dichtbij, recht en zonder weerspiegeling. De foto wordt op je telefoon gelezen en nergens heen gestuurd.</string>
+    <string name="afegir_fes_la_foto">Foto maken</string>
+    <string name="afegir_tria_foto">Foto kiezen</string>
+    <string name="afegir_llegint_placa">Typeplaatje lezen…</string>
+    <string name="afegir_foto_placa">De foto van het typeplaatje</string>
+    <string name="afegir_he_llegit">Ik heb %1$s W gelezen</string>
+    <string name="afegir_he_llegit_amperes">Ik heb %1$s W berekend uit de ampères</string>
+    <string name="afegir_a_la_placa">Op het typeplaatje: ‘%1$s’</string>
+    <string name="afegir_sense_potencia">Ik heb het vermogen niet gevonden. Vul het zelf in, of maak de foto opnieuw van dichterbij.</string>
+    <string name="afegir_amaga_llegit">Verberg wat ik heb gelezen</string>
+    <string name="afegir_mira_llegit">Bekijk alles wat ik heb gelezen</string>
+    <string name="afegir_res">(niets)</string>
+    <string name="afegir_nom">Naam</string>
+    <string name="afegir_potencia">Vermogen</string>
+    <string name="afegir_hores_al_dia">Gemiddeld aantal uur per dag in gebruik</string>
+    <string name="afegir_hores_ajuda">Tel alleen de tijd dat het verwarmt of hard werkt. Een waterkoker bijvoorbeeld zo\'n 7 minuten: 0,1.</string>
+    <string name="afegir_kwh_any_aprox">≈ %1$s kWh per jaar</string>
+
+    <!-- Pantalla Qüestionari -->
+    <string name="questionari_estanca_calefaccio">Verwarming en warm water</string>
+    <string name="questionari_estanca_cuina">Keuken</string>
+    <string name="questionari_estanca_rentador">Wasruimte</string>
+    <string name="questionari_estanca_sala">Woonkamer</string>
+    <string name="questionari_estanca_habitacions">Slaapkamers en werkkamer</string>
+    <string name="questionari_estanca_bany">Badkamer</string>
+    <string name="questionari_estanca_exterior">Buiten, garage en auto</string>
+    <string name="questionari_com_escalfa">Hoe wordt het huis verwarmd?</string>
+    <string name="questionari_aigua_calenta">En het warme water?</string>
+    <string name="questionari_aire">Is er airco?</string>
+    <string name="questionari_que_cuina">Wat heb je in de keuken?</string>
+    <string name="questionari_placa_es">Je kookt op…</string>
+    <string name="questionari_que_rentador">Wat staat er in de wasruimte?</string>
+    <string name="questionari_que_sala">Wat staat er in de woonkamer?</string>
+    <string name="questionari_que_habitacions">Wat staat er in de slaapkamers en de werkkamer?</string>
+    <string name="questionari_que_bany">Wat heb je in de badkamer?</string>
+    <string name="questionari_que_fora">En buiten?</string>
+    <string name="questionari_caldera_gas">Cv-ketel</string>
+    <string name="questionari_estufes_radiadors">Elektrische kachels of radiatoren</string>
+    <string name="questionari_calefaccio_barri">Stadsverwarming</string>
+    <string name="questionari_no_n_hi_ha">Geen</string>
+    <string name="questionari_mateixa_caldera">Dezelfde ketel of warmtepomp</string>
+    <string name="questionari_escalfador_gas">Geiser</string>
+    <string name="questionari_induccio">Inductie</string>
+    <string name="questionari_vitroceramica">Keramisch</string>
+    <string name="questionari_gas">Gas</string>
+    <string name="questionari_altre_congelador">Nog een vriezer</string>
+    <string name="questionari_altaveus">Speakers</string>
+    <string name="questionari_altre_televisor">Nog een televisie</string>
+    <string name="questionari_impressora">Printer</string>
+    <string name="questionari_estufa_bany">Badkamerkachel</string>
+    <string name="questionari_depuradora_piscina">Zwembadpomp</string>
+    <string name="questionari_eines">Gereedschap</string>
+    <string name="questionari_placa_induccio">Kookplaat (inductie)</string>
+    <string name="questionari_placa_vitroceramica">Kookplaat (keramisch)</string>
+    <string name="questionari_estanca_n">Ruimte %1$d van %2$d · %3$s</string>
+    <string name="questionari_nota">Elk apparaat dat je aanvinkt, komt in de lijst met een gemiddelde waarde. Het energielabel kun je scannen wanneer je wilt.</string>
+    <string name="questionari_enrere">Terug</string>
+    <string name="questionari_seguent">Volgende: %1$s</string>
+    <string name="questionari_fet">Klaar</string>
+
+    <!-- Pantalla Preu: escanejar el contracte o la factura -->
+    <string name="escaneig_camp_nl_normaal">Leveringstarief · Normaal</string>
+    <string name="escaneig_camp_nl_dal">Leveringstarief · Dal</string>
+    <string name="escaneig_camp_nl_enkel">Leveringstarief</string>
+    <string name="escaneig_camp_nl_eb">Energiebelasting (EB)</string>
+    <string name="escaneig_camp_nl_vaste">Vaste leveringskosten</string>
+    <string name="escaneig_camp_nl_netbeheer">Netbeheerkosten</string>
+    <string name="escaneig_camp_nl_vermindering">Vermindering energiebelasting</string>
+    <string name="escaneig_camp_nl_inkoop">Inkoopvergoeding</string>
+    <string name="escaneig_camp_es_potencia">Gecontracteerd vermogen</string>
+    <string name="escaneig_camp_es_p1">Vermogen P1</string>
+    <string name="escaneig_camp_es_p2">Vermogen P2 (dal)</string>
+    <string name="escaneig_camp_es_punta">Energie, piek</string>
+    <string name="escaneig_camp_es_pla">Energie, midden</string>
+    <string name="escaneig_camp_es_vall">Energie, dal</string>
+    <string name="escaneig_camp_es_fix">Energie, enkel tarief</string>
+    <string name="escaneig_camp_es_iee">Elektriciteitsbelasting (impuesto eléctrico)</string>
+    <string name="escaneig_camp_es_iva">btw (IVA)</string>
+    <string name="escaneig_camp_es_comptador">Meterhuur</string>
+    <string name="escaneig_camp_es_bo_social">Financiering sociaal bonus (bono social)</string>
+    <string name="escaneig_unitat_eur_kwh">%1$s €/kWh</string>
+    <string name="escaneig_unitat_eur_dag">%1$s €/dag</string>
+    <string name="escaneig_unitat_kw">%1$s kW</string>
+    <string name="escaneig_unitat_eur_kw_dia">%1$s €/kW per dag</string>
+    <string name="escaneig_unitat_percent">%1$s%%</string>
+    <string name="escaneig_unitat_eur_mes">%1$s €/maand</string>
+    <string name="escaneig_unitat_eur_dia">%1$s €/dag</string>
+    <string name="escaneig_contracte">Contract: %1$s</string>
+    <string name="escaneig_contracte_nl_fix">Nederland · enkel tarief</string>
+    <string name="escaneig_contracte_nl_franges">Nederland · normaal en dal</string>
+    <string name="escaneig_contracte_nl_dinamic">Nederland · dynamisch</string>
+    <string name="escaneig_contracte_es_fix">Spanje · enkel tarief</string>
+    <string name="escaneig_contracte_es_franges">Spanje · met tijdvakken</string>
+    <string name="escaneig_contracte_es_pvpc">Spanje · PVPC</string>
+    <string name="escaneig_obrint">Document openen…</string>
+    <string name="escaneig_llegint_pagina">Pagina %1$d van %2$d lezen…</string>
+    <string name="escaneig_cap_preu">Ik heb geen prijzen gevonden. Probeer de pdf, of een foto van dichterbij.</string>
+    <string name="escaneig_error_document">Ik kon het document niet lezen.</string>
+    <string name="escaneig_sense_permis_camera">Geen toegang tot de camera. Je kunt de pdf kiezen.</string>
+    <string name="escaneig_titol">Invullen vanuit je contract of energierekening</string>
+    <string name="escaneig_nota">Maak een foto of kies de pdf. De app zoekt de prijzen en laat ze zien voordat ze worden ingevuld. Alles wordt op je telefoon gelezen.</string>
+    <string name="escaneig_foto">Foto</string>
+    <string name="escaneig_tria">Kies een pdf of foto</string>
+    <string name="escaneig_he_trobat">Gevonden in het document</string>
+    <string name="escaneig_vall_deduida">De rekening heeft maar twee prijzen: de middenprijs geldt ook voor het dal</string>
+    <string name="escaneig_fragment">‘%1$s’</string>
+    <string name="escaneig_nota_revisio">Onder elk getal staat het stukje uit het document waar het vandaan komt. Vink uit wat niet klopt.</string>
+    <string name="escaneig_no_trobat">Niet gevonden</string>
+    <string name="escaneig_no_falta_res">Niets: alles wat nodig is, stond erin.</string>
+    <string name="escaneig_falten">%1$s. Daarvoor blijft de huidige waarde staan.</string>
+    <string name="escaneig_cancella">Annuleren</string>
+    <string name="escaneig_posa_ls">Invullen</string>
+
+    <!-- Pantalla Configuració (la primera, per connectar el Shelly) -->
+    <string name="connecta_titol_shelly">1. De Shelly op je wifi thuis</string>
+    <string name="connecta_buscant">Op zoek naar een Shelly op de wifi… Staat hij er niet bij? Vul dan het adres in (dat staat in de Shelly-app).</string>
+    <string name="connecta_adreca">Adres van de Shelly</string>
+    <string name="connecta_prova">Testen</string>
+    <string name="connecta_no_hi_arribo">Ik kan hem niet bereiken. Controleer het adres en of je telefoon thuis op de wifi zit.</string>
+    <string name="connecta_info_shelly">%1$s · %2$s · versie %3$s</string>
+    <string name="connecta_titol_pinces">2. De meetklemmen</string>
+    <string name="connecta_pinca_1">Meetklem 1: het hele huis</string>
+    <string name="connecta_pinca_2">Meetklem 2: wat meet hij?</string>
+    <string name="connecta_pinca_2_exemple">Bijvoorbeeld: Keuken, Wasmachine, Boiler</string>
+    <string name="connecta_pinca_2_ajuda">Laat leeg als er maar één meetklem is.</string>
+    <string name="connecta_titol_nuvol">3. Kijken als je niet thuis bent</string>
+    <string name="connecta_nuvol_nota">Dit is niet verplicht. In de Shelly-app: Instellingen → Woning → Toegang en rechten → Cloud Key. Daar staan de Cloud Key en de server. De Cloud Key blijft alleen op deze telefoon.</string>
+    <string name="connecta_servidor">Server</string>
+    <string name="connecta_clau">Cloud Key</string>
+    <string name="connecta_id">ID van de Shelly</string>
+    <string name="connecta_id_ajuda">Wordt vanzelf ingevuld als je hem thuis hebt getest. Anders vind je hem bij de apparaatinfo in de Shelly-app.</string>
+    <string name="connecta_prova_nuvol">Shelly Cloud testen</string>
+    <string name="connecta_nuvol_respon">De Shelly Cloud reageert: nu %1$s W</string>
+    <string name="connecta_nuvol_no_coneix">De Shelly Cloud kent deze Shelly niet. Controleer de ID.</string>
+    <string name="connecta_clau_dolenta">De Cloud Key klopt niet.</string>
+    <string name="connecta_no_arribo_nuvol">Ik kan de Shelly Cloud niet bereiken: %1$s</string>
+    <string name="connecta_titol_preu">4. De stroomprijs</string>
+    <string name="connecta_canvia_preu">Prijs wijzigen</string>
+    <string name="connecta_preu_despres">Die vul je in nadat je de Shelly hebt verbonden: hier, of door in het scherm Nu op de prijs te tikken.</string>
+    <string name="connecta_idioma">Taal</string>
+    <string name="connecta_idioma_mobil">Zoals je telefoon</string>
+    <string name="connecta_actualitzacions">Updates</string>
+    <string name="connecta_versio_actual">Je hebt versie %1$s.</string>
+    <string name="connecta_baixant">Versie %1$s wordt gedownload…</string>
+    <string name="connecta_versio_nova">Versie %1$s is beschikbaar.</string>
+    <string name="connecta_actualitza">Bijwerken</string>
+    <string name="connecta_samsung">Op een Samsung: zie je ‘Onbekende app geblokkeerd’, zet dan Instellingen → Beveiliging en privacy → Automatische blokkering uit en probeer het opnieuw.</string>
+    <string name="connecta_mira_noves">Controleren op updates</string>
+    <string name="connecta_desa">Opslaan</string>
+    <string name="connecta_comenca">Beginnen</string>
+    <string name="connecta_prova_primer">Test eerst de Shelly thuis, of de Shelly Cloud.</string>
+
+    <!-- Pantalla del preu de la llum -->
+    <string name="preu_resum_es_fix">Spanje · enkel tarief · %1$s kW</string>
+    <string name="preu_resum_es_franges">Spanje · 3 tijdvakken · %1$s kW</string>
+    <string name="preu_resum_es_pvpc">Spanje · PVPC · %1$s kW</string>
+    <string name="preu_resum_nl_fix">Nederland · enkel tarief</string>
+    <string name="preu_resum_nl_franges">Nederland · normaal en dal</string>
+    <string name="preu_resum_nl_dinamic">Nederland · dynamisch</string>
+    <string name="preu_resum_altre">Enkel tarief · € %1$s per kWh</string>
+    <string name="preu_fixos_es">vermogen, meterhuur en sociaal bonus (bono social)</string>
+    <string name="preu_fixos_nl">vastrecht en belastingvermindering</string>
+    <string name="preu_fixos_altre">vastrecht</string>
+    <string name="preu_quin_contracte">Wat voor contract heb je?</string>
+    <string name="preu_contracte_fix">Enkel</string>
+    <string name="preu_contracte_3_franges">3 tijdvakken</string>
+    <string name="preu_contracte_normaal_dal">Normaal en dal</string>
+    <string name="preu_contracte_dinamic">Dynamisch</string>
+    <string name="preu_unitat_mes">€/maand</string>
+    <string name="preu_unitat_dia">€/dag</string>
+    <string name="preu_unitat_kw_dia">€/kW per dag</string>
+    <string name="preu_unitat_dag">€/dag</string>
+    <string name="preu_kwh_tot_inclos">Prijs per kWh, alles inbegrepen</string>
+    <string name="preu_costos_fixos">Vaste kosten</string>
+    <string name="preu_costos_fixos_ajuda">Wat je hoe dan ook betaalt, ook als je niets verbruikt.</string>
+    <string name="preu_desa">Opslaan</string>
+    <!-- Espanya -->
+    <string name="preu_energia">Energie</string>
+    <string name="preu_kwh_sense_impostos">Prijs per kWh, zonder belastingen</string>
+    <string name="preu_kwh_sense_impostos_ajuda">Zoals op de energierekening. De elektriciteitsbelasting en btw (IVA) komen erbij.</string>
+    <string name="preu_energia_franges">Energie, per tijdvak</string>
+    <string name="preu_franges_es_nota">Piek 10–14 en 18–22 u · midden 8–10, 14–18 en 22–24 u · dal 0–8 u. In het weekend en op feestdagen is het de hele dag dal.</string>
+    <string name="preu_amb_impostos_franges">Zonder belastingen, zoals op de energierekening. Met belastingen: € %1$s, € %2$s en € %3$s.</string>
+    <string name="preu_energia_pvpc">Energie, met een prijs per uur (PVPC)</string>
+    <string name="preu_pvpc_nota">De app downloadt elke dag zelf de PVPC-prijzen van Red Eléctrica en telt er de elektriciteitsbelasting en btw (IVA) bij op.</string>
+    <string name="preu_desa_i_es_baixaran">Sla op, dan worden de prijzen vanzelf gedownload.</string>
+    <string name="preu_titol_potencia">Gecontracteerd vermogen (telt niet mee bij de apparaten)</string>
+    <string name="preu_potencia">Vermogen</string>
+    <string name="preu_sense_impostos">Zonder belastingen, zoals op de energierekening.</string>
+    <string name="preu_potencia_al_mes">%1$s per maand, met belastingen</string>
+    <string name="preu_titol_impostos">Belastingen en overige kosten</string>
+    <string name="preu_impost_electric">Elektriciteitsbelasting</string>
+    <string name="preu_iva">btw (IVA)</string>
+    <string name="preu_comptador">Meterhuur</string>
+    <string name="preu_comptador_ajuda">Zonder btw (IVA). Telt niet mee bij de apparaten.</string>
+    <string name="preu_bo_social">Financiering sociaal bonus (bono social)</string>
+    <string name="preu_bo_social_ajuda">Zonder belastingen. Telt niet mee bij de apparaten.</string>
+    <!-- Països Baixos -->
+    <string name="preu_nl_nota">De namen zijn zoals op je contract: neem de bedragen precies zo over. De vaste kosten zijn per dag.</string>
+    <string name="preu_amb_iva_sense_eb">Met btw, zonder energiebelasting (die vul je hieronder in).</string>
+    <string name="preu_titol_normaal_dal">Leveringstarief, normaal en dal</string>
+    <string name="preu_dal_nota">Dal: doordeweeks van 23 tot 7 uur, en in het weekend en op feestdagen de hele dag.</string>
+    <string name="preu_energia_hora">Energie, met een prijs per uur</string>
+    <string name="preu_dinamic_nl_nota">De app downloadt elke dag zelf de marktprijs (EnergyZero), inclusief energiebelasting en btw. Daar komt de inkoopvergoeding van je leverancier bij.</string>
+    <string name="preu_recarrec_ajuda">De inkoopvergoeding (opslag) van je leverancier, met btw.</string>
+    <string name="preu_eb_ajuda">De belasting per kWh, met btw. In 2026: 0,11085.</string>
+    <string name="preu_cada_kwh">Per kWh: € %1$s, alles inbegrepen</string>
+    <string name="preu_cada_kwh_dos">Per kWh: € %1$s en € %2$s, alles inbegrepen</string>
+    <string name="preu_titol_fixos">Vaste kosten (tellen niet mee bij de apparaten)</string>
+    <string name="preu_descompte_ajuda">Gaat af van de andere twee.</string>
+    <string name="preu_total_fixos">Totaal vaste kosten: %1$s per maand</string>
+
+    <!-- Missatges d'estat (Configuració i Entrena) -->
+    <string name="vm_ultima_versio">Je hebt de nieuwste versie al.</string>
+    <string name="vm_no_he_pogut_mirar">Controleren is niet gelukt: %1$s</string>
+    <string name="vm_permet_installar">Sta toe dat Consum apps installeert, kom hier terug en tik nog een keer op ‘Bijwerken’.</string>
+    <string name="vm_no_s_ha_pogut_baixar">Downloaden is mislukt: %1$s</string>
+    <string name="vm_error_sincronitzacio">Ik kan de Shelly thuis niet bereiken</string>
+    <string name="vm_entrena_poques_lectures">Ik heb nog te weinig gegevens. Wacht een paar seconden en probeer het opnieuw.</string>
+    <string name="vm_entrena_no_arribo">Ik kan de Shelly niet bereiken. Probeer het opnieuw.</string>
+    <string name="vm_entrena_cap_canvi">Ik zie geen verschil (%1$s W). Probeer het opnieuw.</string>
+    <string name="vm_entrena_desat_encen">%1$s: +%2$s W. Opgeslagen (meting %3$d van %4$d).</string>
+    <string name="vm_entrena_desat_apaga">%1$s: −%2$s W. Opgeslagen (meting %3$d van %4$d).</string>
+</resources>

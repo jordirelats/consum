@@ -9,6 +9,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import cat.jordi.consum.dades.Aparell
+import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Referencia
 import cat.jordi.consum.dades.endevina
@@ -19,7 +20,6 @@ import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * Els avisos de consum inesperat: una notificació que pregunta què és, amb dos aparells proposats
@@ -31,8 +31,8 @@ object Avisos {
     const val ENTRENA = "entrena"
 
     fun creaCanal(context: Context) {
-        val canal = NotificationChannel(CANAL, "Consum inesperat", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Quan s'encén una cosa que l'app no reconeix"
+        val canal = NotificationChannel(CANAL, context.getString(R.string.avis_canal), NotificationManager.IMPORTANCE_HIGH).apply {
+            description = context.getString(R.string.avis_canal_descripcio)
         }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(canal)
     }
@@ -51,18 +51,18 @@ object Avisos {
     fun avisa(context: Context, p: Pregunta, aparells: List<Aparell>, referencies: Map<Long, Referencia>) {
         val gestor = NotificationManagerCompat.from(context)
         if (!gestor.areNotificationsEnabled()) return
-        val w = NumberFormat.getIntegerInstance(Locale.forLanguageTag("ca-ES")).format(p.dp)
+        val w = NumberFormat.getIntegerInstance(Idioma.locale).format(p.dp)
         val hora = Instant.ofEpochSecond(p.ts).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
         val n = NotificationCompat.Builder(context, CANAL)
             .setSmallIcon(R.drawable.ic_llamp)
-            .setContentTitle("Hi ha +$w W que no reconec")
-            .setContentText("Des de les $hora. No s'assembla a cap aparell que m'hagis ensenyat. Què és?")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("Des de les $hora. No s'assembla a cap aparell que m'hagis ensenyat. Què és?"))
+            .setContentTitle(context.getString(R.string.avis_titol, w))
+            .setContentText(context.getString(R.string.avis_text, hora))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.avis_text, hora)))
             .setContentIntent(obreEntrena(context))
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
         endevina(p.dp, aparells, referencies).forEach { a -> n.addAction(0, a.nom, resposta(context, p.id, a.id)) }
-        n.addAction(0, "Un altre…", obreEntrena(context))
+        n.addAction(0, context.getString(R.string.avis_un_altre), obreEntrena(context))
         try {
             gestor.notify(p.id.toInt(), n.build())
         } catch (_: SecurityException) {
@@ -95,8 +95,11 @@ class RespostaReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 repo.respon(pregunta, aparell)
-                val nom = repo.aparells().firstOrNull { it.id == aparell }?.nom ?: "l'aparell"
-                Avisos.confirma(context, pregunta, "Has respost «$nom». L'he après.")
+                val nom = repo.aparells().firstOrNull { it.id == aparell }?.nom
+                Avisos.confirma(
+                    context, pregunta,
+                    if (nom != null) context.getString(R.string.avis_respost, nom) else context.getString(R.string.avis_respost_sense_nom),
+                )
             } finally {
                 pendent.finish()
             }

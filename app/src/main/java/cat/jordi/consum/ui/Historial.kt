@@ -16,9 +16,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cat.jordi.consum.R
 import cat.jordi.consum.dades.Periode
 
 @Composable
@@ -28,13 +30,15 @@ fun PantallaHistorial(vm: ConsumViewModel) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Pestanyes(Periode.entries, vm.periode, { it.nom }, vm::triaPeriode)
+        Pestanyes(Periode.entries, vm.periode, { stringResource(it.nomId) }, vm::triaPeriode)
         Text(
-            when (vm.periode) {
-                Periode.DIA -> "Últimes 24 hores"
-                Periode.SETMANA -> "Últims 7 dies"
-                Periode.MES -> "Últims 30 dies"
-            },
+            stringResource(
+                when (vm.periode) {
+                    Periode.DIA -> R.string.historial_ultimes_24h
+                    Periode.SETMANA -> R.string.historial_ultims_7_dies
+                    Periode.MES -> R.string.historial_ultims_30_dies
+                }
+            ),
             fontSize = 14.sp, color = Suau,
         )
         if (r == null) return@Column
@@ -53,20 +57,22 @@ fun PantallaHistorial(vm: ConsumViewModel) {
                 )
             }
             FilaConsum(
-                Icons.Outlined.Power, SempreFluix, Sempre, "Sempre encès",
-                r.fonsW?.let { "${num(it)} W de fons · ${pct(r.sempre)} · ${euros(r.euros.sempre)}" } ?: "cal un dia de dades",
+                Icons.Outlined.Power, SempreFluix, Sempre, stringResource(R.string.historial_sempre_ences),
+                r.fonsW?.let { stringResource(R.string.historial_fons, num(it), pct(r.sempre), euros(r.euros.sempre)) }
+                    ?: stringResource(R.string.historial_cal_un_dia),
                 "${num(r.sempre, 2)} kWh", 3,
             )
             FilaConsum(
-                Icons.Outlined.QuestionMark, DesconegutFluix, Desconegut, "Sense identificar",
+                Icons.Outlined.QuestionMark, DesconegutFluix, Desconegut, stringResource(R.string.historial_sense_identificar),
                 "${pct(r.desconegut)} · ${euros(r.euros.desconegut)}", "${num(r.desconegut, 2)} kWh", 1,
             )
             FilaConsum(
-                Icons.Outlined.Euro, SempreFluix, Sempre, "Costos fixos", "no depenen de l'ús", euros(r.euros.fixos),
+                Icons.Outlined.Euro, SempreFluix, Sempre, stringResource(R.string.historial_costos_fixos),
+                stringResource(R.string.historial_no_depenen_us), euros(r.euros.fixos),
             )
         }
         Nota(
-            "Quan l'app hagi après els aparells, aquí sortirà cadascun amb el seu color.",
+            stringResource(R.string.historial_nota_aparells),
             Modifier.padding(horizontal = 4.dp),
         )
     }
