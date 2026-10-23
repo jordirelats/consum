@@ -42,7 +42,7 @@ fun PantallaHistorial(vm: ConsumViewModel) {
             Text(num(r.total, 2), fontSize = 40.sp, fontWeight = FontWeight.Light)
             Text(" kWh   ≈ ${euros(r.euros.total)}", Modifier.padding(bottom = 7.dp), fontSize = 17.sp, color = Suau)
         }
-        Text("${euros(r.euros.consum)} de consum + ${euros(r.euros.fixos)} de fixos", fontSize = 13.sp, color = Suau)
+        Text(consumIFixos(r.euros.consum, r.euros.fixos), fontSize = 13.sp, color = Suau)
         Targeta { GraficaBarres(r.barres) }
         Targeta {
             fun pct(x: Double) = if (r.total > 0) "${num(x / r.total * 100)} %" else "—"

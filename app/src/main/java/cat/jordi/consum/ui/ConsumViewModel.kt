@@ -117,10 +117,10 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
         comprovaVersio(forcat = false)
     }
 
-    /** Mira a GitHub si hi ha una versió nova. Sola, com a molt cada 12 hores; amb el botó, sempre. */
+    /** Mira a GitHub si hi ha una versió nova: cada cop que s'obre l'app, com a molt un cop per hora; amb el botó, sempre. */
     fun comprovaVersio(forcat: Boolean) {
         val ara = System.currentTimeMillis()
-        if (!forcat && ara - config.darreraComprovacio < 12 * 3_600_000L) return
+        if (!forcat && ara - config.darreraComprovacio < 3_600_000L) return
         if (forcat) missatgeActualitzacio = null
         viewModelScope.launch {
             val r = withContext(Dispatchers.IO) { runCatching { Actualitzacio.comprova(getApplication()) } }
@@ -155,6 +155,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     fun enPrimerPla(si: Boolean) {
         bucles?.cancel()
         bucles = null
+        if (si) comprovaVersio(forcat = false)
         if (!si || !config.configurat) return
         bucles = viewModelScope.launch {
             launch {

@@ -55,7 +55,7 @@ fun PantallaAparells(vm: ConsumViewModel) {
                 Text(euros(mes.euros.total), fontSize = 40.sp, fontWeight = FontWeight.Light)
                 Text("  ${num(mes.total)} kWh", Modifier.padding(bottom = 7.dp), fontSize = 14.sp, color = Suau)
             }
-            Text("${euros(mes.euros.consum)} de consum + ${euros(mes.euros.fixos)} de fixos", fontSize = 13.sp, color = Suau)
+            Text(consumIFixos(mes.euros.consum, mes.euros.fixos), fontSize = 13.sp, color = Suau)
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

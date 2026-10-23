@@ -20,8 +20,10 @@ enum class Franja(val nom: String) {
  *
  * - Espanya: els preus d'energia i de potència són sense impostos, com a la factura; s'hi afegeixen l'impost
  *   elèctric i l'IVA. Les franges són les de la 2.0TD. El dinàmic és el PVPC.
- * - Països Baixos: els preus del contracte (fix, normaal i dal) són tot inclòs, com els donen les companyies.
- *   El dinàmic és el preu de mercat amb l'energiebelasting i l'IVA, més el recàrrec del proveïdor.
+ * - Països Baixos: com al contracte. El leveringstarief (fix, o normaal i dal) porta l'IVA però no
+ *   l'energiebelasting, que va a part; els costos fixos (vaste leveringskosten, netbeheer i la vermindering
+ *   energiebelasting) són per dia. El dinàmic és el preu de mercat amb l'energiebelasting i l'IVA, més el
+ *   recàrrec del proveïdor.
  * - Un altre país: un preu tot inclòs i uns fixos al mes.
  */
 data class Tarifa(
@@ -46,10 +48,15 @@ data class Tarifa(
     val comptadorMes: Double = 0.81,
     val iee: Double = 0.0511269632,
     val iva: Double = 0.21,
-    /** Països Baixos, amb IVA: vaste leveringskosten i netbeheer al mes, i el descompte d'impostos a l'any. */
-    val proveidorMes: Double = 10.59,
-    val xarxaMes: Double = 39.83,
-    val descompteAny: Double = 628.96,
+    /** Països Baixos: l'energiebelasting per kWh, amb IVA (2026: 0,11085). Se suma al leveringstarief. */
+    val ebKwh: Double = 0.11085,
+    /**
+     * Països Baixos, per dia i amb IVA, com al contracte: vaste leveringskosten, netbeheerkosten i la vermindering
+     * energiebelasting (que es resta). Per defecte, els valors típics del 2026.
+     */
+    val proveidorDia: Double = 0.33,
+    val xarxaDia: Double = 1.31,
+    val descompteDia: Double = 1.72317,
     /** Un altre país: els fixos al mes. */
     val fixosMes: Double = 0.0,
 ) {
@@ -90,8 +97,9 @@ data class Tarifa(
             Contracte.DINAMIC -> mercat(ts)?.let(::ambImpostosEs)
         }
         Pais.NL -> when (contracte) {
-            Contracte.FIX -> preuFix
-            Contracte.FRANGES -> if (franja(ts, zona) == Franja.DAL) dal else normaal
+            Contracte.FIX -> preuFix + ebKwh
+            Contracte.FRANGES -> (if (franja(ts, zona) == Franja.DAL) dal else normaal) + ebKwh
+            // El preu de mercat d'EnergyZero ja porta l'energiebelasting
             Contracte.DINAMIC -> mercat(ts)?.plus(recarrec)
         }
         Pais.ALTRE -> preuFix
@@ -100,7 +108,7 @@ data class Tarifa(
     /** Els costos fixos d'un dia, amb impostos. Als Països Baixos poden ser negatius: el descompte supera les quotes. */
     fun fixosDia(): Double = when (pais) {
         Pais.ES -> ambImpostosEs(potenciaKw * (potP1 + potP2)) + comptadorMes * 12 / 365 * (1 + iva)
-        Pais.NL -> (proveidorMes + xarxaMes) * 12 / 365 - descompteAny / 365
+        Pais.NL -> proveidorDia + xarxaDia - descompteDia
         Pais.ALTRE -> fixosMes * 12 / 365
     }
 
@@ -108,8 +116,8 @@ data class Tarifa(
         put("pais", pais.name); put("contracte", contracte.name); put("preuFix", preuFix)
         put("punta", punta); put("pla", pla); put("vall", vall); put("normaal", normaal); put("dal", dal)
         put("recarrec", recarrec); put("potenciaKw", potenciaKw); put("potP1", potP1); put("potP2", potP2)
-        put("comptadorMes", comptadorMes); put("iee", iee); put("iva", iva); put("proveidorMes", proveidorMes)
-        put("xarxaMes", xarxaMes); put("descompteAny", descompteAny); put("fixosMes", fixosMes)
+        put("comptadorMes", comptadorMes); put("iee", iee); put("iva", iva); put("ebKwh", ebKwh)
+        put("proveidorDia", proveidorDia); put("xarxaDia", xarxaDia); put("descompteDia", descompteDia); put("fixosMes", fixosMes)
     }.toString()
 
     companion object {
@@ -117,8 +125,12 @@ data class Tarifa(
             runCatching {
                 val o = JSONObject(it)
                 val d = Tarifa()
+                val pais = Pais.valueOf(o.optString("pais", d.pais.name))
+                // Fins a la 0.8, als Països Baixos el preu era tot inclòs i els fixos anaven al mes o a l'any:
+                // es converteixen, i l'EB es deixa a 0 perquè el total del kWh no canviï
+                val antiga = !o.has("ebKwh")
                 Tarifa(
-                    pais = Pais.valueOf(o.optString("pais", d.pais.name)),
+                    pais = pais,
                     contracte = Contracte.valueOf(o.optString("contracte", d.contracte.name)),
                     preuFix = o.optDouble("preuFix", d.preuFix),
                     punta = o.optDouble("punta", d.punta), pla = o.optDouble("pla", d.pla), vall = o.optDouble("vall", d.vall),
@@ -126,8 +138,11 @@ data class Tarifa(
                     recarrec = o.optDouble("recarrec", d.recarrec), potenciaKw = o.optDouble("potenciaKw", d.potenciaKw),
                     potP1 = o.optDouble("potP1", d.potP1), potP2 = o.optDouble("potP2", d.potP2),
                     comptadorMes = o.optDouble("comptadorMes", d.comptadorMes), iee = o.optDouble("iee", d.iee),
-                    iva = o.optDouble("iva", d.iva), proveidorMes = o.optDouble("proveidorMes", d.proveidorMes),
-                    xarxaMes = o.optDouble("xarxaMes", d.xarxaMes), descompteAny = o.optDouble("descompteAny", d.descompteAny),
+                    iva = o.optDouble("iva", d.iva),
+                    ebKwh = if (antiga && pais == Pais.NL) 0.0 else o.optDouble("ebKwh", d.ebKwh),
+                    proveidorDia = if (antiga) o.optDouble("proveidorMes", 10.59) * 12 / 365 else o.optDouble("proveidorDia", d.proveidorDia),
+                    xarxaDia = if (antiga) o.optDouble("xarxaMes", 39.83) * 12 / 365 else o.optDouble("xarxaDia", d.xarxaDia),
+                    descompteDia = if (antiga) o.optDouble("descompteAny", 628.96) / 365 else o.optDouble("descompteDia", d.descompteDia),
                     fixosMes = o.optDouble("fixosMes", d.fixosMes),
                 )
             }.getOrNull()

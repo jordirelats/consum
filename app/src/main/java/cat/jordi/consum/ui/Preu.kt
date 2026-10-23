@@ -33,6 +33,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.abs
 
 /** Una línia que resumeix la tarifa, per a la configuració. */
 fun resumTarifa(t: Tarifa): String = when (t.pais) {
@@ -166,36 +167,46 @@ private fun Espanya(t: Tarifa, mercat: List<HoraPreu>?, canvia: (Tarifa) -> Unit
 
 @Composable
 private fun PaisosBaixos(t: Tarifa, mercat: List<HoraPreu>?, canvia: (Tarifa) -> Unit) {
+    Nota(
+        "Els noms en neerlandès són els del contracte: copia-hi els números tal com hi surten. Els fixos, per dia.",
+        Modifier.padding(horizontal = 4.dp),
+    )
     Targeta {
         when (t.contracte) {
             Contracte.FIX -> {
-                TitolTargeta("Energia")
-                CampNum("Preu del kWh, tot inclòs", t.preuFix, "€", "Amb l'impost de l'energia i l'IVA, com el dona la companyia.") { canvia(t.copy(preuFix = it)) }
+                TitolTargeta("Leveringstarief")
+                CampNum("Leveringstarief", t.preuFix, "€/kWh", "Amb IVA i sense l'energiebelasting, que va a sota.") { canvia(t.copy(preuFix = it)) }
             }
             Contracte.FRANGES -> {
-                TitolTargeta("Energia, normaal i dal")
+                TitolTargeta("Leveringstarief, normaal i dal")
                 TiraPreus(franges(t), null, 14.dp)
                 Nota("Dal de 23 a 7 h els dies feiners, i tot el dia els caps de setmana i festius.", Modifier.padding(vertical = 4.dp))
-                CampNum("Normaal", t.normaal, "€/kWh") { canvia(t.copy(normaal = it)) }
-                CampNum("Dal", t.dal, "€/kWh", "Tot inclòs: impost de l'energia i IVA.") { canvia(t.copy(dal = it)) }
+                CampNum("Leveringstarief · Normaal", t.normaal, "€/kWh") { canvia(t.copy(normaal = it)) }
+                CampNum("Leveringstarief · Dal", t.dal, "€/kWh", "Amb IVA i sense l'energiebelasting, que va a sota.") { canvia(t.copy(dal = it)) }
             }
             Contracte.DINAMIC -> {
                 TitolTargeta("Energia, al preu de cada hora")
                 Nota(
-                    "L'app baixa sola cada dia el preu de mercat (EnergyZero), amb l'impost de l'energia i l'IVA. Hi suma el recàrrec del proveïdor.",
+                    "L'app baixa sola cada dia el preu de mercat (EnergyZero), que ja porta l'energiebelasting i l'IVA. Hi suma el recàrrec del proveïdor.",
                     Modifier.padding(bottom = 6.dp),
                 )
                 if (mercat != null) BarresPreu(mercat, null) else Nota("Desa-ho i els preus es baixaran sols.")
                 Spacer(Modifier.height(6.dp))
-                CampNum("Recàrrec del proveïdor", t.recarrec, "€/kWh", "L'inkoopvergoeding, amb IVA. És al contracte.") { canvia(t.copy(recarrec = it)) }
+                CampNum("Inkoopvergoeding", t.recarrec, "€/kWh", "El recàrrec del proveïdor, amb IVA.") { canvia(t.copy(recarrec = it)) }
             }
+        }
+        if (t.contracte != Contracte.DINAMIC) {
+            CampNum("Energiebelasting (EB)", t.ebKwh, "€/kWh", "L'impost de l'energia, amb IVA. El 2026, 0,11085.") { canvia(t.copy(ebKwh = it)) }
+            val total = if (t.contracte == Contracte.FIX) num(t.preuFix + t.ebKwh, 3) else "${num(t.normaal + t.ebKwh, 3)} i ${num(t.dal + t.ebKwh, 3)}"
+            Text("Cada kWh: $total €, tot inclòs", fontSize = 13.sp, fontWeight = FontWeight.Medium)
         }
     }
     Targeta {
         TitolTargeta("Costos fixos (no van als aparells)")
-        CampNum("Proveïdor", t.proveidorMes, "€/mes", "Vaste leveringskosten, amb IVA.") { canvia(t.copy(proveidorMes = it)) }
-        CampNum("Xarxa", t.xarxaMes, "€/mes", "Netbeheerkosten, amb IVA.") { canvia(t.copy(xarxaMes = it)) }
-        CampNum("Descompte d'impostos", t.descompteAny, "€/any", "Vermindering energiebelasting. Es resta.") { canvia(t.copy(descompteAny = it)) }
-        Row { Text("Total fixos: ${euros(t.fixosDia() * 365 / 12)} al mes", fontSize = 13.sp, fontWeight = FontWeight.Medium) }
+        CampNum("Vaste leveringskosten", t.proveidorDia, "€/dag") { canvia(t.copy(proveidorDia = it)) }
+        CampNum("Netbeheerkosten", t.xarxaDia, "€/dag") { canvia(t.copy(xarxaDia = it)) }
+        // Al contracte surt amb un menys davant («€- 1,72317»): es guarda sempre en positiu i es resta
+        CampNum("Vermindering energiebelasting", t.descompteDia, "€/dag", "Es resta dels altres dos.") { canvia(t.copy(descompteDia = abs(it))) }
+        Text("Total fixos: ${euros(t.fixosDia() * 365 / 12)} al mes", fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }

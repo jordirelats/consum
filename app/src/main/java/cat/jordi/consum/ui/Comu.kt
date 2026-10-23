@@ -76,6 +76,11 @@ fun num(x: Double, decimals: Int = 0): String =
 
 fun euros(x: Double) = "${num(x, 2)} €"
 
+/** «X € de consum + Y € de fixos»; als Països Baixos els fixos poden ser negatius, i llavors es resten. */
+fun consumIFixos(consum: Double, fixos: Double) =
+    if (fixos >= 0) "${euros(consum)} de consum + ${euros(fixos)} de fixos"
+    else "${euros(consum)} de consum − ${euros(-fixos)} de fixos (el descompte d'impostos supera les quotes)"
+
 fun icona(c: Categoria): ImageVector = when (c) {
     Categoria.NEVERA -> Icons.Outlined.Kitchen
     Categoria.CONGELADOR, Categoria.AIRE -> Icons.Outlined.AcUnit

@@ -207,6 +207,10 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                     nova != null -> {
                         Text("Hi ha la versió ${nova.versio}.", Modifier.padding(top = 4.dp), fontSize = 14.sp, color = Primari)
                         Button(onClick = vm::actualitza, Modifier.padding(top = 6.dp)) { Text("Actualitza") }
+                        Nota(
+                            "En un Samsung, si surt «S'ha bloquejat una aplicació desconeguda», desactiva Ajustaments → Seguretat i privadesa → Bloquejador automàtic i torna-ho a provar.",
+                            Modifier.padding(top = 6.dp),
+                        )
                     }
                     else -> TextButton(onClick = { vm.comprovaVersio(forcat = true) }) { Text("Mira si n'hi ha de noves") }
                 }

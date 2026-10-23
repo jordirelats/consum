@@ -30,6 +30,7 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
 
 1. Baixa l'APK de l'última versió a [Releases](../../releases).
 2. Obre'l des de «Fitxers» i permet instal·lar apps d'aquesta font.
+   - En un Samsung, si surt «S'ha bloquejat una aplicació desconeguda», cal desactivar Ajustaments → Seguretat i privadesa → Bloquejador automàtic.
 3. A partir d'aquí, l'app avisa quan hi ha una versió nova i s'actualitza des de la Configuració.
 
 ## Les dades
