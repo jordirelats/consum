@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Els fitxers que l'app comparteix amb l'instal·lador d'Android: només l'APK de l'actualització. -->
+<paths>
+    <cache-path name="actualitzacio" path="actualitzacio/" />
+</paths>

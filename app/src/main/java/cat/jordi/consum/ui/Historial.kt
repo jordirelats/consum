@@ -1,0 +1,73 @@
+package cat.jordi.consum.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Euro
+import androidx.compose.material.icons.outlined.Power
+import androidx.compose.material.icons.outlined.QuestionMark
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import cat.jordi.consum.dades.Periode
+
+@Composable
+fun PantallaHistorial(vm: ConsumViewModel) {
+    val r = vm.resum
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Pestanyes(Periode.entries, vm.periode, { it.nom }, vm::triaPeriode)
+        Text(
+            when (vm.periode) {
+                Periode.DIA -> "Últimes 24 hores"
+                Periode.SETMANA -> "Últims 7 dies"
+                Periode.MES -> "Últims 30 dies"
+            },
+            fontSize = 14.sp, color = Suau,
+        )
+        if (r == null) return@Column
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(num(r.total, 2), fontSize = 40.sp, fontWeight = FontWeight.Light)
+            Text(" kWh   ≈ ${euros(r.euros.total)}", Modifier.padding(bottom = 7.dp), fontSize = 17.sp, color = Suau)
+        }
+        Text("${euros(r.euros.consum)} de consum + ${euros(r.euros.fixos)} de fixos", fontSize = 13.sp, color = Suau)
+        Targeta { GraficaBarres(r.barres) }
+        Targeta {
+            fun pct(x: Double) = if (r.total > 0) "${num(x / r.total * 100)} %" else "—"
+            if (vm.config.teLinia) {
+                FilaConsum(
+                    Icons.Outlined.Bolt, LiniaFluix, Linia, vm.config.nomLinia, "${pct(r.linia)} · ${euros(r.euros.linia)}",
+                    "${num(r.linia, 2)} kWh", 3,
+                )
+            }
+            FilaConsum(
+                Icons.Outlined.Power, SempreFluix, Sempre, "Sempre encès",
+                r.fonsW?.let { "${num(it)} W de fons · ${pct(r.sempre)} · ${euros(r.euros.sempre)}" } ?: "cal un dia de dades",
+                "${num(r.sempre, 2)} kWh", 3,
+            )
+            FilaConsum(
+                Icons.Outlined.QuestionMark, DesconegutFluix, Desconegut, "Sense identificar",
+                "${pct(r.desconegut)} · ${euros(r.euros.desconegut)}", "${num(r.desconegut, 2)} kWh", 1,
+            )
+            FilaConsum(
+                Icons.Outlined.Euro, SempreFluix, Sempre, "Costos fixos", "no depenen de l'ús", euros(r.euros.fixos),
+            )
+        }
+        Nota(
+            "Quan l'app hagi après els aparells, aquí sortirà cadascun amb el seu color.",
+            Modifier.padding(horizontal = 4.dp),
+        )
+    }
+}
