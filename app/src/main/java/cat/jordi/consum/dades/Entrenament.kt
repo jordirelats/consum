@@ -83,4 +83,4 @@ class Explicador(referencies: List<Referencia>) {
 
 /** Els aparells que més s'assemblen a un consum desconegut, per proposar-los a la pregunta. */
 fun endevina(w: Double, aparells: List<Aparell>, referencies: Map<Long, Referencia>, quants: Int = 2): List<Aparell> =
-    aparells.sortedBy { a -> abs(ln(max(referencies[a.id]?.w ?: a.categoria.wTipic, 1.0) / max(w, 1.0))) }.take(quants)
+    aparells.sortedBy { a -> abs(ln(max(referencies[a.id]?.w ?: a.potenciaW ?: a.categoria.wTipic, 1.0) / max(w, 1.0))) }.take(quants)

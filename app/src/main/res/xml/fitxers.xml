@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Els fitxers que l'app comparteix amb l'instal·lador d'Android: només l'APK de l'actualització. -->
+<!-- Els fitxers que l'app comparteix: l'APK de l'actualització (amb l'instal·lador) i la foto de la placa (amb la càmera). -->
 <paths>
     <cache-path name="actualitzacio" path="actualitzacio/" />
+    <cache-path name="fotos" path="fotos/" />
 </paths>

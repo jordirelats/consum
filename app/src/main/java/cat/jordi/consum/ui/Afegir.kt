@@ -3,6 +3,23 @@
 package cat.jordi.consum.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.net.Uri
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import cat.jordi.consum.dades.LecturaPlaca
+import cat.jordi.consum.dades.Placa
+import java.io.File
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -69,10 +86,7 @@ fun PantallaAfegir(vm: ConsumViewModel) {
         Pestanyes(Via.entries, via, { it.nom }) { via = it }
         when (via) {
             Via.QR -> AmbQr(acaba)
-            Via.PLACA -> Targeta {
-                TitolTargeta("Foto de la placa")
-                Nota("Aviat: fotografiaràs la placa de característiques i l'app en llegirà la potència. Mentrestant, escriu-la a la pestanya Model.")
-            }
+            Via.PLACA -> AmbPlaca(acaba)
             Via.MODEL -> AmbModel(acaba)
         }
     }
@@ -198,6 +212,141 @@ private fun AmbModel(acaba: (Aparell) -> Unit) {
                 },
                 Modifier.fillMaxWidth(), enabled = valor != null,
             ) { Text("Afegeix-lo") }
+        }
+    }
+}
+
+/** Les categories per triar, com a la pestanya Model. */
+@Composable
+private fun TriaCategoria(triada: Categoria?, enTriar: (Categoria) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Categoria.entries.forEach { c -> FilterChip(selected = c == triada, onClick = { enTriar(c) }, label = { Text(c.nom) }) }
+    }
+}
+
+/**
+ * La placa de característiques: es fa (o es tria) una foto, l'app en llegeix el text dins del mòbil amb
+ * Tesseract i en treu la potència. L'usuari la pot corregir i diu quantes hores al dia funciona l'aparell.
+ */
+@Composable
+private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
+    val context = LocalContext.current
+    val abast = rememberCoroutineScope()
+    var foto by remember { mutableStateOf<Bitmap?>(null) }
+    var llegint by remember { mutableStateOf(false) }
+    var lectura by remember { mutableStateOf<LecturaPlaca?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var w by remember { mutableStateOf("") }
+    var categoria by remember { mutableStateOf<Categoria?>(null) }
+    var nom by remember { mutableStateOf("") }
+    var hores by remember { mutableStateOf("") }
+    var veureText by remember { mutableStateOf(false) }
+
+    fun llegeix(uri: Uri) {
+        llegint = true
+        error = null
+        lectura = null
+        abast.launch {
+            val r = withContext(Dispatchers.Default) {
+                runCatching {
+                    val b = Placa.carrega(context.contentResolver, uri)
+                    b to Placa.potencia(Placa.llegeix(context, b))
+                }
+            }
+            llegint = false
+            r.onSuccess { (b, l) ->
+                foto = b
+                lectura = l
+                w = l.w?.let { num(it) } ?: ""
+            }.onFailure { error = it.message ?: "No he pogut llegir la foto" }
+        }
+    }
+
+    val uriFoto = remember {
+        val f = File(context.cacheDir, "fotos/placa.jpg").apply { parentFile?.mkdirs() }
+        FileProvider.getUriForFile(context, "${context.packageName}.fitxers", f)
+    }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { feta -> if (feta) llegeix(uriFoto) }
+    // L'app declara el permís de càmera (per l'escàner de QR): si no està concedit, Android no deixa obrir la càmera
+    val permis = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { si ->
+        if (si) camera.launch(uriFoto) else error = "Sense permís de càmera. Pots triar una foto que ja tinguis."
+    }
+    val galeria = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(::llegeix) }
+
+    Targeta {
+        TitolTargeta("Foto de la placa de característiques")
+        Nota("És l'etiqueta platejada o blanca del darrere o de dins de la porta. Fes-la de prop, recta i sense reflexos. La foto es llegeix dins del mòbil i no s'envia enlloc.")
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) camera.launch(uriFoto)
+                else permis.launch(Manifest.permission.CAMERA)
+            }, enabled = !llegint) {
+                Icon(Icons.Outlined.PhotoCamera, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Fes la foto")
+            }
+            OutlinedButton(onClick = { galeria.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, enabled = !llegint) {
+                Text("Tria'n una")
+            }
+        }
+    }
+    if (llegint) {
+        Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+            Text("  Llegint la placa…", fontSize = 14.sp, color = Suau)
+        }
+    }
+    error?.let { Text(it, color = Desconegut, fontSize = 14.sp) }
+    lectura?.let { l ->
+        Targeta {
+            foto?.let { Image(it.asImageBitmap(), "La foto de la placa", Modifier.fillMaxWidth().height(150.dp)) }
+            Spacer(Modifier.height(8.dp))
+            if (l.w != null) {
+                Text(
+                    "He llegit ${num(l.w)} W" + if (l.delsAmperes) ", calculats amb els amperes" else "",
+                    fontSize = 17.sp, fontWeight = FontWeight.Medium, color = Ok,
+                )
+                l.fragment?.let { Nota("A la placa: «$it»") }
+            } else {
+                Text("No he trobat la potència. Escriu-la tu, o torna a fer la foto més de prop.", fontSize = 14.sp, color = Desconegut)
+            }
+            TextButton(onClick = { veureText = !veureText }) { Text(if (veureText) "Amaga el que he llegit" else "Mira tot el que he llegit") }
+            if (veureText) Nota(l.text.ifBlank { "(res)" })
+        }
+        Targeta {
+            TitolTargeta("Quin aparell és?")
+            TriaCategoria(categoria) { c ->
+                categoria = c
+                if (nom.isBlank() || Categoria.entries.any { it.nom == nom }) nom = c.nom
+                // Les hores que donen el consum típic d'aquest tipus d'aparell amb aquesta potència
+                w.replace(".", "").replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 }?.let { p ->
+                    hores = num(c.kwhAnyTipic * 1000 / 365 / p, 1)
+                }
+            }
+        }
+        categoria?.let { c ->
+            Targeta {
+                OutlinedTextField(nom, { nom = it }, Modifier.fillMaxWidth(), label = { Text("Nom") }, singleLine = true)
+                OutlinedTextField(
+                    w, { w = it }, Modifier.fillMaxWidth(), label = { Text("Potència") }, singleLine = true, suffix = { Text("W") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+                OutlinedTextField(
+                    hores, { hores = it }, Modifier.fillMaxWidth(), label = { Text("Hores al dia que funciona, de mitjana") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    supportingText = { Text("Comptant només quan escalfa o fa força. Per exemple, un bullidor uns 7 minuts: 0,1.") },
+                )
+                val pw = w.replace(".", "").replace(',', '.').toDoubleOrNull()
+                val ph = hores.replace(',', '.').toDoubleOrNull()
+                val kwh = if (pw != null && ph != null) pw * ph * 365 / 1000 else null
+                kwh?.let { Text("≈ ${num(it)} kWh l'any", Modifier.padding(top = 4.dp), fontSize = 15.sp, fontWeight = FontWeight.Medium) }
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = { acaba(Aparell(nom = nom.ifBlank { c.nom }, categoria = c, font = Font.PLACA, kwhAny = kwh ?: c.kwhAnyTipic, potenciaW = pw)) },
+                    Modifier.fillMaxWidth(), enabled = pw != null && kwh != null,
+                ) { Text("Afegeix-lo") }
+            }
         }
     }
 }

@@ -20,7 +20,7 @@ data class Hora(val ts: Long, val sempre: Double, val linia: Double, val descone
  * Les dades queden al mòbil. Canal 0 = pinça 1 (tota la casa), canal 1 = pinça 2 (una línia).
  * La "resta" és el total menys la línia; d'aquí surten el "sempre encès" i el "sense identificar".
  */
-class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 3) {
+class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 4) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -30,7 +30,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         db.execSQL(
             """CREATE TABLE aparells (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT NOT NULL,
                categoria TEXT NOT NULL, font TEXT NOT NULL, kwh_any REAL NOT NULL, espera_w REAL,
-               marca TEXT, model TEXT, classe TEXT, eprel TEXT, creat INTEGER NOT NULL)"""
+               marca TEXT, model TEXT, classe TEXT, eprel TEXT, creat INTEGER NOT NULL, potencia_w REAL)"""
         )
         creaPreus(db)
         creaEntrenament(db)
@@ -56,6 +56,8 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) creaPreus(db)
         if (oldVersion < 3) creaEntrenament(db)
+        // Versió 4: la potència de la placa de característiques
+        if (oldVersion < 4) db.execSQL("ALTER TABLE aparells ADD COLUMN potencia_w REAL")
     }
 
     fun insereixMinuts(canal: Int, files: List<Minut>) {
@@ -147,7 +149,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     fun aparells(): List<Aparell> =
         readableDatabase.rawQuery(
-            "SELECT id, nom, categoria, font, kwh_any, espera_w, marca, model, classe, eprel FROM aparells ORDER BY kwh_any DESC", null
+            "SELECT id, nom, categoria, font, kwh_any, espera_w, marca, model, classe, eprel, potencia_w FROM aparells ORDER BY kwh_any DESC", null
         ).use { c ->
             buildList {
                 while (c.moveToNext()) add(
@@ -157,6 +159,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
                         esperaW = if (c.isNull(5)) null else c.getDouble(5),
                         marca = c.getString(6) ?: "", model = c.getString(7) ?: "",
                         classe = c.getString(8) ?: "", eprel = c.getString(9) ?: "",
+                        potenciaW = if (c.isNull(10)) null else c.getDouble(10),
                     )
                 )
             }
@@ -166,7 +169,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         val v = ContentValues().apply {
             put("nom", a.nom); put("categoria", a.categoria.name); put("font", a.font.name)
             put("kwh_any", a.kwhAny); put("espera_w", a.esperaW); put("marca", a.marca)
-            put("model", a.model); put("classe", a.classe); put("eprel", a.eprel)
+            put("model", a.model); put("classe", a.classe); put("eprel", a.eprel); put("potencia_w", a.potenciaW)
         }
         if (a.id == 0L) {
             v.put("creat", System.currentTimeMillis() / 1000)

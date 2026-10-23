@@ -12,11 +12,16 @@ android {
         applicationId = "cat.jordi.consum"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.7"
+        versionCode = 8
+        versionName = "0.8"
+        // Tesseract porta codi natiu: només el dels mòbils (a la versió de prova, també el de l'emulador)
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
     buildTypes {
+        debug {
+            ndk { abiFilters += "x86_64" }
+        }
         release {
             // Signada amb la mateixa clau que les versions de prova, perquè s'actualitzin a sobre sense desinstal·lar
             signingConfig = signingConfigs.getByName("debug")
@@ -34,6 +39,10 @@ android {
     buildFeatures {
         compose = true
     }
+    // El codi natiu comprimit dins de l'APK: es baixa la meitat i Android el descomprimeix en instal·lar
+    packaging {
+        jniLibs { useLegacyPackaging = true }
+    }
 }
 
 dependencies {
@@ -50,4 +59,5 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
 }

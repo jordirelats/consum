@@ -45,6 +45,7 @@ enum class Categoria(val nom: String, val kwhAnyTipic: Double, val wTipic: Doubl
 /** D'on surt el consum teòric d'un aparell. */
 enum class Font(val nom: String, val punts: Int) {
     ETIQUETA("Etiqueta (QR)", 2),
+    PLACA("Placa", 2),
     MANUAL("Escrit a mà", 2),
     TIPIC("Valor típic", 1);
 
@@ -64,6 +65,8 @@ data class Aparell(
     val model: String = "",
     val classe: String = "",
     val eprel: String = "",
+    /** La potència de la placa de característiques (W), si se n'ha fet la foto. */
+    val potenciaW: Double? = null,
 ) {
     /** Encara ve del qüestionari o d'un valor típic: falta escanejar-ne l'etiqueta. */
     val perCompletar get() = font == Font.TIPIC

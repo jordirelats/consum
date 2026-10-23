@@ -10,6 +10,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Tesseract4Android (el reconeixement de text de les plaques) només és a JitPack
+        maven { url = uri("https://jitpack.io") }
     }
 }
 rootProject.name = "Consum"
