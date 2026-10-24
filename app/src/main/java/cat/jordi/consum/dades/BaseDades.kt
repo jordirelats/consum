@@ -8,8 +8,8 @@ import android.database.sqlite.SQLiteOpenHelper
 /** Un minut del Shelly: l'energia del minut (Wh) i les potències màxima i mínima (W). */
 data class Minut(val ts: Long, val wh: Double, val pmax: Double, val pmin: Double)
 
-/** Un punt de la gràfica: la potència mitjana del minut (W) del total i de la línia. */
-data class Punt(val ts: Long, val wTotal: Double, val wLinia: Double)
+/** Un punt de la gràfica: la potència mitjana del minut (W) del total i de la línia. [aprox]: calculat des de fora. */
+data class Punt(val ts: Long, val wTotal: Double, val wLinia: Double, val aprox: Boolean = false)
 
 /** L'energia d'una hora (kWh) repartida: sempre encès, la línia de la segona pinça i la resta sense identificar. */
 data class Hora(val ts: Long, val sempre: Double, val linia: Double, val desconegut: Double) {
@@ -19,13 +19,15 @@ data class Hora(val ts: Long, val sempre: Double, val linia: Double, val descone
 /**
  * Les dades queden al mòbil. Canal 0 = pinça 1 (tota la casa), canal 1 = pinça 2 (una línia).
  * La "resta" és el total menys la línia; d'aquí surten el "sempre encès" i el "sense identificar".
+ * Els minuts aproximats (aprox = 1) es fan des de fora amb el comptador del núvol; els exactes, que es baixen
+ * del Shelly a casa, els substitueixen.
  */
-class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 4) {
+class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 5) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
             """CREATE TABLE minuts (ts INTEGER NOT NULL, canal INTEGER NOT NULL, wh REAL NOT NULL,
-               pmax REAL, pmin REAL, PRIMARY KEY (ts, canal)) WITHOUT ROWID"""
+               pmax REAL, pmin REAL, aprox INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (ts, canal)) WITHOUT ROWID"""
         )
         db.execSQL(
             """CREATE TABLE aparells (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT NOT NULL,
@@ -58,13 +60,23 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         if (oldVersion < 3) creaEntrenament(db)
         // Versió 4: la potència de la placa de característiques
         if (oldVersion < 4) db.execSQL("ALTER TABLE aparells ADD COLUMN potencia_w REAL")
+        // Versió 5: els minuts aproximats, calculats des de fora
+        if (oldVersion < 5) db.execSQL("ALTER TABLE minuts ADD COLUMN aprox INTEGER NOT NULL DEFAULT 0")
     }
 
-    fun insereixMinuts(canal: Int, files: List<Minut>) {
+    /** Els minuts exactes, baixats del Shelly: substitueixen els aproximats que hi hagués. */
+    fun insereixMinuts(canal: Int, files: List<Minut>) = insereix(canal, files, aprox = false)
+
+    /** Els minuts aproximats: no toquen els exactes que ja hi són. */
+    fun insereixAproximats(canal: Int, files: List<Minut>) = insereix(canal, files, aprox = true)
+
+    private fun insereix(canal: Int, files: List<Minut>, aprox: Boolean) {
         val db = writableDatabase
         db.beginTransaction()
         try {
-            val sql = db.compileStatement("INSERT OR REPLACE INTO minuts (ts, canal, wh, pmax, pmin) VALUES (?, ?, ?, ?, ?)")
+            val sql = db.compileStatement(
+                "INSERT OR ${if (aprox) "IGNORE" else "REPLACE"} INTO minuts (ts, canal, wh, pmax, pmin, aprox) VALUES (?, ?, ?, ?, ?, ${if (aprox) 1 else 0})"
+            )
             for (m in files) {
                 sql.bindLong(1, m.ts)
                 sql.bindLong(2, canal.toLong())
@@ -79,8 +91,9 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         }
     }
 
+    /** L'últim minut exacte: d'aquí en endavant es baixa del Shelly (també on ara hi ha minuts aproximats). */
     fun darrerTs(canal: Int): Long? =
-        readableDatabase.rawQuery("SELECT MAX(ts) FROM minuts WHERE canal = ?", arrayOf(canal.toString())).use {
+        readableDatabase.rawQuery("SELECT MAX(ts) FROM minuts WHERE canal = ? AND aprox = 0", arrayOf(canal.toString())).use {
             if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null
         }
 
@@ -89,19 +102,29 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     fun serie(desDe: Long, finsA: Long): List<Punt> =
         readableDatabase.rawQuery(
-            "SELECT m0.ts, m0.wh * 60, IFNULL(m1.wh, 0) * 60 $restaSql ORDER BY m0.ts",
+            "SELECT m0.ts, m0.wh * 60, IFNULL(m1.wh, 0) * 60, m0.aprox $restaSql ORDER BY m0.ts",
             arrayOf(desDe.toString(), finsA.toString())
         ).use { c ->
-            buildList { while (c.moveToNext()) add(Punt(c.getLong(0), c.getDouble(1), c.getDouble(2))) }
+            buildList { while (c.moveToNext()) add(Punt(c.getLong(0), c.getDouble(1), c.getDouble(2), c.getInt(3) == 1)) }
         }
 
-    /** El consum de fons (Wh per minut): el percentil 5 de la resta. Null si encara no hi ha prou dades. */
-    fun fons(desDe: Long, finsA: Long): Double? {
+    /** Si entre aquestes dues hores hi ha algun minut aproximat. */
+    fun teAproximats(desDe: Long, finsA: Long): Boolean =
+        readableDatabase.rawQuery(
+            "SELECT 1 FROM minuts WHERE aprox = 1 AND ts >= ? AND ts < ? LIMIT 1", arrayOf(desDe.toString(), finsA.toString())
+        ).use { it.moveToFirst() }
+
+    /**
+     * El consum de fons (Wh per minut): el percentil 5 de la resta. Null si encara no hi ha prou dades.
+     * Amb [nomesExactes], sense els minuts aproximats, que són mitjanes i el farien més alt.
+     */
+    fun fons(desDe: Long, finsA: Long, nomesExactes: Boolean): Double? {
         val args = arrayOf(desDe.toString(), finsA.toString())
-        val n = readableDatabase.rawQuery("SELECT COUNT(*) $restaSql", args).use { if (it.moveToFirst()) it.getLong(0) else 0 }
+        val filtre = if (nomesExactes) " AND m0.aprox = 0" else ""
+        val n = readableDatabase.rawQuery("SELECT COUNT(*) $restaSql$filtre", args).use { if (it.moveToFirst()) it.getLong(0) else 0 }
         if (n < 60) return null
         return readableDatabase.rawQuery(
-            "SELECT MAX(m0.wh - IFNULL(m1.wh, 0), 0) AS resta $restaSql ORDER BY resta LIMIT 1 OFFSET ${n / 20}", args
+            "SELECT MAX(m0.wh - IFNULL(m1.wh, 0), 0) AS resta $restaSql$filtre ORDER BY resta LIMIT 1 OFFSET ${n / 20}", args
         ).use { if (it.moveToFirst()) it.getDouble(0) else null }
     }
 

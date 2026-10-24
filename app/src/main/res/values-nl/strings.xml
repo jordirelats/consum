@@ -76,6 +76,7 @@
     <string name="comu_consum_menys_fixos">%1$s verbruik − %2$s vaste kosten (de belastingvermindering is hoger dan de vaste kosten)</string>
     <string name="comu_sense_preus_avui">Ik heb de prijzen van vandaag nog niet. Ze worden vanzelf gedownload als er internet is.</string>
     <string name="comu_hora_zero">0 u</string>
+    <string name="comu_es_corregira">Zodra je telefoon weer thuis op de wifi zit, wordt het vanzelf gecorrigeerd.</string>
 
     <!-- L'etiqueta energètica (EPREL) -->
     <string name="eprel_consum_anual">jaarverbruik volgens het energielabel</string>
@@ -122,8 +123,12 @@
     <string name="ara_actualitza">Bijwerken</string>
     <string name="ara_resum_amb_preu">Nu %1$s per uur · vandaag %2$s kWh, %3$s</string>
     <string name="ara_resum">Vandaag %1$s kWh, %2$s</string>
+    <string name="ara_resum_amb_preu_aprox">Nu %1$s per uur · vandaag zo\'n %2$s kWh, %3$s</string>
+    <string name="ara_resum_aprox">Vandaag zo\'n %1$s kWh, %2$s</string>
     <string name="ara_ultimes_24h">Afgelopen 24 uur</string>
     <string name="ara_dades_wifi">De gegevens worden van de Shelly opgehaald als je telefoon thuis op de wifi zit.</string>
+    <string name="ara_dades_nuvol">Op afstand wordt het verbruik berekend met de meterstand uit de Shelly Cloud: over een paar minuten verschijnen de eerste gegevens.</string>
+    <string name="ara_aproximat">De stippellijn is een schatting: op afstand geeft de Shelly Cloud alleen de meterstand, niet het verbruik per minuut.</string>
     <string name="ara_mes_barat_avui">Wanneer is het vandaag het goedkoopst</string>
     <string name="ara_que_hi_ha_ences">Wat staat er nu aan</string>
     <string name="ara_linia_subtitol">%1$s W · tweede meetklem, gemeten</string>
@@ -160,6 +165,7 @@
     <string name="historial_costos_fixos">Vaste kosten</string>
     <string name="historial_no_depenen_us">los van je verbruik</string>
     <string name="historial_nota_aparells">Zodra de app je apparaten heeft aangeleerd, zie je ze hier elk met een eigen kleur.</string>
+    <string name="historial_aproximat">Een deel is een schatting: berekend op afstand, met de meterstand uit de Shelly Cloud.</string>
 
     <!-- Pantalla Aparells -->
     <string name="aparells_aquest_mes">Deze maand tot nu toe</string>
@@ -375,7 +381,7 @@
 
     <!-- Pantalla Configuració (la primera, per connectar el Shelly) -->
     <string name="connecta_titol_shelly">1. De Shelly op je wifi thuis</string>
-    <string name="connecta_buscant">Op zoek naar een Shelly op de wifi… Staat hij er niet bij? Vul dan het adres in (dat staat in de Shelly-app).</string>
+    <string name="connecta_buscant">Op zoek naar een Shelly op de wifi… Staat hij er niet bij, of zit hij in een ander netwerk (via vpn)? Vul dan het adres in (dat staat in de Shelly-app).</string>
     <string name="connecta_adreca">Adres van de Shelly</string>
     <string name="connecta_prova">Testen</string>
     <string name="connecta_no_hi_arribo">Ik kan hem niet bereiken. Controleer het adres en of je telefoon thuis op de wifi zit.</string>

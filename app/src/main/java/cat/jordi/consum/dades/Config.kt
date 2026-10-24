@@ -57,6 +57,16 @@ class Config(context: Context) {
         get() = p.getLong("inesperat_pregunta", 0)
         set(v) = p.edit().putLong("inesperat_pregunta", v).apply()
 
+    /**
+     * L'última lectura dels comptadors d'energia: el minut i els Wh de cada pinça. És el punt de partida del
+     * consum aproximat de fora de casa. Es desa com a text perquè un Float perdria els decimals dels Wh.
+     */
+    var comptador: Comptador?
+        get() = text("comptador").split(";").takeIf { it.size == 3 }?.let { (ts, wh, linia) ->
+            Comptador(ts.toLongOrNull() ?: return null, wh.toDoubleOrNull() ?: return null, linia.toDoubleOrNull())
+        }
+        set(v) = desa("comptador", v?.let { "${it.ts};${it.wh};${it.whLinia ?: ""}" } ?: "")
+
     /** L'última vegada que s'ha mirat si hi ha una versió nova (ms). */
     var darreraComprovacio: Long
         get() = p.getLong("darrera_comprovacio", 0)
@@ -67,3 +77,6 @@ class Config(context: Context) {
     val teLinia get() = nomLinia.isNotBlank()
     val teNuvol get() = servidorNuvol.isNotBlank() && clauNuvol.isNotBlank() && idDispositiu.isNotBlank()
 }
+
+/** Els comptadors d'energia del Shelly (Wh acumulats) en un minut. */
+data class Comptador(val ts: Long, val wh: Double, val whLinia: Double?)

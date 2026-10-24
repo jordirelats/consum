@@ -13,14 +13,25 @@ data class Canal(val w: Double, val va: Double, val pf: Double, val v: Double)
 
 enum class Origen { LOCAL, NUVOL }
 
-/** Una lectura en directe: la pinça 1 (total) i la pinça 2 (línia), si n'hi ha. */
-data class Lectura(val total: Canal, val linia: Canal?, val origen: Origen, val ts: Long) {
+/**
+ * Una lectura en directe: la pinça 1 (total) i la pinça 2 (línia), si n'hi ha, i els seus comptadors d'energia
+ * (Wh acumulats; el núvol els actualitza cada minut).
+ */
+data class Lectura(
+    val total: Canal, val linia: Canal?, val origen: Origen, val ts: Long,
+    val whTotal: Double? = null, val whLinia: Double? = null,
+) {
     companion object {
         /** Llegeix l'estat de Shelly.GetStatus, que és igual en local i al núvol. */
         fun de(estat: JSONObject, origen: Origen): Lectura? {
             val total = canal(estat.optJSONObject("em1:0")) ?: return null
-            return Lectura(total, canal(estat.optJSONObject("em1:1")), origen, System.currentTimeMillis() / 1000)
+            return Lectura(
+                total, canal(estat.optJSONObject("em1:1")), origen, System.currentTimeMillis() / 1000,
+                comptador(estat.optJSONObject("em1data:0")), comptador(estat.optJSONObject("em1data:1")),
+            )
         }
+
+        private fun comptador(o: JSONObject?) = o?.optDouble("total_act_energy")?.takeIf { !it.isNaN() }
 
         private fun canal(o: JSONObject?) = o?.let {
             Canal(it.optDouble("act_power", 0.0), it.optDouble("aprt_power", 0.0), it.optDouble("pf", 0.0), it.optDouble("voltage", 0.0))
@@ -93,12 +104,14 @@ class ShellyLocal(private val host: String) {
 
 /**
  * El núvol de Shelly (Cloud Control API v2), per veure el consum des de fora de casa.
- * Només dona l'estat del moment; l'historial es recull a casa. Màxim una petició per segon.
+ * Només dona l'estat del moment, amb el comptador d'energia; l'historial per minuts es recull a casa.
+ * Màxim una petició per segon. El servidor va per HTTPS, tret que porti un altre esquema (el núvol fals de les proves).
  */
 class ShellyNuvol(private val servidor: String, private val clau: String, private val idDispositiu: String) {
 
     fun lectura(): Lectura? {
-        val c = URL("https://$servidor/v2/devices/api/get?auth_key=${URLEncoder.encode(clau, "UTF-8")}")
+        val base = if ("://" in servidor) servidor else "https://$servidor"
+        val c = URL("$base/v2/devices/api/get?auth_key=${URLEncoder.encode(clau, "UTF-8")}")
             .openConnection() as HttpURLConnection
         c.connectTimeout = 5000
         c.readTimeout = 5000

@@ -47,7 +47,10 @@ fun PantallaHistorial(vm: ConsumViewModel) {
             Text(" kWh   ≈ ${euros(r.euros.total)}", Modifier.padding(bottom = 7.dp), fontSize = 17.sp, color = Suau)
         }
         Text(consumIFixos(r.euros.consum, r.euros.fixos), fontSize = 13.sp, color = Suau)
-        Targeta { GraficaBarres(r.barres) }
+        Targeta {
+            GraficaBarres(r.barres)
+            if (r.aproximat) NotaAproximat(stringResource(R.string.historial_aproximat), vm.config.host.isNotBlank())
+        }
         Targeta {
             fun pct(x: Double) = if (r.total > 0) "${num(x / r.total * 100)} %" else "—"
             if (vm.config.teLinia) {

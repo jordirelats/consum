@@ -8,8 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -29,6 +31,23 @@ import kotlin.math.ceil
 private fun sostre(maxim: Double): Double {
     val passos = listOf(200.0, 400.0, 600.0, 800.0, 1000.0, 1500.0, 2000.0, 3000.0, 4000.0, 5000.0, 7500.0, 10000.0)
     return passos.firstOrNull { it >= maxim } ?: (ceil(maxim / 5000) * 5000)
+}
+
+/**
+ * Una línia que passa per tots els punts: contínua on les dades són exactes i de punts on són aproximades
+ * (un tram és aproximat si el punt on acaba ho és).
+ */
+private fun DrawScope.liniaPunts(serie: List<Punt>, color: Color, x: (Long) -> Float, y: (Punt) -> Float) {
+    val exacta = Path()
+    val aproximada = Path()
+    for (i in 1 until serie.size) {
+        val (a, b) = serie[i - 1] to serie[i]
+        val cami = if (b.aprox) aproximada else exacta
+        if (i == 1 || serie[i - 1].aprox != b.aprox) cami.moveTo(x(a.ts), y(a))
+        cami.lineTo(x(b.ts), y(b))
+    }
+    drawPath(exacta, color, style = Stroke(1.5.dp.toPx()))
+    drawPath(aproximada, color, style = Stroke(1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 6f))))
 }
 
 /** La potència de les últimes 24 hores: el total en àrea i la línia de la segona pinça en blau. */
@@ -65,16 +84,8 @@ fun GraficaPotencia(serie: List<Punt>, ambLinia: Boolean) {
             close()
         }
         drawPath(area, Primari.copy(alpha = 0.14f))
-        val linia = Path().apply {
-            serie.forEachIndexed { i, p -> if (i == 0) moveTo(x(p.ts), y(p.wTotal)) else lineTo(x(p.ts), y(p.wTotal)) }
-        }
-        drawPath(linia, Primari, style = Stroke(1.5.dp.toPx()))
-        if (ambLinia) {
-            val l2 = Path().apply {
-                serie.forEachIndexed { i, p -> if (i == 0) moveTo(x(p.ts), y(p.wLinia)) else lineTo(x(p.ts), y(p.wLinia)) }
-            }
-            drawPath(l2, Linia, style = Stroke(1.5.dp.toPx()))
-        }
+        liniaPunts(serie, Primari, ::x) { y(it.wTotal) }
+        if (ambLinia) liniaPunts(serie, Linia, ::x) { y(it.wLinia) }
         // Les hores en punt múltiples de 6 a sota
         val zona = ZoneId.systemDefault()
         var ts = (serie.first().ts / 3600 + 1) * 3600

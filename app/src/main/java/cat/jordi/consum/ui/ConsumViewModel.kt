@@ -13,6 +13,7 @@ import cat.jordi.consum.ConsumApp
 import cat.jordi.consum.R
 import cat.jordi.consum.VersioNova
 import cat.jordi.consum.dades.Aparell
+import cat.jordi.consum.dades.Avui
 import cat.jordi.consum.dades.ConsellLinia
 import cat.jordi.consum.dades.Explicador
 import cat.jordi.consum.dades.InfoPreu
@@ -59,6 +60,10 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     var avuiKwh by mutableStateOf(0.0)
         private set
     var avuiEuros by mutableStateOf(0.0)
+        private set
+
+    /** Una part del consum d'avui s'ha calculat des de fora i és aproximada. */
+    var avuiAproximat by mutableStateOf(false)
         private set
     var infoPreu by mutableStateOf<InfoPreu?>(null)
         private set
@@ -222,8 +227,9 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
             )
         }
         serie = dades.serie
-        avuiKwh = dades.avui.first
-        avuiEuros = dades.avui.second
+        avuiKwh = dades.avui.kwh
+        avuiEuros = dades.avui.euros
+        avuiAproximat = dades.avui.aproximat
         infoPreu = dades.preu
         consellLinia = dades.consell
         referencies = dades.referencies
@@ -238,7 +244,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private class Dades(
-        val serie: List<Punt>, val avui: Pair<Double, Double>, val fons: Double?, val resum: Resum, val mes: Resum,
+        val serie: List<Punt>, val avui: Avui, val fons: Double?, val resum: Resum, val mes: Resum,
         val aparells: List<Aparell>, val preu: InfoPreu, val consell: ConsellLinia?,
         val referencies: Map<Long, Referencia>, val repartiment: Repartiment, val preguntes: List<Pregunta>,
         val aEntrenar: List<Aparell>,

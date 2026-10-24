@@ -3,6 +3,7 @@ package cat.jordi.consum.dades
 import androidx.annotation.StringRes
 import cat.jordi.consum.R
 import cat.jordi.consum.shelly.Lectura
+import cat.jordi.consum.shelly.Origen
 import cat.jordi.consum.shelly.ShellyLocal
 import cat.jordi.consum.shelly.ShellyNuvol
 import kotlinx.coroutines.Dispatchers
@@ -27,15 +28,22 @@ data class Euros(val sempre: Double, val linia: Double, val desconegut: Double, 
     val total get() = consum + fixos
 }
 
-/** El consum d'un període (kWh), repartit. [fonsW] és el consum que no s'apaga mai. */
+/**
+ * El consum d'un període (kWh), repartit. [fonsW] és el consum que no s'apaga mai. [aproximat]: una part s'ha
+ * calculat des de fora i es corregirà a casa.
+ */
 data class Resum(
     val barres: List<Barra>, val sempre: Double, val linia: Double, val desconegut: Double, val fonsW: Double?, val euros: Euros,
+    val aproximat: Boolean = false,
 ) {
     val total get() = sempre + linia + desconegut
 
     /** El que ha pagat de mitjana cada kWh de la casa, sense els fixos. */
     val preuMitja get() = if (total > 0.05) euros.consum / total else null
 }
+
+/** El consum d'avui (kWh i euros sense els fixos). [aproximat]: una part s'ha calculat des de fora. */
+data class Avui(val kwh: Double, val euros: Double, val aproximat: Boolean)
 
 /** Una hora amb el seu preu (€/kWh, amb impostos; null si és dinàmic i encara no se sap) i la seva franja. */
 data class HoraPreu(val ts: Long, val hora: Int, val preu: Double?, val franja: Franja)
@@ -63,21 +71,53 @@ class Repositori(val config: Config, private val bd: BaseDades) {
 
     private fun ara() = System.currentTimeMillis() / 1000
 
-    /** La lectura del moment: primer el Shelly de casa; si no hi arriba, el núvol. */
+    /**
+     * La lectura del moment: primer el Shelly de casa; si no hi arriba, el núvol. De passada, en desa el
+     * comptador d'energia ([desaComptador]).
+     */
     suspend fun lectura(): Lectura? = withContext(Dispatchers.IO) {
-        if (config.host.isNotBlank()) {
-            runCatching { ShellyLocal(config.host).lectura() }.getOrNull()?.let { return@withContext it }
-        }
-        if (config.teNuvol) {
-            runCatching { ShellyNuvol(config.servidorNuvol, config.clauNuvol, config.idDispositiu).lectura() }.getOrNull()
-        } else null
+        val l = (if (config.host.isNotBlank()) runCatching { ShellyLocal(config.host).lectura() }.getOrNull() else null)
+            ?: if (config.teNuvol) {
+                runCatching { ShellyNuvol(config.servidorNuvol, config.clauNuvol, config.idDispositiu).lectura() }.getOrNull()
+            } else null
+        if (l != null) runCatching { desaComptador(l) }
+        l
     }
 
     /**
-     * Baixa del Shelly els minuts que falten (només a casa). Retorna quants n'ha afegit.
-     * Llança una excepció si el Shelly no respon.
+     * Des de fora de casa, el núvol només dona els comptadors d'energia, que avancen cada minut. L'energia
+     * entre dues lectures es reparteix a parts iguals pels minuts d'entremig, que queden com a aproximats fins
+     * que el mòbil torna a casa i es baixen els exactes del Shelly. Amb una lectura de casa només es desa el
+     * comptador, perquè els minuts exactes ja vindran amb la sincronització. D'un en un: l'app i el treball de
+     * fons poden llegir alhora.
+     */
+    @Synchronized
+    private fun desaComptador(l: Lectura) {
+        val wh = l.whTotal ?: return
+        val minut = l.ts / 60 * 60
+        val abans = config.comptador
+        if (abans != null && minut <= abans.ts) return
+        config.comptador = Comptador(minut, wh, l.whLinia)
+        if (abans == null || l.origen == Origen.LOCAL) return
+        val minuts = ((minut - abans.ts) / 60).toInt()
+        // Més d'una setmana sense cap lectura: no es reparteix, i es torna a començar
+        if (minuts > 7 * 24 * 60) return
+        fun reparteix(canal: Int, ara: Double?, aleshores: Double?) {
+            // Si el comptador ha anat enrere, s'ha posat a zero: es torna a començar
+            if (ara == null || aleshores == null || ara < aleshores) return
+            val perMinut = (ara - aleshores) / minuts
+            bd.insereixAproximats(canal, List(minuts) { i -> Minut(abans.ts + i * 60L, perMinut, perMinut * 60, perMinut * 60) })
+        }
+        reparteix(0, wh, abans.wh)
+        if (config.teLinia) reparteix(1, l.whLinia, abans.whLinia)
+    }
+
+    /**
+     * Baixa del Shelly els minuts que falten (només a casa), també els que ara són aproximats. Retorna quants n'ha
+     * afegit. Llança una excepció si el Shelly no respon. Sense l'adreça del Shelly (només núvol) no fa res.
      */
     suspend fun sincronitza(): Int = withContext(Dispatchers.IO) {
+        if (config.host.isBlank()) return@withContext 0
         sincronitzant.withLock {
             val shelly = ShellyLocal(config.host)
             var n = 0
@@ -132,20 +172,26 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         )
     }
 
-    /** El fons en Wh per minut, calculat amb els últims 3 dies. */
-    private fun fonsWh(): Double = bd.fons(ara() - 3 * 86400, ara() + 60) ?: 0.0
+    /**
+     * El fons en Wh per minut, calculat amb els últims 3 dies: amb els minuts exactes, o, si encara no n'hi ha
+     * prou (qui només mira el núvol), amb els aproximats.
+     */
+    private fun fonsMinut(): Double? =
+        bd.fons(ara() - 3 * 86400, ara() + 60, nomesExactes = true) ?: bd.fons(ara() - 3 * 86400, ara() + 60, nomesExactes = false)
 
-    fun fonsW(): Double? = bd.fons(ara() - 3 * 86400, ara() + 60)?.times(60)
+    private fun fonsWh(): Double = fonsMinut() ?: 0.0
+
+    fun fonsW(): Double? = fonsMinut()?.times(60)
 
     fun serie24h(): List<Punt> = bd.serie(ara() - 86400, ara() + 60)
 
     private fun iniciDia(data: LocalDate) = data.atStartOfDay(zona).toEpochSecond()
 
-    /** El consum d'avui: kWh i euros (sense els fixos). */
-    fun avui(): Pair<Double, Double> {
+    /** El consum d'avui: kWh i euros (sense els fixos), i si una part és aproximada. */
+    fun avui(): Avui {
         val desDe = iniciDia(LocalDate.now(zona))
         val hores = bd.perHores(desDe, ara() + 60, fonsWh())
-        return hores.sumOf { it.total } to Preus(desDe, ara()).euros(hores, 0.0).consum
+        return Avui(hores.sumOf { it.total }, Preus(desDe, ara()).euros(hores, 0.0).consum, bd.teAproximats(desDe, ara() + 60))
     }
 
     fun resum(periode: Periode): Resum {
@@ -177,9 +223,10 @@ class Repositori(val config: Config, private val bd: BaseDades) {
                 } to Preus(iniciDia(primer), ara()).euros(llista, dies.toDouble())
             }
         }
+        val desDe = if (periode == Periode.DIA) (ara() / 3600 - 23) * 3600 else iniciDia(avui.minusDays(barres.size - 1L))
         return Resum(
             barres, barres.sumOf { it.hora.sempre }, barres.sumOf { it.hora.linia }, barres.sumOf { it.hora.desconegut },
-            fons.takeIf { it > 0 }?.times(60), euros,
+            fons.takeIf { it > 0 }?.times(60), euros, bd.teAproximats(desDe, ara() + 60),
         )
     }
 
@@ -308,8 +355,14 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         for (punt in bd.serie(desDe, ara() + 60)) {
             val exces = max(punt.wTotal - punt.wLinia, 0.0) - fons
             if (exces <= 0) continue
-            val e = explicador.explica(exces)
             val preu = p.de(punt.ts)
+            // Un minut aproximat és la mitjana d'una estona: no es pot dir quins aparells hi havia
+            if (punt.aprox) {
+                residuKwh += exces / 60_000
+                residuEuros += exces / 60_000 * preu
+                continue
+            }
+            val e = explicador.explica(exces)
             for ((id, w) in e.aparells) {
                 kwh[id] = (kwh[id] ?: 0.0) + w / 60_000
                 euros[id] = (euros[id] ?: 0.0) + w / 60_000 * preu

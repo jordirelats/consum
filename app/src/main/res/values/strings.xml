@@ -107,6 +107,8 @@
     <string name="comu_sense_preus_avui">Encara no tinc els preus d\'avui. Es baixen sols quan hi ha internet.</string>
     <!-- L'inici de l'eix de les hores (les 0 hores) -->
     <string name="comu_hora_zero">0 h</string>
+    <!-- Va darrere dels textos que diuen que una part del consum és aproximada -->
+    <string name="comu_es_corregira">Quan el mòbil torni a la wifi de casa, es corregirà sol.</string>
 
     <!-- L'etiqueta energètica (EPREL) -->
     <string name="eprel_consum_anual">consum anual de l\'etiqueta</string>
@@ -168,8 +170,14 @@
     <string name="ara_resum_amb_preu">Ara gastes %1$s l\'hora · avui %2$s kWh, %3$s</string>
     <!-- El mateix, quan no se sap el preu d'ara: %1$s són els kWh d'avui i %2$s el que han costat -->
     <string name="ara_resum">avui %1$s kWh, %2$s</string>
+    <!-- El mateix, quan una part del consum d'avui és aproximada (calculada des de fora) -->
+    <string name="ara_resum_amb_preu_aprox">Ara gastes %1$s l\'hora · avui uns %2$s kWh, %3$s</string>
+    <string name="ara_resum_aprox">avui uns %1$s kWh, %2$s</string>
     <string name="ara_ultimes_24h">Últimes 24 hores</string>
     <string name="ara_dades_wifi">Les dades es recullen del Shelly quan el mòbil és a la wifi de casa.</string>
+    <string name="ara_dades_nuvol">Des de fora, el consum es calcula amb el comptador del núvol de Shelly: les primeres dades sortiran d\'aquí a un parell de minuts.</string>
+    <!-- Sota la gràfica, quan una part és aproximada: es dibuixa amb una línia de punts -->
+    <string name="ara_aproximat">La línia de punts és aproximada: des de fora, el núvol de Shelly només dona el comptador, no el consum de cada minut.</string>
     <string name="ara_mes_barat_avui">Quan és més barat avui</string>
     <string name="ara_que_hi_ha_ences">Què hi ha encès ara</string>
     <!-- La línia que mesura la segona pinça del Shelly -->
@@ -219,6 +227,7 @@
     <string name="historial_costos_fixos">Costos fixos</string>
     <string name="historial_no_depenen_us">no depenen de l\'ús</string>
     <string name="historial_nota_aparells">Quan l\'app hagi après els aparells, aquí sortirà cadascun amb el seu color.</string>
+    <string name="historial_aproximat">Una part és aproximada: s\'ha calculat des de fora, amb el comptador del núvol de Shelly.</string>
 
     <!-- Pantalla Aparells -->
     <string name="aparells_aquest_mes">Aquest mes, fins ara</string>
@@ -495,7 +504,7 @@
 
     <!-- Pantalla Configuració (la primera, per connectar el Shelly) -->
     <string name="connecta_titol_shelly">1. El Shelly a la wifi de casa</string>
-    <string name="connecta_buscant">Buscant Shelly a la wifi… Si no surt, escriu-ne l\'adreça (és a l\'app de Shelly).</string>
+    <string name="connecta_buscant">Buscant Shelly a la wifi… Si no surt, o si és en una altra xarxa (per VPN), escriu-ne l\'adreça (és a l\'app de Shelly).</string>
     <string name="connecta_adreca">Adreça del Shelly</string>
     <!-- El botó per comprovar que s'arriba al Shelly -->
     <string name="connecta_prova">Prova</string>

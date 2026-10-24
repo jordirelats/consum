@@ -206,6 +206,12 @@ fun Nota(text: String, modifier: Modifier = Modifier) {
     Text(text, modifier, fontSize = 12.5.sp, color = Suau, lineHeight = 17.sp)
 }
 
+/** Que una part del consum és aproximada; si hi ha l'adreça del Shelly de casa, que s'hi corregirà. */
+@Composable
+fun NotaAproximat(text: String, esCorregira: Boolean) {
+    Nota(if (esCorregira) "$text ${stringResource(R.string.comu_es_corregira)}" else text, Modifier.padding(top = 4.dp))
+}
+
 val PuntaColor = Color(0xFFDC2626)
 val PuntaFluix = Color(0xFFFEE2E2)
 val VallColor = Color(0xFF16A34A)

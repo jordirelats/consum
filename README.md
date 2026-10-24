@@ -40,6 +40,7 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
 - **Les fotos de la placa i els contractes o factures es llegeixen dins del mòbil** i no s'envien enlloc.
 - **A casa,** l'app llegeix el Shelly directament per la wifi.
 - **Des de fora,** fa servir el núvol de Shelly amb la teva clau, que no surt del mòbil.
+  - El núvol només dona el comptador d'energia, i per això el consum de fora és aproximat. Quan el mòbil torna a casa, l'app el substitueix per les dades de cada minut del Shelly, que en guarda una setmana.
 - **Les úniques connexions a internet són aquestes:**
   - els preus de mercat: EnergyZero als Països Baixos i Red Eléctrica a Espanya;
   - les fitxes de les etiquetes energètiques (EPREL);
@@ -92,6 +93,7 @@ Fa servir aquestes llibreries i dades, totes amb llicència Apache-2.0:
 - **Unexpected-consumption alerts**: the app asks what an unknown load is through a notification.
 - **Fill in prices from a contract or bill** (photo or PDF), read on the device.
 - **Privacy**: data stays on the phone. Remote access uses your own Shelly cloud key, which never leaves the device.
+- **Away from home**, consumption is estimated from the cloud energy counter and replaced with the Shelly's per-minute data once the phone is back on the home Wi-Fi.
 
 Install the APK from [Releases](../../releases). Licence: GPL-3.0. Not affiliated with Shelly (Allterco Robotics).
 

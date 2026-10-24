@@ -66,9 +66,12 @@ fun PantallaAra(vm: ConsumViewModel) {
         }
         Text(
             if (l != null && preu != null) {
-                stringResource(R.string.ara_resum_amb_preu, euros(l.total.w / 1000 * preu), num(vm.avuiKwh, 2), euros(vm.avuiEuros))
+                stringResource(
+                    if (vm.avuiAproximat) R.string.ara_resum_amb_preu_aprox else R.string.ara_resum_amb_preu,
+                    euros(l.total.w / 1000 * preu), num(vm.avuiKwh, 2), euros(vm.avuiEuros),
+                )
             } else {
-                stringResource(R.string.ara_resum, num(vm.avuiKwh, 2), euros(vm.avuiEuros))
+                stringResource(if (vm.avuiAproximat) R.string.ara_resum_aprox else R.string.ara_resum, num(vm.avuiKwh, 2), euros(vm.avuiEuros))
             },
             fontSize = 14.sp, color = Suau,
         )
@@ -78,7 +81,11 @@ fun PantallaAra(vm: ConsumViewModel) {
         Targeta {
             TitolTargeta(stringResource(R.string.ara_ultimes_24h))
             GraficaPotencia(vm.serie, teLinia)
-            if (vm.serie.isEmpty()) Nota(stringResource(R.string.ara_dades_wifi))
+            when {
+                vm.serie.isEmpty() ->
+                    Nota(stringResource(if (l?.origen == Origen.NUVOL) R.string.ara_dades_nuvol else R.string.ara_dades_wifi))
+                vm.serie.any { it.aprox } -> NotaAproximat(stringResource(R.string.ara_aproximat), vm.config.host.isNotBlank())
+            }
         }
 
         if (info != null && info.tarifa.contracte != Contracte.FIX) {

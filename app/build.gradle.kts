@@ -12,8 +12,8 @@ android {
         applicationId = "cat.jordi.consum"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.11"
+        versionCode = 12
+        versionName = "0.12"
         // Tesseract porta codi natiu: només el dels mòbils (a la versió de prova, també el de l'emulador)
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
@@ -64,7 +64,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
