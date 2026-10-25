@@ -741,4 +741,36 @@
     <string name="ajuda_lloc_aire">Al lateral de l\'aparell de dins, sota la tapa.</string>
     <string name="ajuda_lloc_bomba_calor">Al lateral de la unitat de fora.</string>
     <string name="ajuda_lloc_termo">En una etiqueta al lateral del dipòsit, o a sota, prop dels tubs.</string>
+
+    <!-- Els moments punta (0.14) -->
+    <string name="pics_setmana">Els moments punta de la setmana</string>
+    <string name="pics_mes">Els moments punta del mes</string>
+    <!-- El dia (dissabte 24) i l'hora (20:48) d'un pic -->
+    <string name="pics_dia_hora">%1$s · %2$s</string>
+    <string name="pics_toca">Toca\'n un per veure què hi havia encès.</string>
+    <string name="pics_titol_24h">El moment punta de les últimes 24 hores</string>
+    <!-- %1$s és el dia: dissabte 24 -->
+    <string name="pics_titol_dia">El moment punta de %1$s</string>
+    <string name="pics_quan">a les %1$s</string>
+    <string name="pics_quan_percent">a les %1$s · el %2$s %% de la contractada</string>
+    <string name="pics_instantani">Amb puntes de %1$s W dins del minut.</string>
+    <!-- %1$d és quants n'hi ha (com a molt 5) -->
+    <string name="pics_gastaven_mes">Els %1$d que gastaven més</string>
+    <string name="pics_la_resta">La resta</string>
+    <string name="pics_des_de">des de les %1$s</string>
+    <string name="pics_apres">après</string>
+    <string name="pics_aprenent">aprenent</string>
+    <string name="pics_sempre_ences">nevera, routers, espera…</string>
+    <string name="pics_linia">segona pinça, mesurat</string>
+    <!-- Un salt de potència desconegut que es manté -->
+    <string name="pics_estable">des de les %1$s, sense parar</string>
+    <!-- Un salt de potència desconegut que puja i baixa -->
+    <string name="pics_variable">des de les %1$s, puja i baixa</string>
+    <string name="pics_ja_hi_era">ja era encès a les %1$s</string>
+    <string name="pics_que_era">Què era?</string>
+    <string name="pics_aprendra">El que li diguis queda après: la propera vegada ja sortirà amb el nom.</string>
+    <!-- %1$s són els aparells encesos: «Cotxe 2,7 kW, Placa 1,9 kW» -->
+    <string name="avis_potencia_ences">Ara: %1$s. Si encens res més, pot saltar el comptador.</string>
+    <string name="marca_sense_model">No en saps el model?</string>
+    <string name="marca_sense_model_nota">Afegeix-lo amb el consum típic. Quan en sàpigues el model, el pots buscar aquí i es posarà al seu lloc.</string>
 </resources>

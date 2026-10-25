@@ -381,18 +381,25 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
             Nota(stringResource(R.string.marca_nota_eprel), Modifier.padding(top = 8.dp))
         }
     }
-    if (c != null && (grups.isEmpty() || noTrobat || error != null)) {
+    val noSurt = grups.isEmpty() || noTrobat || error != null
+    // Qui no en sap el model també l'ha de poder afegir, amb el valor típic
+    val senseModel = !noSurt && model.isBlank() && fitxes.isEmpty() && !buscant
+    if (c != null && (noSurt || senseModel)) {
         Targeta {
-            TitolTargeta(stringResource(R.string.marca_no_surt))
-            val e = error
-            when {
-                e != null -> Text(e, color = Desconegut, fontSize = 14.sp)
-                noTrobat -> Nota(stringResource(R.string.cerca_no_trobat))
-                else -> Nota(stringResource(R.string.marca_tipus_sense_etiqueta))
+            TitolTargeta(stringResource(if (noSurt) R.string.marca_no_surt else R.string.marca_sense_model))
+            if (noSurt) {
+                val e = error
+                when {
+                    e != null -> Text(e, color = Desconegut, fontSize = 14.sp)
+                    noTrobat -> Nota(stringResource(R.string.cerca_no_trobat))
+                    else -> Nota(stringResource(R.string.marca_tipus_sense_etiqueta))
+                }
+                OpcionsNoSurt(text, aPlaca)
+                HorizontalDivider(Modifier.padding(vertical = 10.dp), color = Separador)
+                Nota(stringResource(R.string.marca_a_ma))
+            } else {
+                Nota(stringResource(R.string.marca_sense_model_nota))
             }
-            OpcionsNoSurt(text, aPlaca)
-            HorizontalDivider(Modifier.padding(vertical = 10.dp), color = Separador)
-            Nota(stringResource(R.string.marca_a_ma))
             Spacer(Modifier.height(6.dp))
             val nomTipus = stringResource(c.nomId)
             val nomDefecte = text.ifEmpty { nomTipus }

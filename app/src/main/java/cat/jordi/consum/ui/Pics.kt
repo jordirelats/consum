@@ -1,0 +1,221 @@
+package cat.jordi.consum.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Power
+import androidx.compose.material.icons.outlined.QuestionMark
+import androidx.compose.material.icons.outlined.ShowChart
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import cat.jordi.consum.R
+import cat.jordi.consum.dades.AnalisiPic
+import cat.jordi.consum.dades.AparellPic
+import cat.jordi.consum.dades.DesconegutPic
+import cat.jordi.consum.dades.ElementPic
+import cat.jordi.consum.dades.Idioma
+import cat.jordi.consum.dades.LiniaPic
+import cat.jordi.consum.dades.NivellPotencia
+import cat.jordi.consum.dades.Periode
+import cat.jordi.consum.dades.SempreEncesPic
+import cat.jordi.consum.dades.SenseIdentificarPic
+import cat.jordi.consum.dades.TipusTros
+import cat.jordi.consum.dades.nivellPotencia
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.TextStyle
+
+/** Els que s'ensenyen d'un pic, de més a menys: els altres van junts a «la resta». */
+private const val QUANTS = 5
+
+/**
+ * Els moments punta del període. Amb el dia, el de les últimes 24 hores; amb la setmana i el mes, els tres dies
+ * més alts, i el que es toca s'ensenya a sota.
+ */
+@Composable
+fun MomentsPunta(vm: ConsumViewModel) {
+    val pics = vm.pics
+    if (pics.isEmpty()) return
+    val limit = vm.config.tarifa.limitKw
+    if (vm.periode != Periode.DIA && pics.size > 1) {
+        Targeta {
+            TitolTargeta(stringResource(if (vm.periode == Periode.SETMANA) R.string.pics_setmana else R.string.pics_mes))
+            pics.forEachIndexed { i, a ->
+                if (i > 0) HorizontalDivider(color = Separador)
+                val triat = a.pic.ts == (vm.picTriat ?: pics.first().pic.ts)
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { vm.triaPic(a.pic) }
+                        .background(if (triat) PrimariFluix else Color.Transparent).padding(horizontal = 6.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.pics_dia_hora, dia(a.pic.ts), horaMinut(a.pic.ts)), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        resumElements(a)?.let { Text(it, fontSize = 12.sp, color = Suau, maxLines = 1) }
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("${num(a.pic.w)} W", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colorNivell(nivellPotencia(a.pic.w, limit), Color.Unspecified))
+                        if (limit != null) Text("${num(a.pic.w / (limit * 10))} %", fontSize = 11.sp, color = Suau)
+                    }
+                }
+            }
+            Nota(stringResource(R.string.pics_toca), Modifier.padding(top = 4.dp))
+        }
+    }
+    val triat = pics.firstOrNull { it.pic.ts == vm.picTriat } ?: pics.first()
+    TargetaPic(vm, triat, if (vm.periode == Periode.DIA) stringResource(R.string.pics_titol_24h) else stringResource(R.string.pics_titol_dia, dia(triat.pic.ts)))
+}
+
+/** Els noms dels que gastaven més en un pic, per a la llista: els aparells coneguts o el salt dels desconeguts. */
+@Composable
+private fun resumElements(a: AnalisiPic): String? {
+    val noms = a.elements.mapNotNull {
+        when (it) {
+            is AparellPic -> it.aparell.nom
+            is DesconegutPic -> "+${num(it.w / 1000, 1)} kW"
+            is LiniaPic -> null
+            else -> null
+        }
+    }.take(3)
+    return noms.takeIf { it.isNotEmpty() }?.joinToString(", ")
+}
+
+/** El dia d'un instant, curt: «dissabte 24». */
+private fun dia(ts: Long): String = Instant.ofEpochSecond(ts).atZone(ZoneId.systemDefault()).let {
+    "${it.dayOfWeek.getDisplayName(TextStyle.FULL, Idioma.locale)} ${it.dayOfMonth}"
+}
+
+/** Un pic: quant i quan, la gràfica de l'estona d'abans amb els salts, i els que gastaven més. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TargetaPic(vm: ConsumViewModel, a: AnalisiPic, titol: String) {
+    val limit = vm.config.tarifa.limitKw
+    val nivell = nivellPotencia(a.pic.w, limit)
+    Targeta {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.ShowChart, null, Modifier.size(18.dp), tint = colorNivell(nivell, Primari))
+            Spacer(Modifier.width(6.dp))
+            TitolTargeta(titol, Modifier.padding(top = 6.dp))
+        }
+        Text("${num(a.pic.w)} W", fontSize = 30.sp, fontWeight = FontWeight.Light, color = colorNivell(nivell, Color.Unspecified))
+        Text(
+            if (limit != null) stringResource(R.string.pics_quan_percent, horaMinut(a.pic.ts), num(a.pic.w / (limit * 10)))
+            else stringResource(R.string.pics_quan, horaMinut(a.pic.ts)),
+            fontSize = 13.sp, color = if (nivell == NivellPotencia.NORMAL) Suau else colorNivell(nivell, Suau),
+        )
+        a.pic.wMax?.takeIf { it > a.pic.w * 1.1 }?.let { Nota(stringResource(R.string.pics_instantani, num(it))) }
+        Spacer(Modifier.height(6.dp))
+        val marques = a.trossos.filter { it.tipus != TipusTros.JA_HI_ERA }.sortedBy { it.desDe }
+            .map { it.desDe to "${horaMinut(it.desDe)} · +${num(it.w / 1000, 1)} kW" }
+        GraficaPotencia(a.finestra, vm.config.teLinia, limit, marques, a.pic.ts)
+    }
+    Targeta {
+        TitolTargeta(stringResource(R.string.pics_gastaven_mes, minOf(QUANTS, a.elements.size)))
+        val mostrats = a.elements.take(QUANTS)
+        val resta = a.elements.drop(QUANTS).sumOf { it.w }
+        mostrats.forEach { e -> ElementDelPic(vm, e, a.pic.w) }
+        if (resta > 0) FilaPic(Icons.Outlined.QuestionMark, Sempre, stringResource(R.string.pics_la_resta), "", resta, a.pic.w)
+        if (mostrats.any { it is DesconegutPic }) {
+            Nota(stringResource(R.string.pics_aprendra), Modifier.padding(top = 6.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ElementDelPic(vm: ConsumViewModel, e: ElementPic, total: Double) {
+    when (e) {
+        is AparellPic -> FilaPic(
+            icona(e.aparell.categoria), Primari, e.aparell.nom,
+            listOfNotNull(
+                e.desDe?.let { stringResource(R.string.pics_des_de, horaMinut(it)) },
+                stringResource(if (e.apres) R.string.pics_apres else R.string.pics_aprenent),
+            ).joinToString(" · "),
+            e.w, total,
+        )
+        is SempreEncesPic -> FilaPic(Icons.Outlined.Power, Sempre, stringResource(R.string.historial_sempre_ences), stringResource(R.string.pics_sempre_ences), e.w, total)
+        is LiniaPic -> FilaPic(Icons.Outlined.Bolt, Linia, vm.config.nomLinia, stringResource(R.string.pics_linia), e.w, total)
+        is SenseIdentificarPic -> FilaPic(Icons.Outlined.QuestionMark, Desconegut, stringResource(R.string.historial_sense_identificar), "", e.w, total)
+        is DesconegutPic -> {
+            var tots by remember(e) { mutableStateOf(false) }
+            Column(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(10.dp)).background(DesconegutFluix)
+                    .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text("+${num(e.w / 1000, 1)} kW", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Desconegut)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        when (e.tros.tipus) {
+                            TipusTros.ESTABLE -> stringResource(R.string.pics_estable, horaMinut(e.tros.desDe))
+                            TipusTros.VARIABLE -> stringResource(R.string.pics_variable, horaMinut(e.tros.desDe))
+                            TipusTros.JA_HI_ERA -> stringResource(R.string.pics_ja_hi_era, horaMinut(e.tros.desDe))
+                        },
+                        fontSize = 12.sp, color = Suau,
+                    )
+                }
+                Text(stringResource(R.string.pics_que_era), Modifier.padding(top = 2.dp), fontSize = 12.5.sp, color = Suau)
+                val opcions = if (tots) vm.aparellsAEntrenar else e.suggerits
+                if (vm.aparellsAEntrenar.isEmpty()) {
+                    Nota(stringResource(R.string.entrena_primer_afegeix))
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        opcions.forEach { ap -> AssistChip(onClick = { vm.respon(e.tros, ap.id) }, label = { Text(ap.nom) }) }
+                        if (!tots) AssistChip(onClick = { tots = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Una fila d'un pic: la icona, el nom, els W, una barra amb la part del total i el detall. */
+@Composable
+private fun FilaPic(icona: ImageVector, color: Color, nom: String, detall: String, w: Double, total: Double) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(color.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+            Icon(icona, null, Modifier.size(18.dp), tint = color)
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Row {
+                Text(nom, Modifier.weight(1f), fontSize = 14.5.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                Text("${num(w)} W", fontSize = 14.5.sp)
+            }
+            Box(Modifier.padding(vertical = 3.dp).fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)).background(Separador)) {
+                Box(Modifier.fillMaxWidth((w / total).toFloat().coerceIn(0.01f, 1f)).height(5.dp).clip(RoundedCornerShape(3.dp)).background(color))
+            }
+            if (detall.isNotBlank()) Text(detall, fontSize = 11.5.sp, color = Suau, maxLines = 1)
+        }
+    }
+}

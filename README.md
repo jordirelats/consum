@@ -10,6 +10,7 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
   - Amb la potència contractada, quina part se'n fa servir. A la gràfica, en taronja des del 80 % i en vermell des del 90 %.
   - Un avís quan la casa passa del 90 %. Amb l'app tancada, al moment (amb una notificació fixa) o cada 15 minuts.
 - **Historial:** el consum per dies, setmanes i mesos, en kWh i en euros.
+  - Els moments punta: el minut de més consum i els 5 que gastaven més, amb des de quan eren encesos. Si un salt no s'assembla a cap aparell conegut, l'app pregunta què era i ho aprèn.
 - **Aparells:** el consum de cada aparell, comparat amb el que diu la seva etiqueta energètica.
   - Els aparells s'afegeixen amb un qüestionari estança per estança, escanejant el QR de l'etiqueta (la base de dades europea EPREL), buscant-ne la marca i el model a l'EPREL, fent una foto de la placa de característiques o a mà.
   - Una ajuda diu on és la placa amb el model a cada tipus d'aparell. Una fitxa de l'EPREL, una foto o un PDF es poden compartir amb l'app des d'una altra.
@@ -94,6 +95,7 @@ Fa servir aquestes llibreries i dades, totes amb llicència Apache-2.0:
 - **Appliance inventory**: a room-by-room questionnaire, the EU energy label QR (EPREL), a brand and model search on the EPREL website, a photo of the rating plate (read on the device with Tesseract), or manual entry.
 - **Contracted power**: how close the house is to it, with an alert above 90 % (immediately, with a persistent notification, or every 15 minutes).
 - **Training**: tell the app when you switch an appliance on or off and it learns its power.
+- **Peak moments**: the busiest minute of each day and the 5 loads behind it, with when each switched on; unknown steps can be labelled to teach the app.
 - **Unexpected-consumption alerts**: the app asks what an unknown load is through a notification.
 - **Fill in prices from a contract or bill** (photo or PDF), read on the device.
 - **Privacy**: data stays on the phone. Remote access uses your own Shelly cloud key, which never leaves the device.

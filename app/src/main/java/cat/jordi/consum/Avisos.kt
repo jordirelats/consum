@@ -52,8 +52,8 @@ object Avisos {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    /** La potència ha passat del 90 % de la contractada ([limitKw]). */
-    fun avisaPotencia(context: Context, w: Double, limitKw: Double) {
+    /** La potència ha passat del 90 % de la contractada ([limitKw]). [ences]: els aparells que l'expliquen, si se'n sap cap. */
+    fun avisaPotencia(context: Context, w: Double, limitKw: Double, ences: List<Pair<String, Double>> = emptyList()) {
         val gestor = NotificationManagerCompat.from(context)
         if (!gestor.areNotificationsEnabled()) return
         val watts = NumberFormat.getIntegerInstance(Idioma.locale).format(w)
@@ -61,10 +61,14 @@ object Avisos {
         val kw = NumberFormat.getNumberInstance(Idioma.locale).apply { maximumFractionDigits = 2 }.format(limitKw)
         val titol = if (w >= limitKw * 1000) context.getString(R.string.avis_potencia_passada, watts, kw)
         else context.getString(R.string.avis_potencia_titol, watts, percent)
+        val quilos = NumberFormat.getNumberInstance(Idioma.locale).apply { maximumFractionDigits = 1; minimumFractionDigits = 1 }
+        val text = if (ences.isEmpty()) context.getString(R.string.avis_potencia_text)
+        else context.getString(R.string.avis_potencia_ences, ences.joinToString(", ") { (nom, w) -> "$nom ${quilos.format(w / 1000)} kW" })
         val n = NotificationCompat.Builder(context, CANAL_POTENCIA)
             .setSmallIcon(R.drawable.ic_llamp)
             .setContentTitle(titol)
-            .setContentText(context.getString(R.string.avis_potencia_text))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(obreApp(context))
             .setAutoCancel(true)
             .setTimeoutAfter(15 * 60_000L)

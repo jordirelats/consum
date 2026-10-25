@@ -108,6 +108,12 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
             buildList { while (c.moveToNext()) add(Punt(c.getLong(0), c.getDouble(1), c.getDouble(2), c.getInt(3) == 1)) }
         }
 
+    /** El pic instantani (W) d'un minut exacte del total, o null si no se sap. */
+    fun pmax(ts: Long): Double? =
+        readableDatabase.rawQuery("SELECT pmax FROM minuts WHERE canal = 0 AND ts = ? AND aprox = 0", arrayOf(ts.toString())).use {
+            if (it.moveToFirst() && !it.isNull(0)) it.getDouble(0).takeIf { w -> w > 0 } else null
+        }
+
     /** Si entre aquestes dues hores hi ha algun minut aproximat. */
     fun teAproximats(desDe: Long, finsA: Long): Boolean =
         readableDatabase.rawQuery(

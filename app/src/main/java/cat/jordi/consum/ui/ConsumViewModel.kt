@@ -11,14 +11,16 @@ import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.Avisos
 import cat.jordi.consum.ConsumApp
 import cat.jordi.consum.R
-import cat.jordi.consum.Vigilancia
 import cat.jordi.consum.VersioNova
+import cat.jordi.consum.Vigilancia
+import cat.jordi.consum.dades.AnalisiPic
 import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Avui
 import cat.jordi.consum.dades.ConsellLinia
 import cat.jordi.consum.dades.Explicador
 import cat.jordi.consum.dades.InfoPreu
 import cat.jordi.consum.dades.Periode
+import cat.jordi.consum.dades.Pic
 import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Punt
 import cat.jordi.consum.dades.Referencia
@@ -26,6 +28,7 @@ import cat.jordi.consum.dades.Repartiment
 import cat.jordi.consum.dades.Resum
 import cat.jordi.consum.dades.Tarifa
 import cat.jordi.consum.dades.TextRecurs
+import cat.jordi.consum.dades.Tros
 import cat.jordi.consum.dades.mediana
 import cat.jordi.consum.dades.missatge
 import cat.jordi.consum.shelly.Lectura
@@ -77,6 +80,12 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     var resum by mutableStateOf<Resum?>(null)
         private set
     var resumMes by mutableStateOf<Resum?>(null)
+        private set
+
+    /** Els moments punta del període de l'Historial, amb què hi havia encès, i el que s'ensenya (el primer si no se n'ha triat cap). */
+    var pics by mutableStateOf<List<AnalisiPic>>(emptyList())
+        private set
+    var picTriat by mutableStateOf<Long?>(null)
         private set
     var aparells by mutableStateOf<List<Aparell>>(emptyList())
         private set
@@ -225,6 +234,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
         val p = periode
         val dades = withContext(Dispatchers.IO) {
             Dades(
+                repo.pics(p).map(repo::analitzaPic),
                 repo.serie24h(), repo.avui(), repo.fonsW(), repo.resum(p), repo.resumMes(), repo.aparells(),
                 repo.infoPreu(), repo.consellLinia(),
                 repo.referencies(), repo.repartimentMes(), repo.preguntesPendents(), repo.aparellsAEntrenar(),
@@ -245,9 +255,11 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
         resum = dades.resum
         resumMes = dades.mes
         aparells = dades.aparells
+        pics = dades.pics
     }
 
     private class Dades(
+        val pics: List<AnalisiPic>,
         val serie: List<Punt>, val avui: Avui, val fons: Double?, val resum: Resum, val mes: Resum,
         val aparells: List<Aparell>, val preu: InfoPreu, val consell: ConsellLinia?,
         val referencies: Map<Long, Referencia>, val repartiment: Repartiment, val preguntes: List<Pregunta>,
@@ -260,7 +272,20 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
 
     fun triaPeriode(p: Periode) {
         periode = p
+        picTriat = null
         refresca()
+    }
+
+    fun triaPic(p: Pic) {
+        picTriat = p.ts
+    }
+
+    /** L'usuari diu quin aparell era un tros d'un pic: se'n desa la mostra i es torna a analitzar. */
+    fun respon(tros: Tros, aparellId: Long) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.respon(aparellId, tros) }
+            refrescaAra()
+        }
     }
 
     fun desaAparells(llista: List<Aparell>) {

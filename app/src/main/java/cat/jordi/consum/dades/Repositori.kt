@@ -342,6 +342,82 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         return bd.pregunta(id)
     }
 
+    /**
+     * Els moments punta d'un període: el minut de més consum de les últimes 24 hores, o, per a la setmana i el mes,
+     * el de cada dia, i els [quants] més alts.
+     */
+    fun pics(periode: Periode, quants: Int = 3): List<Pic> {
+        val avui = LocalDate.now(zona)
+        val desDe = when (periode) {
+            Periode.DIA -> ara() - 86400
+            Periode.SETMANA -> iniciDia(avui.minusDays(6))
+            Periode.MES -> iniciDia(avui.minusDays(29))
+        }
+        val serie = bd.serie(desDe, ara() + 60)
+        if (serie.isEmpty()) return emptyList()
+        val maxims = if (periode == Periode.DIA) listOf(serie.maxBy { it.wTotal })
+        else serie.groupBy { Instant.ofEpochSecond(it.ts).atZone(zona).toLocalDate() }.values.map { dia -> dia.maxBy { it.wTotal } }
+        return maxims.sortedByDescending { it.wTotal }.take(if (periode == Periode.DIA) 1 else quants)
+            .map { Pic(it.ts, it.wTotal, bd.pmax(it.ts)) }
+    }
+
+    /**
+     * Què hi havia encès en un pic: la línia de la segona pinça, el fons i els trossos d'[AnalisiPics], cadascun amb
+     * els aparells après que l'expliquen (si en queda poc per explicar) o, si no, com a desconegut per preguntar-ne.
+     */
+    fun analitzaPic(pic: Pic): AnalisiPic {
+        val linia = config.teLinia
+        val serie = bd.serie(pic.ts - AnalisiPics.FINESTRA_S, pic.ts + 1)
+        val fons = fonsW() ?: 0.0
+        val trossos = AnalisiPics.trossos(serie.map { it.ts to max(it.wTotal - (if (linia) it.wLinia else 0.0), 0.0) }, fons)
+        val refs = referencies()
+        val tots = aparells().associateBy { it.id }
+        val aEntrenar = aparellsAEntrenar()
+        val elements = mutableListOf<ElementPic>()
+        val alPic = serie.lastOrNull()
+        val wLinia = if (linia) alPic?.wLinia ?: 0.0 else 0.0
+        if (wLinia > 0) elements += LiniaPic(wLinia)
+        if (fons > 0) elements += SempreEncesPic(minOf(fons, pic.w - wLinia))
+        // Un aparell només pot ser en un tros: primer els estables i el que ja hi era, que són més segurs
+        val usats = mutableSetOf<Long>()
+        for (tros in trossos.sortedBy { it.tipus == TipusTros.VARIABLE }) {
+            // El que puja i baixa es compara amb la seva potència típica, i els aparells que l'expliquen s'emporten tot el tros
+            val variable = tros.tipus == TipusTros.VARIABLE
+            val objectiu = if (variable) tros.mostra else tros.w
+            val e = Explicador(refs.values.filter { it.aparellId !in usats }).explica(objectiu)
+            if (e.aparells.isNotEmpty() && e.residu <= 0.25 * objectiu) {
+                usats += e.aparells.map { it.first }
+                val escala = if (variable) tros.w / e.aparells.sumOf { it.second } else 1.0
+                e.aparells.forEach { (id, w) ->
+                    tots[id]?.let { a -> elements += AparellPic(a, w * escala, tros.desDe.takeIf { tros.tipus != TipusTros.JA_HI_ERA }, refs[id]?.apresa == true) }
+                }
+            } else {
+                elements += DesconegutPic(tros, endevina(tros.mostra, aEntrenar.filter { it.id !in usats }, refs))
+            }
+        }
+        // El que queda (el que els aparells no expliquen del tot): sense identificar
+        val resta = pic.w - elements.sumOf { it.w }
+        if (resta > 50) elements += SenseIdentificarPic(resta)
+        // La gràfica: des d'una mica abans del primer tros que s'encén (com a molt 90 minuts abans del pic) fins a mitja hora després
+        val primer = trossos.filter { it.tipus != TipusTros.JA_HI_ERA }.minOfOrNull { it.desDe } ?: pic.ts
+        val inici = minOf(primer, pic.ts - 30 * 60) - 15 * 60
+        val finestra = bd.serie(maxOf(inici, pic.ts - 90 * 60L - 15 * 60), pic.ts + 30 * 60)
+        return AnalisiPic(pic, elements.sortedByDescending { it.w }, trossos, finestra)
+    }
+
+    /** L'usuari diu quin aparell era un tros d'un pic: és una mostra de l'aparell, com si l'hagués ensenyat en directe. */
+    fun respon(aparellId: Long, tros: Tros) = bd.desaMostra(aparellId, tros.desDe, tros.mostra, null, "pic")
+
+    /** Els aparells que expliquen ara el consum (com a molt 3), per dir-ho a l'avís de potència: nom i W. */
+    fun encesAra(l: Lectura): List<Pair<String, Double>> {
+        val wLinia = if (config.teLinia) l.linia?.w ?: 0.0 else 0.0
+        val fons = fonsW() ?: return emptyList()
+        val noms = aparells().associate { it.id to it.nom }
+        val llista = explicador().explica(l.total.w - wLinia - fons).aparells.mapNotNull { (id, w) -> noms[id]?.let { it to w } }.toMutableList()
+        if (wLinia >= AnalisiPics.LLINDAR) llista += config.nomLinia to wLinia
+        return llista.sortedByDescending { it.second }.take(3)
+    }
+
     /** Reparteix el consum sense identificar del mes entre els aparells après, minut a minut, al preu de cada hora. */
     fun repartimentMes(): Repartiment {
         val desDe = iniciDia(LocalDate.now(zona).withDayOfMonth(1))

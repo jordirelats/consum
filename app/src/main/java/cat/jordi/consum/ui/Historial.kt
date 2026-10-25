@@ -51,6 +51,7 @@ fun PantallaHistorial(vm: ConsumViewModel) {
             GraficaBarres(r.barres)
             if (r.aproximat) NotaAproximat(stringResource(R.string.historial_aproximat), vm.config.host.isNotBlank())
         }
+        MomentsPunta(vm)
         Targeta {
             fun pct(x: Double) = if (r.total > 0) "${num(x / r.total * 100)} %" else "—"
             if (vm.config.teLinia) {

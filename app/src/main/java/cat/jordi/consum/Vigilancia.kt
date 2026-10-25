@@ -58,7 +58,7 @@ class Vigilancia : Service() {
             if (l != null) {
                 val limit = repo.config.tarifa.limitKw
                 if (limit != null && calAvisarPotencia(repo.config, l.total.w, ConsumApp.oberta)) {
-                    Avisos.avisaPotencia(this, l.total.w, limit)
+                    Avisos.avisaPotencia(this, l.total.w, limit, runCatching { repo.encesAra(l) }.getOrDefault(emptyList()))
                 }
                 runCatching { NotificationManagerCompat.from(this).notify(ID, notificacio(l.total.w)) }
                 val ara = System.currentTimeMillis()

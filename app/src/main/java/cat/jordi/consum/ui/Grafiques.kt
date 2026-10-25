@@ -49,9 +49,13 @@ private val EstilEix = TextStyle(fontSize = 11.sp, color = Eix, fontWeight = Fon
  * - Amb la potència contractada ([limitKw]): les ratlles del 80 %, el 90 % i el 100 %, i els trams que passen
  *   del 80 % en taronja i del 90 % en vermell.
  * - La línia de la segona pinça, en blau.
+ * - [marques]: ratlles verticals amb una etiqueta (els salts d'abans d'un pic), i [pic], un punt vermell.
  */
 @Composable
-fun GraficaPotencia(serie: List<Punt>, ambLinia: Boolean, limitKw: Double?) {
+fun GraficaPotencia(
+    serie: List<Punt>, ambLinia: Boolean, limitKw: Double?,
+    marques: List<Pair<Long, String>> = emptyList(), pic: Long? = null,
+) {
     val mesura = rememberTextMeasurer()
     val context = LocalContext.current
     val senseDades = stringResource(R.string.grafiques_sense_dades)
@@ -120,22 +124,48 @@ fun GraficaPotencia(serie: List<Punt>, ambLinia: Boolean, limitKw: Double?) {
         liniaNivells(serie, limitKw, ::x) { y(it.wTotal) }
         if (ambLinia) liniaPunts(serie, Linia, ::x) { y(it.wLinia) }
 
-        // Les hores en punt múltiples de 6 a sota, sense sortir dels marges
+        // Els salts i el pic
+        marques.forEachIndexed { k, (ts, text) ->
+            val xx = x(ts)
+            drawLine(Desconegut, Offset(xx, 0f), Offset(xx, alt), 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 5f)))
+            val estil = EstilEix.copy(color = Desconegut)
+            val mida = mesura.measure(text, estil).size
+            drawText(mesura, text, Offset((xx + 3.dp.toPx()).coerceAtMost(size.width - mida.width), alt - mida.height * (k + 1) - 2.dp.toPx()), estil)
+        }
+        if (pic != null) serie.firstOrNull { it.ts == pic }?.let { p ->
+            val centre = Offset(x(p.ts), y(p.wTotal))
+            drawCircle(PotenciaLimit, 4.dp.toPx(), centre)
+            val text = horaMinut(p.ts)
+            val estil = EstilEix.copy(color = PotenciaLimit)
+            val mida = mesura.measure(text, estil).size
+            drawText(mesura, text, Offset((centre.x - mida.width - 4.dp.toPx()).coerceAtLeast(marge), (centre.y - mida.height - 2.dp.toPx()).coerceAtLeast(0f)), estil)
+        }
+
+        // Les hores a sota, sense sortir dels marges: cada 6 hores, cada 2 o, en una estona curta, cada mitja hora
+        val durada = serie.last().ts - serie.first().ts
+        val pas = when {
+            durada <= 4 * 3600 -> 1800L
+            durada <= 12 * 3600 -> 7200L
+            else -> 6 * 3600L
+        }
         val zona = ZoneId.systemDefault()
-        var ts = (serie.first().ts / 3600 + 1) * 3600
+        var ts = (serie.first().ts / 1800 + 1) * 1800
         while (ts <= serie.last().ts) {
-            val h = Instant.ofEpochSecond(ts).atZone(zona).hour
-            if (h % 6 == 0) {
-                val etiqueta = context.getString(R.string.grafiques_hora, h)
+            val hora = Instant.ofEpochSecond(ts).atZone(zona)
+            if ((hora.hour * 3600L + hora.minute * 60L) % pas == 0L) {
+                val etiqueta = if (pas < 3600) horaMinut(ts) else context.getString(R.string.grafiques_hora, hora.hour)
                 val mida = mesura.measure(etiqueta, EstilEix).size
                 val xx = (x(ts) - mida.width / 2).coerceIn(marge, size.width - mida.width)
                 drawText(mesura, etiqueta, Offset(xx, alt + 4.dp.toPx()), EstilEix)
             }
-            ts += 3600
+            ts += 1800
         }
     }
     Llegenda(serie.any { it.aprox }, limitKw != null)
 }
+
+/** L'hora i el minut d'un instant, com a les etiquetes de la gràfica (20:48). */
+fun horaMinut(ts: Long): String = Instant.ofEpochSecond(ts).atZone(ZoneId.systemDefault()).let { "%d:%02d".format(it.hour, it.minute) }
 
 /** El total, en trams del mateix aspecte: el color segons la potència i si és aproximat (lila i de punts). */
 private fun DrawScope.liniaNivells(serie: List<Punt>, limitKw: Double?, x: (Long) -> Float, y: (Punt) -> Float) {

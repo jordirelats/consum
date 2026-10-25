@@ -561,4 +561,30 @@
     <string name="ajuda_lloc_aire">Op de zijkant van de binnenunit, onder de klep.</string>
     <string name="ajuda_lloc_bomba_calor">Op de zijkant van de buitenunit.</string>
     <string name="ajuda_lloc_termo">Op een sticker op de zijkant van de boiler, of aan de onderkant bij de leidingen.</string>
+
+    <!-- Els moments punta (0.14) -->
+    <string name="pics_setmana">De piekmomenten van de week</string>
+    <string name="pics_mes">De piekmomenten van de maand</string>
+    <string name="pics_dia_hora">%1$s · %2$s</string>
+    <string name="pics_toca">Tik er een aan om te zien wat er aan stond.</string>
+    <string name="pics_titol_24h">Het piekmoment van de afgelopen 24 uur</string>
+    <string name="pics_titol_dia">Het piekmoment van %1$s</string>
+    <string name="pics_quan">om %1$s</string>
+    <string name="pics_quan_percent">om %1$s · %2$s%% van het maximum</string>
+    <string name="pics_instantani">Met pieken van %1$s W binnen die minuut.</string>
+    <string name="pics_gastaven_mes">De %1$d die het meest verbruikten</string>
+    <string name="pics_la_resta">De rest</string>
+    <string name="pics_des_de">sinds %1$s</string>
+    <string name="pics_apres">aangeleerd</string>
+    <string name="pics_aprenent">wordt nog aangeleerd</string>
+    <string name="pics_sempre_ences">koelkast, router, stand-by…</string>
+    <string name="pics_linia">tweede meetklem, gemeten</string>
+    <string name="pics_estable">sinds %1$s, zonder te stoppen</string>
+    <string name="pics_variable">sinds %1$s, wisselend</string>
+    <string name="pics_ja_hi_era">stond om %1$s al aan</string>
+    <string name="pics_que_era">Wat was het?</string>
+    <string name="pics_aprendra">Wat je hier kiest, onthoudt de app: de volgende keer staat de naam erbij.</string>
+    <string name="avis_potencia_ences">Nu: %1$s. Zet je nog iets aan, dan kan de hoofdzekering eruit springen.</string>
+    <string name="marca_sense_model">Weet je het modelnummer niet?</string>
+    <string name="marca_sense_model_nota">Voeg het toe met het gemiddelde verbruik. Weet je later het modelnummer, zoek het dan hier op: het wordt dan vervangen.</string>
 </resources>
