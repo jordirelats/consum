@@ -67,6 +67,21 @@ class Config(context: Context) {
         }
         set(v) = desa("comptador", v?.let { "${it.ts};${it.wh};${it.whLinia ?: ""}" } ?: "")
 
+    /** L'avís quan la potència passa del 90 % de la contractada. */
+    var avisPotencia: Boolean
+        get() = p.getBoolean("avis_potencia", true)
+        set(v) = p.edit().putBoolean("avis_potencia", v).apply()
+
+    /** Amb l'app tancada: al moment (el servei que vigila cada 10 s) o cada 15 minuts (el treball de fons). */
+    var avisAlMoment: Boolean
+        get() = p.getBoolean("avis_al_moment", true)
+        set(v) = p.edit().putBoolean("avis_al_moment", v).apply()
+
+    /** L'últim avís de potència (s), perquè no se n'enviïn seguits. */
+    var darrerAvisPotencia: Long
+        get() = p.getLong("darrer_avis_potencia", 0)
+        set(v) = p.edit().putLong("darrer_avis_potencia", v).apply()
+
     /** L'última vegada que s'ha mirat si hi ha una versió nova (ms). */
     var darreraComprovacio: Long
         get() = p.getLong("darrera_comprovacio", 0)

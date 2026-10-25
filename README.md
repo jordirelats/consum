@@ -7,9 +7,12 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
 ## Què fa
 
 - **Ara:** el consum en directe, el preu del kWh d'aquesta hora i què hi ha encès.
+  - Amb la potència contractada, quina part se'n fa servir. A la gràfica, en taronja des del 80 % i en vermell des del 90 %.
+  - Un avís quan la casa passa del 90 %. Amb l'app tancada, al moment (amb una notificació fixa) o cada 15 minuts.
 - **Historial:** el consum per dies, setmanes i mesos, en kWh i en euros.
 - **Aparells:** el consum de cada aparell, comparat amb el que diu la seva etiqueta energètica.
-  - Els aparells s'afegeixen amb un qüestionari estança per estança, escanejant el QR de l'etiqueta (la base de dades europea EPREL), fent una foto de la placa de característiques o a mà.
+  - Els aparells s'afegeixen amb un qüestionari estança per estança, escanejant el QR de l'etiqueta (la base de dades europea EPREL), buscant-ne la marca i el model a l'EPREL, fent una foto de la placa de característiques o a mà.
+  - Una ajuda diu on és la placa amb el model a cada tipus d'aparell. Una fitxa de l'EPREL, una foto o un PDF es poden compartir amb l'app des d'una altra.
   - L'app llegeix la potència de la foto de la placa amb Tesseract, dins del mòbil.
 - **Entrena:** li ensenyes quan encens o apagues un aparell, i l'app n'aprèn la potència.
   - Si apareix un consum que no reconeix, t'ho pregunta amb una notificació.
@@ -43,7 +46,7 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
   - El núvol només dona el comptador d'energia, i per això el consum de fora és aproximat. Quan el mòbil torna a casa, l'app el substitueix per les dades de cada minut del Shelly, que en guarda una setmana.
 - **Les úniques connexions a internet són aquestes:**
   - els preus de mercat: EnergyZero als Països Baixos i Red Eléctrica a Espanya;
-  - les fitxes de les etiquetes energètiques (EPREL);
+  - les fitxes de les etiquetes energètiques i la cerca per model (la web de l'EPREL);
   - GitHub, per mirar si hi ha una versió nova.
 
 ## Limitacions
@@ -88,7 +91,8 @@ Fa servir aquestes llibreries i dades, totes amb llicència Apache-2.0:
 **Consum** is an Android app that shows what each household appliance uses and what it costs, using a Shelly energy meter (Gen2/Gen3 with EM1/EM1Data, e.g. Shelly EM Gen3) and no server of its own.
 
 - **Live view and history**, with hour-by-hour prices: Spain 2.0TD/PVPC, Netherlands fixed, normaal/dal or dynamic (EnergyZero), or a single price. Fixed costs are shown separately.
-- **Appliance inventory**: a room-by-room questionnaire, the EU energy label QR (EPREL), a photo of the rating plate (read on the device with Tesseract), or manual entry.
+- **Appliance inventory**: a room-by-room questionnaire, the EU energy label QR (EPREL), a brand and model search on the EPREL website, a photo of the rating plate (read on the device with Tesseract), or manual entry.
+- **Contracted power**: how close the house is to it, with an alert above 90 % (immediately, with a persistent notification, or every 15 minutes).
 - **Training**: tell the app when you switch an appliance on or off and it learns its power.
 - **Unexpected-consumption alerts**: the app asks what an unknown load is through a notification.
 - **Fill in prices from a contract or bill** (photo or PDF), read on the device.

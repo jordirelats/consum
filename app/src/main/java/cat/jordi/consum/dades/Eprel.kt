@@ -28,16 +28,42 @@ data class FitxaEprel(
 
 /**
  * L'EPREL: el QR de l'etiqueta porta a eprel.ec.europa.eu/qr/<número>, i /api/product/<número>
- * dona la fitxa sense cap clau. (Cercar per marca i model sí que en demana, per això no es fa.)
+ * dona la fitxa sense cap clau. (L'API de cerca per marca i model sí que en demana: la cerca es fa a la web,
+ * amb `CercaEprel`.)
  */
 object Eprel {
-    private val reQr = Regex("""eprel\.ec\.europa\.eu/(?:qr|screen/product/[^/]+)/(\d+)""")
+    /** Els enllaços amb el número: el QR, la fitxa de la web, la fitxa en PDF i l'etiqueta. */
+    private val reEnllac = Regex("""eprel\.ec\.europa\.eu/(?:qr/|screen/product/[^/\s]+/|fiches/[^/\s]+/Fiche_|labels/[^/\s]+/Label_)(\d+)""")
+    private val reFitxer = Regex("""(?:Fiche|Label)_(\d+)""")
 
-    /** El número de registre d'un QR escanejat, o d'un número escrit a mà. */
+    /** El número de registre d'un QR escanejat, d'un enllaç, o d'un número escrit a mà. */
     fun numero(text: String): String? {
-        reQr.find(text)?.let { return it.groupValues[1] }
+        enllac(text)?.let { return it }
         val net = text.trim()
         return net.takeIf { it.length in 4..10 && it.all(Char::isDigit) }
+    }
+
+    /** El número de registre d'un text que porta un enllaç de l'EPREL. */
+    fun enllac(text: String): String? = reEnllac.find(text)?.groupValues?.get(1)
+
+    /** El número d'una fitxa o d'una etiqueta baixades de l'EPREL, pel nom del fitxer (Fiche_1621246_ES.pdf). */
+    fun deFitxer(nom: String): String? = reFitxer.find(nom)?.groupValues?.get(1)
+
+    /** On buscar cada tipus d'aparell a la web de l'EPREL, per ordre: primer l'etiqueta d'ara, després l'antiga. */
+    fun grups(c: Categoria): List<String> = when (c) {
+        Categoria.NEVERA, Categoria.CONGELADOR -> listOf("refrigeratingappliances2019", "refrigeratingappliances")
+        Categoria.RENTADORA -> listOf("washingmachines2019", "washerdriers2019", "washingmachines")
+        Categoria.RENTAPLATS -> listOf("dishwashers2019", "dishwashers")
+        Categoria.ASSECADORA -> listOf("tumbledryers20232534", "tumbledriers")
+        Categoria.TELEVISOR -> listOf("electronicdisplays", "televisions")
+        Categoria.FORN -> listOf("ovens")
+        Categoria.CAMPANA -> listOf("rangehoods")
+        Categoria.AIRE -> listOf("airconditioners")
+        Categoria.TERMO -> listOf("waterheaters")
+        Categoria.BOMBA_CALOR, Categoria.CALDERA -> listOf("spaceheaters")
+        Categoria.ESTUFA -> listOf("localspaceheaters")
+        Categoria.LLUMS -> listOf("lightsources")
+        else -> emptyList()
     }
 
     fun fitxa(numero: String): FitxaEprel {

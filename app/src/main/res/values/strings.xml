@@ -212,7 +212,7 @@
     <!-- Gràfiques -->
     <string name="grafiques_sense_dades">Encara no hi ha dades</string>
     <!-- Les hores de l'eix de baix de la gràfica (6 h, 12 h...) -->
-    <string name="grafiques_hora">%1$d h</string>
+    <string name="grafiques_hora">%1$d:00</string>
 
     <!-- Pantalla Historial -->
     <string name="historial_ultimes_24h">Últimes 24 hores</string>
@@ -329,7 +329,6 @@
     <string name="afegir_via_qr">QR etiqueta</string>
     <!-- La placa de característiques de l'aparell -->
     <string name="afegir_via_placa">Placa</string>
-    <string name="afegir_via_model">Model</string>
     <string name="afegir_qr_no_etiqueta">Aquest QR no és d\'una etiqueta energètica europea.</string>
     <string name="afegir_error_eprel">No he pogut llegir l\'EPREL</string>
     <string name="afegir_qr_titol">Escaneja el QR de l\'etiqueta energètica</string>
@@ -351,7 +350,6 @@
     <string name="afegir_nom_app">Nom a l\'app</string>
     <string name="afegir_afegeix_lo">Afegeix-lo</string>
     <string name="afegir_quin_aparell">Quin aparell és?</string>
-    <string name="afegir_nom_i_model">Nom (i model, si el saps)</string>
     <string name="afegir_consum_kwh_any">Consum, kWh l\'any</string>
     <!-- Sota el consum anual, si l'usuari l'ha canviat -->
     <string name="afegir_escrit_per_tu">El que has escrit tu</string>
@@ -649,4 +647,98 @@
     <!-- Mostra desada: %1$s és el nom de l'aparell, %2$s el salt de potència, %3$d quantes mostres té i %4$d quantes en calen -->
     <string name="vm_entrena_desat_encen">%1$s: +%2$s W. Desat (%3$d de %4$d).</string>
     <string name="vm_entrena_desat_apaga">%1$s: −%2$s W. Desat (%3$d de %4$d).</string>
+
+    <!-- La potència contractada (0.13) -->
+    <!-- El nom del canal de notificacions -->
+    <string name="avis_canal_potencia">Prop de la potència contractada</string>
+    <string name="avis_canal_potencia_descripcio" formatted="false">Quan la casa passa del 90 % de la potència contractada</string>
+    <!-- El nom del canal de la notificació fixa -->
+    <string name="avis_canal_vigilancia">Vigilància de la potència</string>
+    <string name="avis_canal_vigilancia_descripcio">La notificació fixa mentre l\'app vigila la potència amb l\'app tancada</string>
+    <!-- %1$s són els watts d'ara i %2$s el percentatge -->
+    <string name="avis_potencia_titol">%1$s W: el %2$s %% de la potència contractada</string>
+    <string name="avis_potencia_passada">%1$s W: per sobre de la potència contractada (%2$s kW)</string>
+    <string name="avis_potencia_text">Si encens res més, pot saltar el comptador.</string>
+    <!-- La notificació fixa de la vigilància -->
+    <string name="vigilancia_titol">Vigilant la potència</string>
+    <string name="vigilancia_engegant">Començant…</string>
+    <string name="vigilancia_ara">Ara %1$s W</string>
+    <string name="vigilancia_ara_percent">Ara %1$s W, el %2$s %% de la contractada</string>
+    <!-- La ratlla de la potència contractada a la gràfica -->
+    <string name="grafiques_contractats">%1$s kW contractats</string>
+    <!-- Les etiquetes de l'eix de la potència -->
+    <string name="grafiques_kw">%1$s kW</string>
+    <!-- Les etiquetes de l'eix de l'energia -->
+    <string name="grafiques_kwh">%1$s kWh</string>
+    <!-- A la llegenda: les dades exactes -->
+    <string name="grafiques_exacte">exacte</string>
+    <!-- A la llegenda: les dades aproximades del núvol -->
+    <string name="grafiques_aproximat">aproximat (núvol)</string>
+    <!-- Sota la potència d'ara -->
+    <string name="ara_part_contractada">el %1$s %% dels %2$s kW contractats</string>
+    <string name="ara_limit_a_prop">A prop del límit</string>
+    <string name="ara_limit_passat">Per sobre de la potència contractada</string>
+    <string name="ara_limit_text">Si encens res més, pot saltar el comptador. A sota hi ha el que hi ha encès ara.</string>
+    <string name="connecta_titol_potencia">Potència contractada i avisos</string>
+    <string name="connecta_potencia_contractada">Potència contractada</string>
+    <string name="connecta_potencia_es">És a la factura («Potencia contratada»).</string>
+    <string name="connecta_potencia_nl">És la connexió de la casa (als Països Baixos, l\'aansluiting): 1×25 A són 5,8 kW, 1×35 A són 8 kW i 3×25 A són 17 kW.</string>
+    <string name="connecta_avisa_90" formatted="false">Avisa\'m quan passi del 90 %</string>
+    <string name="connecta_colors_grafica" formatted="false">A la gràfica, taronja des del 80 % i vermell des del 90 %.</string>
+    <string name="connecta_app_tancada">Amb l\'app tancada</string>
+    <string name="connecta_al_moment">Al moment</string>
+    <string name="connecta_al_moment_text">L\'app mira la potència cada 10 segons i deixa una icona fixa a la barra de notificacions. Gasta una mica més de bateria.</string>
+    <string name="connecta_cada_15">Cada 15 minuts</string>
+    <string name="connecta_cada_15_text">Sense icona fixa, però l\'avís pot arribar quan ja ha saltat.</string>
+    <string name="connecta_cal_permis">Per avisar-te, l\'app necessita el permís de notificacions.</string>
+
+    <!-- Pantalla Afegir, pestanya Marca i model -->
+    <!-- El nom de la pestanya, al costat de «QR etiqueta» i «Placa» -->
+    <string name="marca_via">Marca i model</string>
+    <string name="marca_marca">Marca</string>
+    <string name="marca_model">Model</string>
+    <!-- Enllaç que obre l'ajuda amb on és la placa de característiques de cada aparell -->
+    <string name="marca_on_trobo">On trobo el model?</string>
+    <!-- EPREL: la base de dades europea de l'etiqueta energètica (eprel.ec.europa.eu) -->
+    <string name="marca_busca_eprel">Busca\'l a l\'EPREL</string>
+    <string name="marca_trobat">Trobat a l\'EPREL</string>
+    <string name="marca_consum_etiqueta">Consum de l\'etiqueta</string>
+    <string name="marca_nota_eprel">La base de dades europea de l\'etiqueta energètica. La cerca es fa a la seva web, des del mòbil.</string>
+    <string name="marca_no_surt">No surt a l\'EPREL?</string>
+    <!-- Quan el tipus d'aparell triat (cafetera, router…) no té etiqueta energètica, i per tant no es pot buscar a l'EPREL -->
+    <string name="marca_tipus_sense_etiqueta">Aquest tipus d\'aparell no té etiqueta energètica europea.</string>
+    <string name="marca_sense_etiqueta">Els aparells petits (cafetera, bullidor, microones…) no tenen etiqueta energètica.</string>
+    <!-- Botó que obre el cercador del mòbil; %1$s és la marca i el model escrits, per exemple «LG GMJ960MBJE» -->
+    <string name="marca_busca_internet">Busca «%1$s» a internet</string>
+    <!-- Botó que passa a la pestanya Placa -->
+    <string name="marca_foto_placa">Fes una foto de la placa</string>
+    <!-- La fitxa de producte o l'etiqueta energètica trobades a internet es poden compartir amb l'app des del navegador -->
+    <string name="marca_comparteix">Si trobes la fitxa o l\'etiqueta a internet, comparteix-la amb Consum i la llegirà.</string>
+    <!-- Abans del formulari per afegir l'aparell escrivint-ne el consum -->
+    <string name="marca_a_ma">O afegeix-lo amb el consum a mà:</string>
+    <!-- Avís breu (Toast) quan es comparteix amb Consum un text sense cap enllaç de l'EPREL -->
+    <string name="marca_compartit_no_eprel">Consum només llegeix els enllaços de l\'EPREL. També pots compartir-hi una foto o un PDF de la placa o de l\'etiqueta.</string>
+
+    <!-- La cerca a la web de l'EPREL -->
+    <string name="cerca_buscant">Buscant-lo a l\'EPREL. Pot trigar uns segons…</string>
+    <string name="cerca_no_trobat">No l\'he trobat a l\'EPREL. Mira que el model sigui el de la placa, o prova\'n només el principi.</string>
+    <string name="cerca_no_carrega">No s\'ha pogut obrir la web de l\'EPREL. Mira la connexió i torna-ho a provar: la segona vegada va més de pressa.</string>
+
+    <!-- Ajuda «On trobo el model?» -->
+    <string name="ajuda_titol">Ajuda</string>
+    <string name="ajuda_tanca">Tanca</string>
+    <string name="ajuda_placa">A la placa de característiques, l\'etiqueta amb la marca, el model i la potència:</string>
+    <!-- On sol ser la placa de característiques de cada tipus d'aparell -->
+    <string name="ajuda_lloc_nevera">A dins, a la paret d\'un costat o darrere del calaix de la verdura.</string>
+    <string name="ajuda_lloc_congelador">A dins, a la paret d\'un costat, o al darrere, per fora.</string>
+    <string name="ajuda_lloc_rentadora">A la vora de la porta, o a dins de la tapa del filtre.</string>
+    <string name="ajuda_lloc_assecadora">Al marc de la porta, quan és oberta, o al darrere.</string>
+    <string name="ajuda_lloc_rentaplats">Al cantell de la porta, quan és oberta.</string>
+    <string name="ajuda_lloc_forn">Al marc de la porta, quan és oberta.</string>
+    <string name="ajuda_lloc_microones">Al darrere o a sota; de vegades, al marc de la porta.</string>
+    <string name="ajuda_lloc_campana">A dins, darrere dels filtres de greix.</string>
+    <string name="ajuda_lloc_televisor">En una etiqueta al darrere. També surt al menú de configuració, a la informació del televisor.</string>
+    <string name="ajuda_lloc_aire">Al lateral de l\'aparell de dins, sota la tapa.</string>
+    <string name="ajuda_lloc_bomba_calor">Al lateral de la unitat de fora.</string>
+    <string name="ajuda_lloc_termo">En una etiqueta al lateral del dipòsit, o a sota, prop dels tubs.</string>
 </resources>

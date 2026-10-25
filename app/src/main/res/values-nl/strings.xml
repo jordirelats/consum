@@ -152,7 +152,7 @@
 
     <!-- Gràfiques -->
     <string name="grafiques_sense_dades">Nog geen gegevens</string>
-    <string name="grafiques_hora">%1$d u</string>
+    <string name="grafiques_hora">%1$d:00</string>
 
     <!-- Pantalla Historial -->
     <string name="historial_ultimes_24h">Afgelopen 24 uur</string>
@@ -242,7 +242,6 @@
     <!-- Pantalla Afegir -->
     <string name="afegir_via_qr">QR-label</string>
     <string name="afegir_via_placa">Typeplaatje</string>
-    <string name="afegir_via_model">Model</string>
     <string name="afegir_qr_no_etiqueta">Deze QR-code hoort niet bij een Europees energielabel.</string>
     <string name="afegir_error_eprel">Ik kon de gegevens van EPREL niet ophalen</string>
     <string name="afegir_qr_titol">Scan de QR-code op het energielabel</string>
@@ -259,7 +258,6 @@
     <string name="afegir_nom_app">Naam in de app</string>
     <string name="afegir_afegeix_lo">Toevoegen</string>
     <string name="afegir_quin_aparell">Welk apparaat is het?</string>
-    <string name="afegir_nom_i_model">Naam (en model, als je dat weet)</string>
     <string name="afegir_consum_kwh_any">Verbruik, kWh per jaar</string>
     <string name="afegir_escrit_per_tu">Wat je zelf hebt ingevuld</string>
     <string name="afegir_valor_tipic">Gemiddelde waarde: pas aan als je het precies weet</string>
@@ -489,4 +487,78 @@
     <string name="vm_entrena_cap_canvi">Ik zie geen verschil (%1$s W). Probeer het opnieuw.</string>
     <string name="vm_entrena_desat_encen">%1$s: +%2$s W. Opgeslagen (meting %3$d van %4$d).</string>
     <string name="vm_entrena_desat_apaga">%1$s: −%2$s W. Opgeslagen (meting %3$d van %4$d).</string>
+
+    <!-- La potència contractada (0.13) -->
+    <string name="avis_canal_potencia">Bijna aan je maximale vermogen</string>
+    <string name="avis_canal_potencia_descripcio" formatted="false">Als het huis meer dan 90% van het maximale vermogen gebruikt</string>
+    <string name="avis_canal_vigilancia">Vermogen bewaken</string>
+    <string name="avis_canal_vigilancia_descripcio">De vaste melding terwijl de app het vermogen bewaakt</string>
+    <string name="avis_potencia_titol">%1$s W: %2$s%% van je maximale vermogen</string>
+    <string name="avis_potencia_passada">%1$s W: boven je maximale vermogen (%2$s kW)</string>
+    <string name="avis_potencia_text">Zet je nog iets aan, dan kan de hoofdzekering eruit springen.</string>
+    <string name="vigilancia_titol">Vermogen wordt bewaakt</string>
+    <string name="vigilancia_engegant">Starten…</string>
+    <string name="vigilancia_ara">Nu %1$s W</string>
+    <string name="vigilancia_ara_percent">Nu %1$s W, %2$s%% van het maximum</string>
+    <string name="grafiques_contractats">max. %1$s kW</string>
+    <string name="grafiques_kw">%1$s kW</string>
+    <string name="grafiques_kwh">%1$s kWh</string>
+    <string name="grafiques_exacte">exact</string>
+    <string name="grafiques_aproximat">schatting (cloud)</string>
+    <string name="ara_part_contractada">%1$s%% van het maximum (%2$s kW)</string>
+    <string name="ara_limit_a_prop">Bijna aan het maximum</string>
+    <string name="ara_limit_passat">Boven het maximale vermogen</string>
+    <string name="ara_limit_text">Zet je nog iets aan, dan kan de hoofdzekering eruit springen. Hieronder zie je wat er nu aan staat.</string>
+    <string name="connecta_titol_potencia">Maximaal vermogen en meldingen</string>
+    <string name="connecta_potencia_contractada">Maximaal vermogen</string>
+    <string name="connecta_potencia_es">Staat op de rekening (‘Potencia contratada’).</string>
+    <string name="connecta_potencia_nl">Dat is je aansluiting: 1×25 A is 5,8 kW, 1×35 A is 8 kW en 3×25 A is 17 kW.</string>
+    <string name="connecta_avisa_90" formatted="false">Waarschuw me boven 90%</string>
+    <string name="connecta_colors_grafica" formatted="false">In de grafiek oranje vanaf 80% en rood vanaf 90%.</string>
+    <string name="connecta_app_tancada">Als de app dicht is</string>
+    <string name="connecta_al_moment">Direct</string>
+    <string name="connecta_al_moment_text">De app kijkt elke 10 seconden naar het vermogen en toont een vaste melding in de statusbalk. Dat kost iets meer batterij.</string>
+    <string name="connecta_cada_15">Elke 15 minuten</string>
+    <string name="connecta_cada_15_text">Zonder vaste melding, maar de waarschuwing kan te laat komen.</string>
+    <string name="connecta_cal_permis">Om je te waarschuwen heeft de app toestemming voor meldingen nodig.</string>
+
+    <!-- Pantalla Afegir, pestanya Marca i model -->
+    <string name="marca_via">Merk en model</string>
+    <string name="marca_marca">Merk</string>
+    <string name="marca_model">Modelnummer</string>
+    <string name="marca_on_trobo">Waar vind ik het modelnummer?</string>
+    <string name="marca_busca_eprel">Zoek in EPREL</string>
+    <string name="marca_trobat">Gevonden in EPREL</string>
+    <string name="marca_consum_etiqueta">Verbruik volgens het energielabel</string>
+    <string name="marca_nota_eprel">De Europese database van het energielabel. Je telefoon zoekt rechtstreeks op de website.</string>
+    <string name="marca_no_surt">Niet in EPREL?</string>
+    <string name="marca_tipus_sense_etiqueta">Dit soort apparaat heeft geen Europees energielabel.</string>
+    <string name="marca_sense_etiqueta">Kleine apparaten (koffiezetapparaat, waterkoker, magnetron…) hebben geen energielabel.</string>
+    <string name="marca_busca_internet">Zoek ‘%1$s’ op internet</string>
+    <string name="marca_foto_placa">Maak een foto van het typeplaatje</string>
+    <string name="marca_comparteix">Vind je het productblad of het energielabel op internet? Deel het met Consum, dan leest de app het.</string>
+    <string name="marca_a_ma">Of voeg het toe en vul het verbruik zelf in:</string>
+    <string name="marca_compartit_no_eprel">Consum kan alleen links van EPREL lezen. Je kunt ook een foto of pdf van het typeplaatje of het energielabel delen.</string>
+
+    <!-- La cerca a la web de l'EPREL -->
+    <string name="cerca_buscant">Zoeken in EPREL. Dit kan een paar seconden duren…</string>
+    <string name="cerca_no_trobat">Niet gevonden in EPREL. Controleer of het modelnummer klopt met het typeplaatje, of probeer alleen het begin.</string>
+    <string name="cerca_no_carrega">De EPREL-website kon niet worden geopend. Controleer je verbinding en probeer het opnieuw: de tweede keer gaat het sneller.</string>
+
+    <!-- Ajuda «On trobo el model?» -->
+    <string name="ajuda_titol">Hulp</string>
+    <string name="ajuda_tanca">Sluiten</string>
+    <string name="ajuda_placa">Op het typeplaatje, het etiket met het merk, het modelnummer en het vermogen:</string>
+    <string name="ajuda_lloc_nevera">Binnenin, op een zijwand of achter de groentelade.</string>
+    <string name="ajuda_lloc_congelador">Binnenin op een zijwand, of buiten op de achterkant.</string>
+    <string name="ajuda_lloc_rentadora">Op de rand rond de deur, of achter het klepje van het filter.</string>
+    <string name="ajuda_lloc_assecadora">Op de rand van de deuropening als de deur openstaat, of op de achterkant.</string>
+    <string name="ajuda_lloc_rentaplats">Op de zijkant van de deur, als die openstaat.</string>
+    <string name="ajuda_lloc_forn">Op de rand van de ovenopening, als de deur openstaat.</string>
+    <string name="ajuda_lloc_microones">Op de achter- of onderkant; soms op de rand van de deuropening.</string>
+    <string name="ajuda_lloc_campana">Binnenin, achter de vetfilters.</string>
+    <string name="ajuda_lloc_televisor">Op een sticker op de achterkant. Het staat ook in het instellingenmenu, bij de informatie over de tv.</string>
+    <string name="ajuda_lloc_aire">Op de zijkant van de binnenunit, onder de klep.</string>
+    <string name="ajuda_lloc_bomba_calor">Op de zijkant van de buitenunit.</string>
+    <string name="ajuda_lloc_termo">Op een sticker op de zijkant van de boiler, of aan de onderkant bij de leidingen.</string>
 </resources>

@@ -1,11 +1,16 @@
 package cat.jordi.consum
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import cat.jordi.consum.dades.Eprel
 import cat.jordi.consum.dades.Idioma
+import androidx.core.content.IntentCompat
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
@@ -39,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import cat.jordi.consum.ui.Compartit
 import cat.jordi.consum.ui.ConsumViewModel
 import cat.jordi.consum.ui.Fons
 import cat.jordi.consum.ui.Pantalla
@@ -53,6 +59,7 @@ import cat.jordi.consum.ui.PantallaQuestionari
 import cat.jordi.consum.ui.Pestanya
 import cat.jordi.consum.ui.Primari
 import cat.jordi.consum.ui.PrimariFluix
+import cat.jordi.consum.ui.Rebut
 import cat.jordi.consum.ui.TemaConsum
 
 class MainActivity : ComponentActivity() {
@@ -63,12 +70,15 @@ class MainActivity : ComponentActivity() {
         Idioma.actualitza(this)
         enableEdgeToEdge()
         obre(intent)
+        // En girar la pantalla torna a arribar el mateix intent: el que s'havia compartit ja s'ha recollit
+        if (savedInstanceState == null) rep(intent)
         setContent { TemaConsum { Arrel(vm) } }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         obre(intent)
+        rep(intent)
     }
 
     /** Des d'un avís, l'app s'obre a Entrena, on hi ha la pregunta. */
@@ -79,6 +89,34 @@ class MainActivity : ComponentActivity() {
             vm.refresca()
         }
     }
+
+    /**
+     * El que s'ha compartit amb Consum des d'una altra app: un enllaç de l'EPREL (se'n busca la fitxa), o una foto
+     * o un PDF (es llegeix com la placa). Una fitxa o una etiqueta baixades de l'EPREL es reconeixen pel nom.
+     */
+    private fun rep(intent: Intent?) {
+        if (intent == null || intent.action != Intent.ACTION_SEND || !vm.config.configurat) return
+        val rebut: Rebut = if (intent.type?.startsWith("text/") == true) {
+            val numero = Eprel.enllac(intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString().orEmpty())
+            if (numero == null) {
+                Toast.makeText(this, R.string.marca_compartit_no_eprel, Toast.LENGTH_LONG).show()
+                return
+            }
+            Rebut.Registre(numero)
+        } else {
+            val uri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java) ?: return
+            nomFitxer(uri)?.let(Eprel::deFitxer)?.let { Rebut.Registre(it) } ?: Rebut.Fitxer(uri)
+        }
+        Compartit.rebut = rebut
+        vm.pantalla = Pantalla.AFEGIR
+    }
+
+    private fun nomFitxer(uri: Uri): String? =
+        runCatching {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            }
+        }.getOrNull() ?: uri.lastPathSegment
 
     override fun onResume() {
         super.onResume()

@@ -11,6 +11,7 @@ import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.Avisos
 import cat.jordi.consum.ConsumApp
 import cat.jordi.consum.R
+import cat.jordi.consum.Vigilancia
 import cat.jordi.consum.VersioNova
 import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Avui
@@ -168,6 +169,9 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     fun enPrimerPla(si: Boolean) {
         bucles?.cancel()
         bucles = null
+        ConsumApp.oberta = si
+        // Amb l'app oberta, Android deixa engegar la vigilància; si cal, continuarà amb l'app tancada
+        if (si) Vigilancia.actualitza(getApplication())
         if (si) comprovaVersio(forcat = false)
         if (!si || !config.configurat) return
         bucles = viewModelScope.launch {

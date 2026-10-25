@@ -27,6 +27,9 @@ import java.time.format.DateTimeFormatter
  */
 object Avisos {
     private const val CANAL = "avisos"
+    private const val CANAL_POTENCIA = "potencia"
+    const val CANAL_VIGILANCIA = "vigilancia"
+    private const val ID_POTENCIA = 900_001
     const val OBRE = "obre"
     const val ENTRENA = "entrena"
 
@@ -34,7 +37,44 @@ object Avisos {
         val canal = NotificationChannel(CANAL, context.getString(R.string.avis_canal), NotificationManager.IMPORTANCE_HIGH).apply {
             description = context.getString(R.string.avis_canal_descripcio)
         }
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(canal)
+        val potencia = NotificationChannel(CANAL_POTENCIA, context.getString(R.string.avis_canal_potencia), NotificationManager.IMPORTANCE_HIGH).apply {
+            description = context.getString(R.string.avis_canal_potencia_descripcio)
+        }
+        val vigilancia = NotificationChannel(CANAL_VIGILANCIA, context.getString(R.string.avis_canal_vigilancia), NotificationManager.IMPORTANCE_MIN).apply {
+            description = context.getString(R.string.avis_canal_vigilancia_descripcio)
+            setShowBadge(false)
+        }
+        context.getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(canal, potencia, vigilancia))
+    }
+
+    fun obreApp(context: Context): PendingIntent = PendingIntent.getActivity(
+        context, 1, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+
+    /** La potència ha passat del 90 % de la contractada ([limitKw]). */
+    fun avisaPotencia(context: Context, w: Double, limitKw: Double) {
+        val gestor = NotificationManagerCompat.from(context)
+        if (!gestor.areNotificationsEnabled()) return
+        val watts = NumberFormat.getIntegerInstance(Idioma.locale).format(w)
+        val percent = NumberFormat.getIntegerInstance(Idioma.locale).format(w / (limitKw * 10))
+        val kw = NumberFormat.getNumberInstance(Idioma.locale).apply { maximumFractionDigits = 2 }.format(limitKw)
+        val titol = if (w >= limitKw * 1000) context.getString(R.string.avis_potencia_passada, watts, kw)
+        else context.getString(R.string.avis_potencia_titol, watts, percent)
+        val n = NotificationCompat.Builder(context, CANAL_POTENCIA)
+            .setSmallIcon(R.drawable.ic_llamp)
+            .setContentTitle(titol)
+            .setContentText(context.getString(R.string.avis_potencia_text))
+            .setContentIntent(obreApp(context))
+            .setAutoCancel(true)
+            .setTimeoutAfter(15 * 60_000L)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .build()
+        try {
+            gestor.notify(ID_POTENCIA, n)
+        } catch (_: SecurityException) {
+        }
     }
 
     private fun obreEntrena(context: Context): PendingIntent = PendingIntent.getActivity(

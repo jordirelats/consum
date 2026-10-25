@@ -1,10 +1,16 @@
 package cat.jordi.consum.ui
 
+import android.Manifest
 import android.app.LocaleConfig
 import android.app.LocaleManager
+import android.content.Intent
 import android.os.Build
 import android.os.LocaleList
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -30,6 +36,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,12 +53,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.NotificationManagerCompat
 import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.R
+import cat.jordi.consum.Vigilancia
+import cat.jordi.consum.dades.Pais
 import cat.jordi.consum.dades.missatge
 import cat.jordi.consum.shelly.InfoShelly
 import cat.jordi.consum.shelly.ShellyLocal
@@ -207,6 +219,7 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                     Nota(stringResource(R.string.connecta_preu_despres))
                 }
             }
+            if (config.configurat) TargetaAvisPotencia(vm)
             // Abans d'Android 13 no hi ha idioma per app: fa com el mòbil
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) TargetaIdioma()
             Targeta {
@@ -249,6 +262,77 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                 Nota(stringResource(R.string.connecta_prova_primer), Modifier.align(Alignment.CenterHorizontally))
             }
 
+        }
+    }
+}
+
+/**
+ * La potència contractada i l'avís quan se'n passa del 90 %: al moment (la vigilància, amb una notificació fixa)
+ * o cada 15 minuts. Els canvis es desen de seguida.
+ */
+@Composable
+private fun TargetaAvisPotencia(vm: ConsumViewModel) {
+    val context = LocalContext.current
+    val config = vm.config
+    val tarifa = config.tarifa
+    var kw by remember { mutableStateOf(tarifa.limitKw?.let { num(it, 2) } ?: "") }
+    var avis by remember { mutableStateOf(config.avisPotencia) }
+    var alMoment by remember { mutableStateOf(config.avisAlMoment) }
+    var permis by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
+    val demana = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        permis = it || NotificationManagerCompat.from(context).areNotificationsEnabled()
+        Vigilancia.actualitza(context)
+    }
+    fun aplica() = Vigilancia.actualitza(context)
+
+    Targeta {
+        TitolTargeta(stringResource(R.string.connecta_titol_potencia))
+        OutlinedTextField(
+            kw, { nou ->
+                kw = nou
+                val valor = nou.replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 }
+                if (valor != null || nou.isBlank()) {
+                    config.tarifa = config.tarifa.ambLimit(valor)
+                    aplica()
+                }
+            },
+            Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.connecta_potencia_contractada)) },
+            suffix = { Text("kW") }, singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        )
+        Nota(
+            stringResource(if (tarifa.pais == Pais.ES) R.string.connecta_potencia_es else R.string.connecta_potencia_nl),
+            Modifier.padding(top = 4.dp),
+        )
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.connecta_avisa_90), Modifier.weight(1f), fontSize = 14.sp)
+            Switch(avis, { avis = it; config.avisPotencia = it; aplica() })
+        }
+        Nota(stringResource(R.string.connecta_colors_grafica))
+        if (avis) {
+            Text(stringResource(R.string.connecta_app_tancada), Modifier.padding(top = 10.dp), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            for ((opcio, titol, text) in listOf(
+                Triple(true, R.string.connecta_al_moment, R.string.connecta_al_moment_text),
+                Triple(false, R.string.connecta_cada_15, R.string.connecta_cada_15_text),
+            )) {
+                Row(
+                    Modifier.fillMaxWidth().clickable { alMoment = opcio; config.avisAlMoment = opcio; aplica() }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    RadioButton(alMoment == opcio, { alMoment = opcio; config.avisAlMoment = opcio; aplica() })
+                    Column(Modifier.padding(top = 12.dp)) {
+                        Text(stringResource(titol), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Nota(stringResource(text))
+                    }
+                }
+            }
+            if (!permis) {
+                Nota(stringResource(R.string.connecta_cal_permis), Modifier.padding(top = 4.dp))
+                TextButton(onClick = {
+                    if (Build.VERSION.SDK_INT >= 33) demana.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    else context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                }) { Text(stringResource(R.string.entrena_activa_avisos)) }
+            }
         }
     }
 }

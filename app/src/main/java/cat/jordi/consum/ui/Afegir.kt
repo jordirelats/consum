@@ -2,9 +2,34 @@
 
 package cat.jordi.consum.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.Manifest
+import android.app.SearchManager
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import cat.jordi.consum.dades.Document
+import cat.jordi.consum.dades.ErrorUsuari
+import kotlinx.coroutines.Job
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.result.PickVisualMediaRequest
@@ -73,11 +98,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private enum class Via(@StringRes val nomId: Int) { QR(R.string.afegir_via_qr), PLACA(R.string.afegir_via_placa), MODEL(R.string.afegir_via_model) }
+private enum class Via(@StringRes val nomId: Int) { QR(R.string.afegir_via_qr), PLACA(R.string.afegir_via_placa), MARCA(R.string.marca_via) }
 
 @Composable
 fun PantallaAfegir(vm: ConsumViewModel) {
-    var via by remember { mutableStateOf(Via.QR) }
+    var via by remember { mutableStateOf(if (Compartit.rebut is Rebut.Fitxer) Via.PLACA else Via.QR) }
+    // El que s'ha compartit amb Consum va a la pestanya que el llegeix, i aquella el recull
+    val rebut = Compartit.rebut
+    LaunchedEffect(rebut) {
+        when (rebut) {
+            is Rebut.Registre -> via = Via.QR
+            is Rebut.Fitxer -> via = Via.PLACA
+            null -> {}
+        }
+    }
     val acaba = { a: Aparell ->
         vm.afegeixAparell(a)
         vm.pantalla = Pantalla.PRINCIPAL
@@ -91,7 +125,7 @@ fun PantallaAfegir(vm: ConsumViewModel) {
         when (via) {
             Via.QR -> AmbQr(acaba)
             Via.PLACA -> AmbPlaca(acaba)
-            Via.MODEL -> AmbModel(acaba)
+            Via.MARCA -> AmbMarca(acaba) { via = Via.PLACA }
         }
     }
 }
@@ -125,6 +159,16 @@ private fun ColumnScope.AmbQr(acaba: (Aparell) -> Unit) {
     }
 
     val escaner = rememberLauncherForActivityResult(ScanContract()) { r -> r.contents?.let(::busca) }
+
+    // Un enllaç de l'EPREL compartit amb Consum
+    val rebut = Compartit.rebut
+    LaunchedEffect(rebut) {
+        if (rebut is Rebut.Registre) {
+            Compartit.rebut = null
+            escrit = rebut.numero
+            busca(rebut.numero)
+        }
+    }
 
     Targeta {
         TitolTargeta(stringResource(R.string.afegir_qr_titol))
@@ -181,33 +225,178 @@ private fun ColumnScope.AmbQr(acaba: (Aparell) -> Unit) {
     }
 }
 
+/** Una cerca a l'EPREL en marxa: els grups on es busca, per ordre, i el model. */
+private data class CercaMarca(val grups: List<String>, val model: String)
+
+/**
+ * Per marca i model: es busca el model a la web de l'EPREL (`CercaEprelWeb`), si el tipus d'aparell té etiqueta.
+ * Si no hi surt, es pot buscar a internet, fer una foto de la placa o afegir-lo amb el consum a mà.
+ */
 @Composable
-private fun AmbModel(acaba: (Aparell) -> Unit) {
+private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
     val context = LocalContext.current
+    val abast = rememberCoroutineScope()
+    val teclat = LocalSoftwareKeyboardController.current
     var categoria by remember { mutableStateOf<Categoria?>(null) }
-    var nom by remember { mutableStateOf("") }
+    var marca by remember { mutableStateOf("") }
+    var model by remember { mutableStateOf("") }
+    var ajuda by remember { mutableStateOf(false) }
+    var cerca by remember { mutableStateOf<CercaMarca?>(null) }
+    var feina by remember { mutableStateOf<Job?>(null) }
+    var llegint by remember { mutableStateOf(false) }
+    var fitxes by remember { mutableStateOf<List<FitxaEprel>>(emptyList()) }
+    var noTrobat by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var nomTrobat by remember { mutableStateOf("") }
+    // El nom del formulari a mà: mentre no s'escriu, «<Marca> <Model>» o el tipus d'aparell
+    var nom by remember { mutableStateOf<String?>(null) }
     var kwh by remember { mutableStateOf("") }
     var tocat by remember { mutableStateOf(false) }
+    val buscant = cerca != null || llegint
+    val text = "${marca.trim()} ${model.trim()}".trim()
+    val c = categoria
+    val grups = c?.let(Eprel::grups).orEmpty()
 
-    Targeta {
-        TitolTargeta(stringResource(R.string.afegir_quin_aparell))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Categoria.entries.forEach { c ->
-                FilterChip(
-                    selected = c == categoria,
-                    onClick = {
-                        categoria = c
-                        if (nom.isBlank() || Categoria.entries.any { context.getString(it.nomId) == nom }) nom = context.getString(c.nomId)
-                        if (!tocat) kwh = num(c.kwhAnyTipic)
-                    },
-                    label = { Text(stringResource(c.nomId)) },
-                )
+    fun busca() {
+        if (c == null || grups.isEmpty() || model.isBlank() || buscant) return
+        teclat?.hide()
+        fitxes = emptyList()
+        noTrobat = false
+        error = null
+        cerca = CercaMarca(grups, model.trim())
+    }
+
+    fun trobats(r: Result<List<String>>, tipus: Categoria) {
+        cerca = null
+        r.onFailure { error = it.missatge(context) ?: context.getString(R.string.cerca_no_carrega) }
+        r.onSuccess { numeros ->
+            if (numeros.isEmpty()) {
+                noTrobat = true
+            } else {
+                llegint = true
+                feina = abast.launch {
+                    try {
+                        val llegides = withContext(Dispatchers.IO) { numeros.map { n -> runCatching { Eprel.fitxa(n) } } }
+                        // Els de la marca escrita, primer
+                        fitxes = llegides.mapNotNull { it.getOrNull() }
+                            .sortedByDescending { marca.isNotBlank() && it.marca.contains(marca.trim(), ignoreCase = true) }
+                        nomTrobat = context.getString(tipus.nomId)
+                        if (fitxes.isEmpty()) {
+                            error = llegides.firstNotNullOfOrNull { it.exceptionOrNull() }?.missatge(context) ?: context.getString(R.string.afegir_error_eprel)
+                        }
+                    } finally {
+                        llegint = false
+                    }
+                }
             }
         }
     }
-    categoria?.let { c ->
+
+    if (ajuda) {
+        BackHandler { ajuda = false }
+        AjudaModel(text, enTancar = { ajuda = false }, enFoto = { ajuda = false; aPlaca() })
+        return
+    }
+    Targeta {
+        TitolTargeta(stringResource(R.string.afegir_quin_aparell))
+        TriaCategoria(categoria) { nova ->
+            if (nova != categoria) {
+                categoria = nova
+                cerca = null
+                feina?.cancel()
+                fitxes = emptyList()
+                noTrobat = false
+                error = null
+                if (!tocat) kwh = num(nova.kwhAnyTipic)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            marca, { marca = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.marca_marca)) }, singleLine = true,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            model, {
+                model = it
+                // El que s'havia trobat era d'un altre model
+                fitxes = emptyList()
+                noTrobat = false
+                error = null
+            },
+            Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.marca_model)) }, singleLine = true,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = if (grups.isEmpty()) ImeAction.Done else ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { busca() }),
+        )
+        TextButton(onClick = { ajuda = true }) {
+            Icon(Icons.AutoMirrored.Outlined.HelpOutline, null, Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.marca_on_trobo))
+        }
+        if (grups.isNotEmpty()) {
+            Button(onClick = { busca() }, Modifier.fillMaxWidth(), enabled = model.isNotBlank() && !buscant) {
+                Icon(Icons.Outlined.Search, null)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.marca_busca_eprel))
+            }
+        }
+    }
+    if (buscant && c != null) {
+        Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+            cerca?.let { cr -> key(cr) { CercaEprelWeb(cr.grups, cr.model) { trobats(it, c) } } }
+            CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+            Text("  " + stringResource(R.string.cerca_buscant), fontSize = 14.sp, color = Suau)
+        }
+    }
+    if (c != null && fitxes.isNotEmpty()) {
         Targeta {
-            OutlinedTextField(nom, { nom = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_nom_i_model)) }, singleLine = true)
+            TitolTargeta(stringResource(R.string.marca_trobat))
+            OutlinedTextField(nomTrobat, { nomTrobat = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_nom_app)) }, singleLine = true)
+            fitxes.forEach { f ->
+                HorizontalDivider(Modifier.padding(vertical = 10.dp), color = Separador)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("${f.marca} · ${f.model}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(c.nomId), fontSize = 12.sp, color = Suau)
+                    }
+                    if (f.classe.isNotBlank()) {
+                        Spacer(Modifier.width(8.dp))
+                        Classe(f.classe)
+                    }
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.marca_consum_etiqueta), Modifier.weight(1f), fontSize = 14.sp)
+                    Text(
+                        if (f.kwhAny != null) stringResource(R.string.afegir_kwh_any, num(f.kwhAny)) else stringResource(R.string.afegir_sense_consum_anual),
+                        fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Nota(f.explicacio.text())
+                // El tipus és el que s'ha triat: una nevera i un congelador, per exemple, són al mateix grup de l'EPREL
+                Button(
+                    onClick = { acaba(f.copy(categoria = c).comAparell(nomTrobat.ifBlank { context.getString(c.nomId) })) },
+                    Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) { Text(stringResource(R.string.afegir_afegeix_lo)) }
+            }
+            Nota(stringResource(R.string.marca_nota_eprel), Modifier.padding(top = 8.dp))
+        }
+    }
+    if (c != null && (grups.isEmpty() || noTrobat || error != null)) {
+        Targeta {
+            TitolTargeta(stringResource(R.string.marca_no_surt))
+            val e = error
+            when {
+                e != null -> Text(e, color = Desconegut, fontSize = 14.sp)
+                noTrobat -> Nota(stringResource(R.string.cerca_no_trobat))
+                else -> Nota(stringResource(R.string.marca_tipus_sense_etiqueta))
+            }
+            OpcionsNoSurt(text, aPlaca)
+            HorizontalDivider(Modifier.padding(vertical = 10.dp), color = Separador)
+            Nota(stringResource(R.string.marca_a_ma))
+            Spacer(Modifier.height(6.dp))
+            val nomTipus = stringResource(c.nomId)
+            val nomDefecte = text.ifEmpty { nomTipus }
+            OutlinedTextField(nom ?: nomDefecte, { nom = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_nom_app)) }, singleLine = true)
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 kwh, { kwh = it; tocat = true }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_consum_kwh_any)) }, singleLine = true,
@@ -218,7 +407,12 @@ private fun AmbModel(acaba: (Aparell) -> Unit) {
             val valor = kwh.replace(".", "").replace(',', '.').toDoubleOrNull()
             Button(
                 onClick = {
-                    acaba(Aparell(nom = nom.ifBlank { context.getString(c.nomId) }, categoria = c, font = if (tocat) Font.MANUAL else Font.TIPIC, kwhAny = valor ?: c.kwhAnyTipic, model = ""))
+                    acaba(
+                        Aparell(
+                            nom = (nom ?: nomDefecte).ifBlank { context.getString(c.nomId) }, categoria = c, font = if (tocat) Font.MANUAL else Font.TIPIC,
+                            kwhAny = valor ?: c.kwhAnyTipic, marca = marca.trim(), model = model.trim(),
+                        )
+                    )
                 },
                 Modifier.fillMaxWidth(), enabled = valor != null,
             ) { Text(stringResource(R.string.afegir_afegeix_lo)) }
@@ -226,7 +420,104 @@ private fun AmbModel(acaba: (Aparell) -> Unit) {
     }
 }
 
-/** Les categories per triar, com a la pestanya Model. */
+/** La classe de l'etiqueta amb el seu color. L'EPREL escriu les classes A+ com «AP», «APP»… */
+@Composable
+private fun Classe(classe: String) {
+    val lletra = if (classe.length > 1 && classe[0] == 'A' && classe.drop(1).all { it == 'P' }) "A" + "+".repeat(classe.length - 1) else classe
+    val primera = classe.firstOrNull() ?: ' '
+    val fons = when (primera) {
+        'A' -> Color(0xFF00A651)
+        'B' -> Color(0xFF50B848)
+        'C' -> Color(0xFFBFD730)
+        'D' -> Color(0xFFFFF200)
+        'E' -> Color(0xFFFDB913)
+        'F' -> Color(0xFFF37021)
+        'G' -> Color(0xFFED1C24)
+        else -> Separador
+    }
+    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(fons).padding(horizontal = 8.dp, vertical = 3.dp)) {
+        Text(lletra, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (primera in 'C'..'E' || fons == Separador) Color(0xFF1C2421) else Color.White)
+    }
+}
+
+/** Què fer si no surt a l'EPREL: buscar-lo a internet, fer una foto de la placa o compartir-hi la fitxa. */
+@Composable
+private fun OpcionsNoSurt(text: String, enFoto: () -> Unit) {
+    val context = LocalContext.current
+    if (text.isNotBlank()) {
+        OutlinedButton(onClick = { buscaAInternet(context, text) }, Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            Icon(Icons.Outlined.Language, null, Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.marca_busca_internet, text))
+        }
+    }
+    OutlinedButton(onClick = enFoto, Modifier.fillMaxWidth().padding(top = 6.dp)) {
+        Icon(Icons.Outlined.PhotoCamera, null, Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.marca_foto_placa))
+    }
+    Row(Modifier.padding(top = 8.dp)) {
+        Icon(Icons.Outlined.Share, null, Modifier.padding(top = 2.dp).size(14.dp), tint = Suau)
+        Spacer(Modifier.width(6.dp))
+        Nota(stringResource(R.string.marca_comparteix))
+    }
+}
+
+/** El cercador del mòbil; si no n'hi ha cap, el navegador. */
+private fun buscaAInternet(context: Context, text: String) {
+    try {
+        context.startActivity(Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, text))
+    } catch (e: ActivityNotFoundException) {
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://duckduckgo.com/?q=" + Uri.encode(text)))) }
+    }
+}
+
+/** On sol ser la placa de característiques de cada tipus d'aparell. */
+private val llocsPlaca = listOf(
+    Categoria.NEVERA to R.string.ajuda_lloc_nevera,
+    Categoria.CONGELADOR to R.string.ajuda_lloc_congelador,
+    Categoria.RENTADORA to R.string.ajuda_lloc_rentadora,
+    Categoria.ASSECADORA to R.string.ajuda_lloc_assecadora,
+    Categoria.RENTAPLATS to R.string.ajuda_lloc_rentaplats,
+    Categoria.FORN to R.string.ajuda_lloc_forn,
+    Categoria.MICROONES to R.string.ajuda_lloc_microones,
+    Categoria.CAMPANA to R.string.ajuda_lloc_campana,
+    Categoria.TELEVISOR to R.string.ajuda_lloc_televisor,
+    Categoria.AIRE to R.string.ajuda_lloc_aire,
+    Categoria.BOMBA_CALOR to R.string.ajuda_lloc_bomba_calor,
+    Categoria.TERMO to R.string.ajuda_lloc_termo,
+)
+
+/** L'ajuda «On trobo el model?», en lloc del formulari. [text] és la marca i el model escrits, per buscar-los a internet. */
+@Composable
+private fun ColumnScope.AjudaModel(text: String, enTancar: () -> Unit, enFoto: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.ajuda_titol), Modifier.weight(1f).padding(start = 4.dp), fontSize = 22.sp)
+        IconButton(onClick = enTancar) { Icon(Icons.Outlined.Close, stringResource(R.string.ajuda_tanca)) }
+    }
+    Targeta {
+        TitolTargeta(stringResource(R.string.marca_on_trobo))
+        Nota(stringResource(R.string.ajuda_placa))
+        llocsPlaca.forEachIndexed { i, (categoria, lloc) ->
+            if (i > 0) HorizontalDivider(color = Separador)
+            Row(Modifier.padding(vertical = 8.dp)) {
+                Icon(icona(categoria), null, Modifier.padding(top = 1.dp).size(20.dp), tint = Primari)
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(stringResource(categoria.nomId), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Nota(stringResource(lloc))
+                }
+            }
+        }
+    }
+    Targeta {
+        TitolTargeta(stringResource(R.string.marca_no_surt))
+        Nota(stringResource(R.string.marca_sense_etiqueta))
+        OpcionsNoSurt(text, enFoto)
+    }
+}
+
+/** Les categories per triar, com a la pestanya Marca i model. */
 @Composable
 private fun TriaCategoria(triada: Categoria?, enTriar: (Categoria) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -252,14 +543,19 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
     var hores by remember { mutableStateOf("") }
     var veureText by remember { mutableStateOf(false) }
 
-    fun llegeix(uri: Uri) {
+    fun llegeix(uri: Uri, compartit: Boolean = false) {
         llegint = true
         error = null
         lectura = null
         abast.launch {
             val r = withContext(Dispatchers.Default) {
                 runCatching {
-                    val b = Placa.carrega(context.contentResolver, uri)
+                    // Un fitxer compartit amb Consum pot ser un PDF: se'n llegeix la primera pàgina
+                    val b = if (compartit) {
+                        Document.pagines(context, uri).firstOrNull() ?: throw ErrorUsuari(R.string.error_pdf)
+                    } else {
+                        Placa.carrega(context.contentResolver, uri)
+                    }
                     b to Placa.potencia(Placa.llegeix(context, b))
                 }
             }
@@ -281,7 +577,16 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
     val permis = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { si ->
         if (si) camera.launch(uriFoto) else error = context.getString(R.string.afegir_sense_permis_camera)
     }
-    val galeria = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(::llegeix) }
+    val galeria = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let { llegeix(it) } }
+
+    // Una foto o un PDF compartits amb Consum, com si s'haguessin triat
+    val rebut = Compartit.rebut
+    LaunchedEffect(rebut) {
+        if (rebut is Rebut.Fitxer) {
+            Compartit.rebut = null
+            llegeix(rebut.uri, compartit = true)
+        }
+    }
 
     Targeta {
         TitolTargeta(stringResource(R.string.afegir_placa_titol))

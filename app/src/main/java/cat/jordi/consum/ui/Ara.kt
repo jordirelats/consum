@@ -1,11 +1,14 @@
 package cat.jordi.consum.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +25,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -32,6 +38,8 @@ import cat.jordi.consum.R
 import cat.jordi.consum.dades.Contracte
 import cat.jordi.consum.dades.Franja
 import cat.jordi.consum.dades.InfoPreu
+import cat.jordi.consum.dades.NivellPotencia
+import cat.jordi.consum.dades.nivellPotencia
 import cat.jordi.consum.shelly.Origen
 
 @Composable
@@ -47,7 +55,7 @@ fun PantallaAra(vm: ConsumViewModel) {
     ) {
         when {
             l?.origen == Origen.LOCAL -> Pastilla(stringResource(R.string.ara_origen_local), Primari, PrimariFluix, punt = Ok)
-            l?.origen == Origen.NUVOL -> Pastilla(stringResource(R.string.ara_origen_nuvol), Primari, PrimariFluix, punt = Ok)
+            l?.origen == Origen.NUVOL -> Pastilla(stringResource(R.string.ara_origen_nuvol), Nuvol, NuvolFluix, punt = Nuvol)
             !vm.haLlegit -> Pastilla(stringResource(R.string.ara_connectant), Suau, SempreFluix)
             vm.config.teNuvol -> Pastilla(stringResource(R.string.ara_sense_connexio), Desconegut, DesconegutFluix, punt = Desconegut)
             else -> Pastilla(stringResource(R.string.ara_falta_clau), Desconegut, DesconegutFluix, punt = Desconegut)
@@ -60,8 +68,10 @@ fun PantallaAra(vm: ConsumViewModel) {
                 }
             }
         }
+        val limit = vm.config.tarifa.limitKw
+        val nivell = nivellPotencia(l?.total?.w ?: 0.0, limit)
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(l?.let { num(it.total.w) } ?: "—", fontSize = 56.sp, fontWeight = FontWeight.Light)
+            Text(l?.let { num(it.total.w) } ?: "—", fontSize = 56.sp, fontWeight = FontWeight.Light, color = colorNivell(nivell, Color.Unspecified))
             Text(" W", Modifier.padding(bottom = 10.dp), fontSize = 24.sp, color = Suau)
         }
         Text(
@@ -76,11 +86,26 @@ fun PantallaAra(vm: ConsumViewModel) {
             fontSize = 14.sp, color = Suau,
         )
 
+        if (l != null && limit != null) BarraPotencia(l.total.w, limit, nivell)
+        if (l != null && limit != null && nivell == NivellPotencia.LIMIT) {
+            Targeta(color = Color(0xFFFEF2F2)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.WarningAmber, null, tint = PotenciaLimit, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(if (l.total.w >= limit * 1000) R.string.ara_limit_passat else R.string.ara_limit_a_prop),
+                        fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = PotenciaLimit,
+                    )
+                }
+                Nota(stringResource(R.string.ara_limit_text), Modifier.padding(top = 4.dp))
+            }
+        }
+
         if (info != null) PastillaPreu(info) { vm.pantalla = Pantalla.PREU }
 
         Targeta {
             TitolTargeta(stringResource(R.string.ara_ultimes_24h))
-            GraficaPotencia(vm.serie, teLinia)
+            GraficaPotencia(vm.serie, teLinia, limit)
             when {
                 vm.serie.isEmpty() ->
                     Nota(stringResource(if (l?.origen == Origen.NUVOL) R.string.ara_dades_nuvol else R.string.ara_dades_wifi))
@@ -134,6 +159,26 @@ fun PantallaAra(vm: ConsumViewModel) {
         }
         if (vm.errorSincronitzacio != null && vm.haLlegit && l == null) {
             Nota(stringResource(R.string.ara_comprova_wifi))
+        }
+    }
+}
+
+/** La part de la potència contractada que es fa servir ara, amb les marques del 80 i del 90 %. */
+@Composable
+private fun BarraPotencia(w: Double, limitKw: Double, nivell: NivellPotencia) {
+    val part = (w / (limitKw * 1000)).toFloat()
+    Column {
+        Text(
+            stringResource(R.string.ara_part_contractada, num(part * 100.0), num(limitKw, 2)),
+            fontSize = 14.sp, color = if (nivell == NivellPotencia.NORMAL) Suau else colorNivell(nivell, Suau),
+        )
+        Canvas(Modifier.fillMaxWidth().height(14.dp).padding(top = 6.dp)) {
+            val alt = size.height
+            drawRoundRect(Separador, Offset(0f, 0f), Size(size.width, alt), CornerRadius(alt / 2))
+            drawRoundRect(colorNivell(nivell, Primari), Offset(0f, 0f), Size(size.width * part.coerceIn(0f, 1f), alt), CornerRadius(alt / 2))
+            for ((marca, color) in listOf(0.8f to PotenciaAlta, 0.9f to PotenciaLimit)) {
+                drawLine(color, Offset(size.width * marca, -3.dp.toPx()), Offset(size.width * marca, alt + 3.dp.toPx()), 2.dp.toPx())
+            }
         }
     }
 }

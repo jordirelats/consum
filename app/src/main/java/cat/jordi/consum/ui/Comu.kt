@@ -40,6 +40,7 @@ import cat.jordi.consum.dades.Categoria
 import cat.jordi.consum.dades.Franja
 import cat.jordi.consum.dades.HoraPreu
 import cat.jordi.consum.dades.Idioma
+import cat.jordi.consum.dades.NivellPotencia
 import cat.jordi.consum.dades.TextRecurs
 import java.text.NumberFormat
 
@@ -55,6 +56,20 @@ val DesconegutFluix = Color(0xFFFEF3C7)
 val Linia = Color(0xFF2563EB)
 val LiniaFluix = Color(0xFFDBEAFE)
 val Ok = Color(0xFF15803D)
+/** El que ve del núvol de Shelly i encara és aproximat. */
+val Nuvol = Color(0xFF7C3AED)
+val NuvolFluix = Color(0xFFEDE9FE)
+/** Des del 80 % de la potència contractada, i des del 90 %. */
+val PotenciaAlta = Color(0xFFD97706)
+val PotenciaLimit = Color(0xFFDC2626)
+/** Les etiquetes dels eixos de les gràfiques: prou grans i fosques per llegir-les. */
+val Eix = Color(0xFF3F4A45)
+
+fun colorNivell(n: NivellPotencia, normal: Color) = when (n) {
+    NivellPotencia.NORMAL -> normal
+    NivellPotencia.ALT -> PotenciaAlta
+    NivellPotencia.LIMIT -> PotenciaLimit
+}
 
 @Composable
 fun TemaConsum(contingut: @Composable () -> Unit) {

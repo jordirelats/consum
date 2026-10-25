@@ -14,11 +14,18 @@ import cat.jordi.consum.dades.BaseDades
 import cat.jordi.consum.dades.Config
 import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.dades.Repositori
+import cat.jordi.consum.dades.calAvisarPotencia
 import java.util.concurrent.TimeUnit
 
 class ConsumApp : Application() {
     lateinit var repo: Repositori
         private set
+
+    companion object {
+        /** L'app és a la pantalla: la vigilància i el treball de fons no avisen, perquè ja ho ensenya ella. */
+        @Volatile
+        var oberta = false
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -49,6 +56,11 @@ class Sincronitza(context: Context, params: WorkerParameters) : CoroutineWorker(
             runCatching { repo.sincronitza() }
             runCatching {
                 repo.lectura()?.let { l ->
+                    // Si la vigilància no és en marxa, la potència es mira aquí, cada 15 minuts
+                    val limit = repo.config.tarifa.limitKw
+                    if (!Vigilancia.enMarxa && limit != null && calAvisarPotencia(repo.config, l.total.w, ConsumApp.oberta)) {
+                        Avisos.avisaPotencia(applicationContext, l.total.w, limit)
+                    }
                     val resta = l.total.w - (if (repo.config.teLinia) l.linia?.w ?: 0.0 else 0.0)
                     repo.comprovaInesperat(resta)?.let { p ->
                         Avisos.avisa(applicationContext, p, repo.aparellsAEntrenar(), repo.referencies())

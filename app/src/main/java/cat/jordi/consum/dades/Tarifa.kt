@@ -64,7 +64,17 @@ data class Tarifa(
     val descompteDia: Double = 1.72317,
     /** Un altre país: els fixos al mes. */
     val fixosMes: Double = 0.0,
+    /**
+     * Països Baixos i un altre país: la potència màxima de la connexió (kW), per exemple l'aansluiting 1×35 A
+     * són 8 kW. A Espanya és [potenciaKw]. Null si no s'ha posat.
+     */
+    val maxKw: Double? = null,
 ) {
+    /** La potència contractada (kW): fins on es pot arribar abans que salti. Null si no se sap. */
+    val limitKw: Double? get() = if (pais == Pais.ES) potenciaKw else maxKw
+
+    fun ambLimit(kw: Double?) = if (pais == Pais.ES) copy(potenciaKw = kw ?: potenciaKw) else copy(maxKw = kw)
+
     val dinamica get() = contracte == Contracte.DINAMIC && pais != Pais.ALTRE
 
     private fun ambImpostosEs(x: Double) = x * (1 + iee) * (1 + iva)
@@ -124,6 +134,7 @@ data class Tarifa(
         put("recarrec", recarrec); put("potenciaKw", potenciaKw); put("potP1", potP1); put("potP2", potP2)
         put("comptadorMes", comptadorMes); put("boSocialDia", boSocialDia); put("iee", iee); put("iva", iva); put("ebKwh", ebKwh)
         put("proveidorDia", proveidorDia); put("xarxaDia", xarxaDia); put("descompteDia", descompteDia); put("fixosMes", fixosMes)
+        maxKw?.let { put("maxKw", it) }
     }.toString()
 
     companion object {
@@ -152,6 +163,7 @@ data class Tarifa(
                     xarxaDia = if (antiga) o.optDouble("xarxaMes", 39.83) * 12 / 365 else o.optDouble("xarxaDia", d.xarxaDia),
                     descompteDia = if (antiga) o.optDouble("descompteAny", 628.96) / 365 else o.optDouble("descompteDia", d.descompteDia),
                     fixosMes = o.optDouble("fixosMes", d.fixosMes),
+                    maxKw = o.optDouble("maxKw").takeIf { !it.isNaN() },
                 )
             }.getOrNull()
         }
