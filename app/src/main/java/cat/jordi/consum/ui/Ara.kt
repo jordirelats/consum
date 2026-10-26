@@ -33,10 +33,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import cat.jordi.consum.R
 import cat.jordi.consum.dades.Contracte
 import cat.jordi.consum.dades.Franja
+import cat.jordi.consum.dades.Funcionament
 import cat.jordi.consum.dades.InfoPreu
 import cat.jordi.consum.dades.NivellPotencia
 import cat.jordi.consum.dades.Pais
@@ -151,30 +154,55 @@ fun PantallaAra(vm: ConsumViewModel) {
                 val fons = vm.fonsW
                 val sempre = if (fons != null) minOf(resta, fons) else 0.0
                 fun perHora(w: Double) = if (preu != null) context.getString(R.string.ara_euros_hora, euros(w / 1000 * preu)) else "${num(w)} W"
+                // Cada cosa, una fila, de més a menys consum (maqueta 9): el que és a 0 W, al final i més apagat
+                val files = mutableListOf<FilaAra>()
                 if (teLinia) {
-                    FilaConsum(Icons.Outlined.Bolt, LiniaFluix, Linia, vm.config.nomLinia, stringResource(R.string.ara_linia_subtitol, num(linia)), perHora(linia), 3)
-                }
-                if (fons != null) {
-                    FilaConsum(
-                        Icons.Outlined.Power, SempreFluix, Sempre, stringResource(R.string.ara_sempre_ences),
-                        stringResource(R.string.ara_sempre_subtitol, num(sempre)), perHora(sempre), 3,
+                    files += FilaAra(
+                        Icons.Outlined.Bolt, LiniaFluix, Linia, vm.config.nomLinia,
+                        stringResource(if (linia < 10) R.string.ara_linia_apagat else R.string.ara_linia_subtitol, num(linia)), linia, 3,
                     )
                 }
-                // El que passa del fons, explicat amb els aparells après; el que queda, sense identificar
+                if (fons != null) {
+                    // Els aparells sempre encesos (el router) diuen que funcionen, amb la seva potència; la resta del fons és «altres en espera»
+                    val sempreEncesos = vm.aparells.filter { it.funciona == Funcionament.SEMPRE }
+                    val suma = sempreEncesos.sumOf { it.wTipic }
+                    val escala = if (suma > sempre && suma > 0) sempre / suma else 1.0
+                    sempreEncesos.forEach { a ->
+                        val w = a.wTipic * escala
+                        files += FilaAra(icona(a.categoria), SempreFluix, Sempre, a.nom, stringResource(R.string.ara_sempre_aparell, num(w)), w, a.font.punts)
+                    }
+                    val altres = sempre - suma * escala
+                    if (sempreEncesos.isEmpty()) {
+                        files += FilaAra(Icons.Outlined.Power, SempreFluix, Sempre, stringResource(R.string.ara_sempre_ences), stringResource(R.string.ara_sempre_subtitol, num(sempre)), sempre, 3)
+                    } else if (altres >= 1) {
+                        files += FilaAra(Icons.Outlined.Power, SempreFluix, Sempre, stringResource(R.string.aparells_altres_espera), stringResource(R.string.ara_altres_espera, num(altres)), altres, 3)
+                    }
+                }
+                // El que passa del fons, explicat amb els aparells après; el que queda, sense identificar (només si n'hi ha)
                 val e = vm.explicador.explica(resta - sempre)
                 e.aparells.forEach { (id, w) ->
                     val a = vm.aparells.firstOrNull { it.id == id } ?: return@forEach
-                    val apresa = vm.referencies[id]?.apresa == true
-                    FilaConsum(
-                        icona(a.categoria), PrimariFluix, Primari, a.nom,
-                        stringResource(if (apresa) R.string.ara_aparell_apres else R.string.ara_aparell_aprenent, num(w)), perHora(w), if (apresa) 3 else 2,
+                    val r = vm.referencies[id]
+                    val apresa = r?.apresa == true
+                    val text = when {
+                        r?.automatica == true -> R.string.ara_compressor
+                        apresa -> R.string.ara_aparell_apres
+                        else -> R.string.ara_aparell_aprenent
+                    }
+                    files += FilaAra(icona(a.categoria), PrimariFluix, Primari, a.nom, stringResource(text, num(w)), w, if (apresa) 3 else 2)
+                }
+                if (fons == null || e.residu >= 10) {
+                    files += FilaAra(
+                        Icons.Outlined.QuestionMark, DesconegutFluix, Desconegut, stringResource(R.string.ara_sense_identificar),
+                        stringResource(if (fons == null) R.string.ara_residu_sense_fons else R.string.ara_residu_entrena, num(e.residu)), e.residu, 1,
                     )
                 }
-                FilaConsum(
-                    Icons.Outlined.QuestionMark, DesconegutFluix, Desconegut, stringResource(R.string.ara_sense_identificar),
-                    stringResource(if (fons == null) R.string.ara_residu_sense_fons else R.string.ara_residu_entrena, num(e.residu)),
-                    perHora(e.residu), 1,
-                )
+                files.sortedByDescending { it.w }.forEach { f ->
+                    FilaConsum(
+                        f.icona, f.fons, f.color, f.titol, f.subtitol, perHora(f.w), f.punts,
+                        modifier = if (f.w < 10) Modifier.alpha(0.55f) else Modifier,
+                    )
+                }
                 Nota(stringResource(R.string.ara_detall, num(l.total.va), num(l.total.pf, 2), num(l.total.v, 1)))
             }
             AvisCar(l.total.w, info)
@@ -184,6 +212,11 @@ fun PantallaAra(vm: ConsumViewModel) {
         }
     }
 }
+
+/** Una fila de «Què hi ha encès ara», abans d'ordenar-les pel que gasten. */
+private class FilaAra(
+    val icona: ImageVector, val fons: Color, val color: Color, val titol: String, val subtitol: String, val w: Double, val punts: Int?,
+)
 
 /** La part de la potència contractada que es fa servir ara, amb les marques del 80 i del 90 %. */
 @Composable

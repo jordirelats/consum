@@ -133,7 +133,11 @@
     <string name="ara_que_hi_ha_ences">Wat staat er nu aan</string>
     <string name="ara_linia_subtitol">%1$s W · tweede meetklem, gemeten</string>
     <string name="ara_sempre_ences">Altijd aan</string>
-    <string name="ara_sempre_subtitol">%1$s W · koelkast, router, stand-by…</string>
+    <string name="ara_sempre_subtitol">%1$s W · apparaten op stand-by, opladers…</string>
+    <string name="ara_sempre_aparell">%1$s W · in werking, altijd aan</string>
+    <string name="ara_altres_espera">%1$s W · altijd aan: opladers, tv’s…</string>
+    <string name="ara_compressor">%1$s W · de compressor draait</string>
+    <string name="ara_linia_apagat">%1$s W · tweede meetklem, nu uit</string>
     <string name="ara_aparell_apres">%1$s W · aangeleerd</string>
     <string name="ara_aparell_aprenent">%1$s W · wordt nog aangeleerd</string>
     <string name="ara_sense_identificar">Niet herkend</string>
@@ -591,7 +595,7 @@
     <string name="pics_des_de">sinds %1$s</string>
     <string name="pics_apres">aangeleerd</string>
     <string name="pics_aprenent">wordt nog aangeleerd</string>
-    <string name="pics_sempre_ences">koelkast, router, stand-by…</string>
+    <string name="pics_sempre_ences">router, apparaten op stand-by…</string>
     <string name="pics_linia">tweede meetklem, gemeten</string>
     <string name="pics_estable">sinds %1$s, zonder te stoppen</string>
     <string name="pics_variable">sinds %1$s, wisselend</string>

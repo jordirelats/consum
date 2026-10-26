@@ -185,7 +185,12 @@
     <string name="ara_linia_subtitol">%1$s W · segona pinça, mesurat</string>
     <!-- El consum que no s'apaga mai (fons) -->
     <string name="ara_sempre_ences">Sempre encès</string>
-    <string name="ara_sempre_subtitol">%1$s W · nevera, router, espera…</string>
+    <string name="ara_sempre_subtitol">%1$s W · aparells en espera, carregadors…</string>
+    <!-- Les files de «Què hi ha encès ara» (maqueta 9): un aparell sempre encès, el que queda del fons, la nevera trobada sola i la pinça 2 apagada -->
+    <string name="ara_sempre_aparell">%1$s W · funcionant, sempre encès</string>
+    <string name="ara_altres_espera">%1$s W · sempre encès: carregadors, teles…</string>
+    <string name="ara_compressor">%1$s W · el compressor, en marxa</string>
+    <string name="ara_linia_apagat">%1$s W · segona pinça, ara apagat</string>
     <!-- Un aparell que l'app ja ha après a reconèixer -->
     <string name="ara_aparell_apres">%1$s W · après</string>
     <!-- Un aparell que l'app encara està aprenent (té alguna mostra, però no prou) -->
@@ -781,7 +786,7 @@
     <string name="pics_des_de">des de les %1$s</string>
     <string name="pics_apres">après</string>
     <string name="pics_aprenent">aprenent</string>
-    <string name="pics_sempre_ences">nevera, routers, espera…</string>
+    <string name="pics_sempre_ences">router, aparells en espera…</string>
     <string name="pics_linia">segona pinça, mesurat</string>
     <!-- Un salt de potència desconegut que es manté -->
     <string name="pics_estable">des de les %1$s, sense parar</string>
