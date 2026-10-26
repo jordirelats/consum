@@ -16,11 +16,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -38,11 +40,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cat.jordi.consum.R
 import cat.jordi.consum.dades.Aparell
+import cat.jordi.consum.dades.Funcionament
 import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Punt
 import cat.jordi.consum.dades.Referencia
@@ -96,8 +100,11 @@ fun PantallaEntrena(vm: ConsumViewModel) {
             if (vm.missatgeDe == null) {
                 vm.missatgeEntrena?.let { Text(it.text(), Modifier.padding(top = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Primari) }
             }
-            if (vm.aparellsAEntrenar.isEmpty()) Nota(stringResource(R.string.entrena_primer_afegeix), Modifier.padding(top = 8.dp))
-            vm.aparellsAEntrenar.forEach { a -> FilaEntrena(vm, a, vm.referencies[a.id]) }
+            // Només s'entrenen els que engega l'usuari: els que estan sempre encesos o s'engeguen sols, no cal
+            val perEntrenar = vm.aparellsAEntrenar.filter { it.funciona == Funcionament.JO }
+            if (vm.aparells.isEmpty()) Nota(stringResource(R.string.entrena_primer_afegeix), Modifier.padding(top = 8.dp))
+            perEntrenar.forEach { a -> FilaEntrena(vm, a, vm.referencies[a.id]) }
+            if (vm.aparells.any { it.funciona != Funcionament.JO }) Nota(stringResource(R.string.entrena_nota_sense_entrenar), Modifier.padding(top = 8.dp))
         }
         Nota(
             stringResource(R.string.entrena_nota_casa),
@@ -144,6 +151,8 @@ private fun FilaEntrena(vm: ConsumViewModel, a: Aparell, r: Referencia?) {
 @Composable
 private fun TargetaPregunta(vm: ConsumViewModel, p: Pregunta) {
     var totes by remember { mutableStateOf(false) }
+    // Si s'engega sol, l'app n'aprèn l'interval de potència i no n'avisa més
+    var sol by remember { mutableStateOf(false) }
     Targeta {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Pastilla(stringResource(R.string.entrena_pregunta), Desconegut, DesconegutFluix)
@@ -156,10 +165,20 @@ private fun TargetaPregunta(vm: ConsumViewModel, p: Pregunta) {
         val ordenats = endevina(p.dp, vm.aparellsAEntrenar, vm.referencies, vm.aparellsAEntrenar.size)
         FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             (if (totes) ordenats else ordenats.take(5)).forEach { a ->
-                SuggestionChip(onClick = { vm.respon(p, a.id) }, label = { Text(a.nom) })
+                SuggestionChip(onClick = { vm.respon(p, a.id, sol) }, label = { Text(a.nom) })
             }
             if (!totes && ordenats.size > 5) SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
             SuggestionChip(onClick = { vm.respon(p, null) }, label = { Text(stringResource(R.string.entrena_no_ho_se)) })
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp).toggleable(sol, role = Role.Switch) { sol = it },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.funciona_sol), fontSize = 14.sp)
+                Text(stringResource(R.string.entrena_sol_text), fontSize = 12.sp, color = Suau)
+            }
+            Switch(sol, null)
         }
     }
 }

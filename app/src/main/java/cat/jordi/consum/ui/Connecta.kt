@@ -5,6 +5,7 @@ import android.app.LocaleManager
 import android.os.Build
 import android.os.LocaleList
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -38,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.R
 import cat.jordi.consum.Vigilancia
+import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.dades.Pais
 import cat.jordi.consum.dades.missatge
 import cat.jordi.consum.shelly.InfoShelly
@@ -69,6 +74,9 @@ import cat.jordi.consum.shelly.descobreix
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.TextStyle
 import java.util.Locale
 
 /** El primer cop, i després com a configuració: on és el Shelly, les pinces, el núvol i el preu. */
@@ -219,6 +227,7 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                 }
             }
             if (config.configurat) TargetaAvisPotencia(vm)
+            if (config.configurat) TargetaAvisInesperat(vm)
             // Abans d'Android 13 no hi ha idioma per app: fa com el mòbil
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) TargetaIdioma()
             Targeta {
@@ -333,6 +342,77 @@ private fun TargetaAvisPotencia(vm: ConsumViewModel) {
             }
         }
     }
+}
+
+/**
+ * Els avisos de consum inesperat (maqueta 7): si n'hi ha, a partir de quant i durant quant. Mentre es tria, diu
+ * quants avisos hauria donat la setmana passada amb el que l'app sap ara.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TargetaAvisInesperat(vm: ConsumViewModel) {
+    val config = vm.config
+    var actiu by remember { mutableStateOf(config.avisInesperat) }
+    var llindar by remember { mutableStateOf(config.llindarInesperat) }
+    var minuts by remember { mutableStateOf(config.minutsInesperat) }
+    LaunchedEffect(actiu, llindar, minuts) { vm.ajustaInesperat(actiu, llindar, minuts) }
+
+    Targeta {
+        TitolTargeta(stringResource(R.string.connecta_titol_inesperat))
+        Row(
+            Modifier.fillMaxWidth().toggleable(actiu, role = Role.Switch) { actiu = it },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.connecta_avisa_inesperat), Modifier.weight(1f), fontSize = 14.sp)
+            Switch(actiu, null)
+        }
+        if (!actiu) return@Targeta
+        Text(stringResource(R.string.connecta_inesperat_quant), Modifier.padding(top = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (w in listOf(500.0, 1000.0, 2000.0, 3000.0)) {
+                FilterChip(llindar == w, { llindar = w }, label = { Text("${num(w / 1000, if (w < 1000) 1 else 0)} kW") })
+            }
+        }
+        Text(stringResource(R.string.connecta_inesperat_durant), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (m in listOf(10, 30, 60)) {
+                FilterChip(minuts == m, { minuts = m }, label = {
+                    Text(if (m == 60) stringResource(R.string.connecta_inesperat_hora) else stringResource(R.string.connecta_inesperat_minuts, m))
+                })
+            }
+        }
+        vm.fonsW?.let { Nota(stringResource(R.string.connecta_inesperat_normal, num(it)), Modifier.padding(top = 2.dp)) }
+        val previsio = vm.previsioAvisos
+        val text = when {
+            vm.previsioSenseDades -> stringResource(R.string.connecta_inesperat_sense_dades)
+            previsio == null -> null
+            previsio.isEmpty() -> stringResource(R.string.connecta_inesperat_cap)
+            else -> {
+                // Com a molt 3, i si n'hi ha més, quants
+                val moments = previsio.take(3).map { (ts, w) -> momentAvis(ts, w) } +
+                    listOfNotNull((previsio.size - 3).takeIf { it > 0 }?.let { pluralStringResource(R.plurals.connecta_inesperat_mes, it, it) })
+                val llista = if (moments.size == 1) moments[0]
+                else moments.dropLast(1).joinToString(", ") + stringResource(R.string.comu_i) + moments.last()
+                pluralStringResource(R.plurals.connecta_inesperat_previsio, previsio.size, previsio.size, llista)
+            }
+        }
+        text?.let {
+            Text(
+                it, Modifier.padding(top = 8.dp).fillMaxWidth().background(PrimariFluix.copy(alpha = 0.5f), RoundedCornerShape(10.dp)).padding(10.dp),
+                fontSize = 13.sp, lineHeight = 18.sp,
+            )
+        }
+    }
+}
+
+/** «dissabte a les 12:46 (+3,0 kW)»: quan va començar un avís i quants kW de més hi havia. */
+@Composable
+private fun momentAvis(ts: Long, w: Double): String {
+    val d = Instant.ofEpochSecond(ts).atZone(ZoneId.systemDefault())
+    return stringResource(
+        R.string.connecta_inesperat_moment, d.dayOfWeek.getDisplayName(TextStyle.FULL, Idioma.locale),
+        "%d:%02d".format(d.hour, d.minute), "${num(w / 1000, 1)} kW",
+    )
 }
 
 /**

@@ -95,13 +95,15 @@ object Avisos {
     fun avisa(context: Context, p: Pregunta, aparells: List<Aparell>, referencies: Map<Long, Referencia>) {
         val gestor = NotificationManagerCompat.from(context)
         if (!gestor.areNotificationsEnabled()) return
-        val w = NumberFormat.getIntegerInstance(Idioma.locale).format(p.dp)
+        val kw = NumberFormat.getNumberInstance(Idioma.locale).apply { maximumFractionDigits = 1; minimumFractionDigits = 1 }.format(p.dp / 1000) + " kW"
         val hora = Instant.ofEpochSecond(p.ts).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+        val minuts = ((System.currentTimeMillis() / 1000 - p.ts) / 60).toInt()
+        val text = context.getString(R.string.avis_text, hora, minuts)
         val n = NotificationCompat.Builder(context, CANAL)
             .setSmallIcon(R.drawable.ic_llamp)
-            .setContentTitle(context.getString(R.string.avis_titol, w))
-            .setContentText(context.getString(R.string.avis_text, hora))
-            .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.avis_text, hora)))
+            .setContentTitle(context.getString(R.string.avis_titol, kw))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(obreEntrena(context))
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

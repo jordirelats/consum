@@ -22,7 +22,7 @@ data class Hora(val ts: Long, val sempre: Double, val linia: Double, val descone
  * Els minuts aproximats (aprox = 1) es fan des de fora amb el comptador del núvol; els exactes, que es baixen
  * del Shelly a casa, els substitueixen.
  */
-class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 5) {
+class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 6) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -32,7 +32,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         db.execSQL(
             """CREATE TABLE aparells (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT NOT NULL,
                categoria TEXT NOT NULL, font TEXT NOT NULL, kwh_any REAL NOT NULL, espera_w REAL,
-               marca TEXT, model TEXT, classe TEXT, eprel TEXT, creat INTEGER NOT NULL, potencia_w REAL)"""
+               marca TEXT, model TEXT, classe TEXT, eprel TEXT, creat INTEGER NOT NULL, potencia_w REAL, funciona TEXT)"""
         )
         creaPreus(db)
         creaEntrenament(db)
@@ -42,7 +42,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
     private fun creaEntrenament(db: SQLiteDatabase) {
         db.execSQL(
             """CREATE TABLE mostres (id INTEGER PRIMARY KEY AUTOINCREMENT, aparell INTEGER NOT NULL, ts INTEGER NOT NULL,
-               dp REAL NOT NULL, durada INTEGER, font TEXT NOT NULL)"""
+               dp REAL NOT NULL, durada INTEGER, font TEXT NOT NULL, wmin REAL, wmax REAL)"""
         )
         db.execSQL(
             """CREATE TABLE preguntes (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, dp REAL NOT NULL,
@@ -62,6 +62,15 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         if (oldVersion < 4) db.execSQL("ALTER TABLE aparells ADD COLUMN potencia_w REAL")
         // Versió 5: els minuts aproximats, calculats des de fora
         if (oldVersion < 5) db.execSQL("ALTER TABLE minuts ADD COLUMN aprox INTEGER NOT NULL DEFAULT 0")
+        // Versió 6: com funciona cada aparell (buit: el del seu tipus) i l'interval de potència de les mostres
+        if (oldVersion < 6) {
+            db.execSQL("ALTER TABLE aparells ADD COLUMN funciona TEXT")
+            // Les taules de la versió 3 ja tenen les columnes noves si s'acaben de crear en aquesta actualització
+            if (oldVersion >= 3) {
+                db.execSQL("ALTER TABLE mostres ADD COLUMN wmin REAL")
+                db.execSQL("ALTER TABLE mostres ADD COLUMN wmax REAL")
+            }
+        }
     }
 
     /** Els minuts exactes, baixats del Shelly: substitueixen els aproximats que hi hagués. */
@@ -183,19 +192,23 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     fun aparells(): List<Aparell> =
         readableDatabase.rawQuery(
-            "SELECT id, nom, categoria, font, kwh_any, espera_w, marca, model, classe, eprel, potencia_w FROM aparells ORDER BY kwh_any DESC", null
+            "SELECT id, nom, categoria, font, kwh_any, espera_w, marca, model, classe, eprel, potencia_w, funciona FROM aparells ORDER BY kwh_any DESC", null
         ).use { c ->
             buildList {
-                while (c.moveToNext()) add(
-                    Aparell(
-                        id = c.getLong(0), nom = c.getString(1), categoria = Categoria.de(c.getString(2)),
-                        font = Font.de(c.getString(3)), kwhAny = c.getDouble(4),
-                        esperaW = if (c.isNull(5)) null else c.getDouble(5),
-                        marca = c.getString(6) ?: "", model = c.getString(7) ?: "",
-                        classe = c.getString(8) ?: "", eprel = c.getString(9) ?: "",
-                        potenciaW = if (c.isNull(10)) null else c.getDouble(10),
+                while (c.moveToNext()) {
+                    val categoria = Categoria.de(c.getString(2))
+                    add(
+                        Aparell(
+                            id = c.getLong(0), nom = c.getString(1), categoria = categoria,
+                            font = Font.de(c.getString(3)), kwhAny = c.getDouble(4),
+                            esperaW = if (c.isNull(5)) null else c.getDouble(5),
+                            marca = c.getString(6) ?: "", model = c.getString(7) ?: "",
+                            classe = c.getString(8) ?: "", eprel = c.getString(9) ?: "",
+                            potenciaW = if (c.isNull(10)) null else c.getDouble(10),
+                            funciona = Funcionament.de(c.getString(11), categoria),
+                        )
                     )
-                )
+                }
             }
         }
 
@@ -204,6 +217,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
             put("nom", a.nom); put("categoria", a.categoria.name); put("font", a.font.name)
             put("kwh_any", a.kwhAny); put("espera_w", a.esperaW); put("marca", a.marca)
             put("model", a.model); put("classe", a.classe); put("eprel", a.eprel); put("potencia_w", a.potenciaW)
+            put("funciona", a.funciona.name)
         }
         if (a.id == 0L) {
             v.put("creat", System.currentTimeMillis() / 1000)
@@ -230,9 +244,21 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         ).use { it.moveToFirst() }
 
     fun mostres(): List<Mostra> =
-        readableDatabase.rawQuery("SELECT id, aparell, ts, dp, durada FROM mostres ORDER BY ts", null).use { c ->
-            buildList { while (c.moveToNext()) add(Mostra(c.getLong(0), c.getLong(1), c.getLong(2), c.getDouble(3), if (c.isNull(4)) null else c.getLong(4))) }
+        readableDatabase.rawQuery("SELECT id, aparell, ts, dp, durada, wmin, wmax, font FROM mostres ORDER BY ts", null).use { c ->
+            buildList {
+                while (c.moveToNext()) add(
+                    Mostra(
+                        c.getLong(0), c.getLong(1), c.getLong(2), c.getDouble(3), if (c.isNull(4)) null else c.getLong(4),
+                        if (c.isNull(5)) null else c.getDouble(5), if (c.isNull(6)) null else c.getDouble(6), c.getString(7) ?: "",
+                    )
+                )
+            }
         }
+
+    /** L'interval de potència d'una mostra, quan ja hi ha les dades de l'episodi. */
+    fun desaInterval(mostraId: Long, wMin: Double, wMax: Double) {
+        writableDatabase.update("mostres", ContentValues().apply { put("wmin", wMin); put("wmax", wMax) }, "id = ?", arrayOf(mostraId.toString()))
+    }
 
     fun esborraMostres(aparellId: Long) {
         writableDatabase.delete("mostres", "aparell = ?", arrayOf(aparellId.toString()))

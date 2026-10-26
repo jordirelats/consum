@@ -96,9 +96,9 @@
 
     <!-- La notificació de consum inesperat -->
     <string name="avis_canal">Onverwacht verbruik</string>
-    <string name="avis_canal_descripcio">Als er iets aangaat dat de app niet herkent</string>
-    <string name="avis_titol">Er is +%1$s W die ik niet herken</string>
-    <string name="avis_text">Sinds %1$s. Het lijkt op geen enkel apparaat dat je me hebt geleerd. Wat is het?</string>
+    <string name="avis_canal_descripcio">Als het verbruik flink stijgt en de app niet weet waarom</string>
+    <string name="avis_titol">Het huis verbruikt %1$s meer dan normaal</string>
+    <string name="avis_text">Sinds %1$s, %2$d minuten geleden. Wat is het?</string>
     <string name="avis_un_altre">Iets anders…</string>
     <string name="avis_respost">Je antwoordde ‘%1$s’. Dat heb ik geleerd.</string>
     <string name="avis_respost_sense_nom">Bedankt, dat heb ik geleerd.</string>
@@ -245,7 +245,7 @@
     <string name="entrena_no_ho_se">Weet ik niet</string>
 
     <!-- Pantalla Afegir -->
-    <string name="afegir_via_qr">QR-label</string>
+    <string name="afegir_via_qr">Label</string>
     <string name="afegir_via_placa">Typeplaatje</string>
     <string name="afegir_qr_no_etiqueta">Deze QR-code hoort niet bij een Europees energielabel.</string>
     <string name="afegir_error_eprel">Ik kon de gegevens van EPREL niet ophalen</string>
@@ -534,7 +534,7 @@
     <string name="connecta_cal_permis">Om je te waarschuwen heeft de app toestemming voor meldingen nodig.</string>
 
     <!-- Pantalla Afegir, pestanya Marca i model -->
-    <string name="marca_via">Merk en model</string>
+    <string name="marca_via">Model</string>
     <string name="marca_marca">Merk</string>
     <string name="marca_model">Modelnummer</string>
     <string name="marca_on_trobo">Waar vind ik het modelnummer?</string>
@@ -625,4 +625,51 @@
     <string name="cerca_tipus_consola">game,PlayStation,Xbox</string>
     <string name="cerca_tipus_cafetera">koffie,espresso</string>
     <string name="cerca_tipus_depuradora">zwembad</string>
+    <string name="funciona_sempre">Altijd aan</string>
+    <string name="funciona_sempre_text">Router, alarm, camera’s… Verbruikt altijd hetzelfde.</string>
+    <string name="funciona_sol">Gaat vanzelf aan</string>
+    <string name="funciona_sol_text">Koelkast, vriezer, warmtepomp, boiler… De app herkent hem in de gegevens.</string>
+    <string name="funciona_jo">Zet ik zelf aan</string>
+    <string name="funciona_jo_text">Wasmachine, oven, auto… De app leert het vermogen bij Aanleren.</string>
+
+    <string name="connecta_titol_inesperat">Meldingen bij onverwacht verbruik</string>
+    <string name="connecta_avisa_inesperat">Waarschuw me als het verbruik flink stijgt</string>
+    <string name="connecta_inesperat_quant">Als het huis meer verbruikt dan normaal</string>
+    <string name="connecta_inesperat_durant">gedurende</string>
+    <string name="connecta_inesperat_minuts">%1$d min</string>
+    <string name="connecta_inesperat_hora">1 uur</string>
+    <string name="connecta_inesperat_normal">Normaal is wat het huis altijd verbruikt (%1$s W), wat vanzelf aangaat en de apparaten die de app al kent.</string>
+    <plurals name="connecta_inesperat_previsio">
+        <item quantity="one">Vorige week had je %1$d melding gekregen: %2$s.</item>
+        <item quantity="other">Vorige week had je %1$d meldingen gekregen: %2$s.</item>
+    </plurals>
+    <plurals name="connecta_inesperat_mes">
+        <item quantity="one">nog %1$d</item>
+        <item quantity="other">nog %1$d</item>
+    </plurals>
+    <string name="connecta_inesperat_cap">Vorige week had je geen enkele melding gekregen.</string>
+    <string name="connecta_inesperat_sense_dades">Zodra de app een dag aan gegevens van thuis heeft, zie je hier hoeveel meldingen je had gekregen.</string>
+    <string name="connecta_inesperat_moment">%1$s om %2$s (+%3$s)</string>
+    <string name="comu_i">" en "</string>
+
+    <string name="entrena_sol_text">Waarschuw me niet als het aangaat</string>
+    <string name="entrena_nota_sense_entrenar">Apparaten die altijd aan zijn of vanzelf aangaan, hoef je niet aan te leren.</string>
+
+    <string name="aparells_titol_sempre">Altijd aan · %1$s W</string>
+    <string name="aparells_sempre_subtitol">dag en nacht · %1$s per maand</string>
+    <string name="aparells_altres_espera">Overig op stand-by</string>
+    <string name="aparells_altres_espera_text">opladers, tv’s op stand-by…</string>
+    <string name="aparells_titol_sols">Gaan vanzelf aan</string>
+    <string name="aparells_sols_subtitol">niet aanleren; je krijgt er geen meldingen over</string>
+    <string name="aparells_sol_trobat">de compressor, vanzelf gevonden in de gegevens</string>
+    <string name="aparells_sol_interval">aangeleerd uit één antwoord</string>
+    <string name="aparells_sol_apres">aangeleerd</string>
+    <string name="aparells_sol_no_encara">nog niet herkend</string>
+    <string name="aparells_com_funciona">Hoe het werkt</string>
+
+    <string name="afegir_via_sense">Alleen type</string>
+    <string name="afegir_sense_com">Hoe werkt het?</string>
+    <string name="afegir_sense_potencia_nota">Typisch voor dit soort apparaat. Weet je het vermogen van het jouwe (op de adapter of het typeplaatje), pas het dan aan.</string>
+    <string name="afegir_sense_any">Per jaar</string>
+    <string name="afegir_sense_any_valor">%1$s kWh · %2$s per maand</string>
 </resources>

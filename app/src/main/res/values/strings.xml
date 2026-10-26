@@ -132,10 +132,11 @@
     <!-- La notificació de consum inesperat -->
     <!-- El nom del canal de notificacions, a la configuració d'Android -->
     <string name="avis_canal">Consum inesperat</string>
-    <string name="avis_canal_descripcio">Quan s\'encén una cosa que l\'app no reconeix</string>
-    <string name="avis_titol">Hi ha +%1$s W que no reconec</string>
-    <!-- %1$s és l'hora (17:05) -->
-    <string name="avis_text">Des de les %1$s. No s\'assembla a cap aparell que m\'hagis ensenyat. Què és?</string>
+    <string name="avis_canal_descripcio">Quan el consum es dispara i l\'app no sap què és</string>
+    <!-- %1$s són els kW de més («2,4 kW») -->
+    <string name="avis_titol">La casa gasta %1$s més del normal</string>
+    <!-- %1$s és l'hora en què va començar (17:05) i %2$d, quants minuts fa -->
+    <string name="avis_text">Des de les %1$s, fa %2$d minuts. Què és?</string>
     <!-- El botó de la notificació per triar un aparell que no és cap dels proposats -->
     <string name="avis_un_altre">Un altre…</string>
     <!-- %1$s és el nom de l'aparell -->
@@ -334,7 +335,7 @@
 
     <!-- Pantalla Afegir -->
     <!-- Les tres pestanyes de dalt: com s'afegeix l'aparell -->
-    <string name="afegir_via_qr">QR etiqueta</string>
+    <string name="afegir_via_qr">Etiqueta</string>
     <!-- La placa de característiques de l'aparell -->
     <string name="afegir_via_placa">Placa</string>
     <string name="afegir_qr_no_etiqueta">Aquest QR no és d\'una etiqueta energètica europea.</string>
@@ -711,7 +712,7 @@
 
     <!-- Pantalla Afegir, pestanya Marca i model -->
     <!-- El nom de la pestanya, al costat de «QR etiqueta» i «Placa» -->
-    <string name="marca_via">Marca i model</string>
+    <string name="marca_via">Model</string>
     <string name="marca_marca">Marca</string>
     <string name="marca_model">Model</string>
     <!-- Enllaç que obre l'ajuda amb on és la placa de característiques de cada aparell -->
@@ -817,4 +818,62 @@
     <string name="cerca_tipus_consola">videojocs,PlayStation,Xbox</string>
     <string name="cerca_tipus_cafetera">cafè,Nespresso</string>
     <string name="cerca_tipus_depuradora">piscina</string>
+    <!-- Com funciona un aparell: d'això depèn si cal entrenar-lo (maqueta 7) -->
+    <string name="funciona_sempre">Sempre encès</string>
+    <string name="funciona_sempre_text">Router, alarma, càmeres… Gasta sempre el mateix.</string>
+    <string name="funciona_sol">S\'engega sol</string>
+    <string name="funciona_sol_text">Nevera, congelador, bomba de calor, termo… L\'app el reconeix a les dades.</string>
+    <string name="funciona_jo">L\'engego jo</string>
+    <string name="funciona_jo_text">Rentadora, forn, cotxe… L\'app n\'aprèn la potència a Entrena.</string>
+
+    <!-- Els avisos de consum inesperat, a la Configuració -->
+    <string name="connecta_titol_inesperat">Avisos de consum inesperat</string>
+    <string name="connecta_avisa_inesperat">Avisa\'m quan el consum es dispari</string>
+    <string name="connecta_inesperat_quant">Quan la casa gasti més del normal</string>
+    <string name="connecta_inesperat_durant">durant</string>
+    <!-- %1$d són minuts: 10 o 30 -->
+    <string name="connecta_inesperat_minuts">%1$d min</string>
+    <string name="connecta_inesperat_hora">1 hora</string>
+    <!-- %1$s són els W que la casa gasta sempre -->
+    <string name="connecta_inesperat_normal">El normal és el que la casa gasta sempre (%1$s W), el que s\'engega sol i els aparells que l\'app ja coneix.</string>
+    <!-- %1$d són els avisos i %2$s, quan (per exemple «dissabte a les 12:46 (+3,0 kW)») -->
+    <plurals name="connecta_inesperat_previsio">
+        <item quantity="one">La setmana passada t\'hauria avisat %1$d vegada: %2$s.</item>
+        <item quantity="other">La setmana passada t\'hauria avisat %1$d vegades: %2$s.</item>
+    </plurals>
+    <!-- Al final de la llista, quants avisos més hi hauria: «…, dimarts a les 19:30 (+2,0 kW) i 14 més» -->
+    <plurals name="connecta_inesperat_mes">
+        <item quantity="one">%1$d més</item>
+        <item quantity="other">%1$d més</item>
+    </plurals>
+    <string name="connecta_inesperat_cap">La setmana passada no t\'hauria avisat cap vegada.</string>
+    <string name="connecta_inesperat_sense_dades">Quan l\'app tingui un dia de dades de casa, et dirà quants avisos t\'hauria donat.</string>
+    <!-- %1$s és el dia de la setmana, %2$s l\'hora i %3$s els kW de més -->
+    <string name="connecta_inesperat_moment">%1$s a les %2$s (+%3$s)</string>
+    <!-- Per ajuntar els dos últims d\'una llista: «a, b i c» -->
+    <string name="comu_i">" i "</string>
+
+    <!-- A la pregunta d\'Entrena: si l\'aparell s\'engega sol, l\'app no n\'avisarà més -->
+    <string name="entrena_sol_text">No m\'avisis quan s\'engegui</string>
+    <string name="entrena_nota_sense_entrenar">Els aparells que estan sempre encesos o que s\'engeguen sols no cal entrenar-los.</string>
+
+    <!-- Aparells: el que està sempre encès i el que s\'engega sol -->
+    <string name="aparells_titol_sempre">Sempre encès · %1$s W</string>
+    <string name="aparells_sempre_subtitol">dia i nit · %1$s al mes</string>
+    <string name="aparells_altres_espera">Altres en espera</string>
+    <string name="aparells_altres_espera_text">carregadors, teles apagades…</string>
+    <string name="aparells_titol_sols">S\'engeguen sols</string>
+    <string name="aparells_sols_subtitol">no cal entrenar-los ni t\'avisarà per ells</string>
+    <string name="aparells_sol_trobat">el compressor, trobat sol a les dades</string>
+    <string name="aparells_sol_interval">après d\'una resposta</string>
+    <string name="aparells_sol_apres">après</string>
+    <string name="aparells_sol_no_encara">encara no l\'he reconegut</string>
+    <string name="aparells_com_funciona">Com funciona</string>
+
+    <!-- Afegir un aparell sense etiqueta, placa ni model -->
+    <string name="afegir_via_sense">Sense dades</string>
+    <string name="afegir_sense_com">Com funciona?</string>
+    <string name="afegir_sense_potencia_nota">El típic d\'aquest tipus d\'aparell. Si saps la del teu (és al transformador o a la placa), canvia-la.</string>
+    <string name="afegir_sense_any">Tot l\'any</string>
+    <string name="afegir_sense_any_valor">%1$s kWh · %2$s al mes</string>
 </resources>

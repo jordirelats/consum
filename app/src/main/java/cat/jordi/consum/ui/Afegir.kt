@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -53,6 +54,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -72,6 +74,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -88,6 +91,7 @@ import cat.jordi.consum.dades.Eprel
 import cat.jordi.consum.dades.ErrorUsuari
 import cat.jordi.consum.dades.FitxaEprel
 import cat.jordi.consum.dades.Font
+import cat.jordi.consum.dades.Funcionament
 import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.dades.LecturaPlaca
 import cat.jordi.consum.dades.Placa
@@ -101,7 +105,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.Normalizer
 
-private enum class Via(@StringRes val nomId: Int) { QR(R.string.afegir_via_qr), PLACA(R.string.afegir_via_placa), MARCA(R.string.marca_via) }
+private enum class Via(@StringRes val nomId: Int) {
+    QR(R.string.afegir_via_qr), PLACA(R.string.afegir_via_placa), MARCA(R.string.marca_via), SENSE(R.string.afegir_via_sense)
+}
 
 @Composable
 fun PantallaAfegir(vm: ConsumViewModel) {
@@ -129,6 +135,7 @@ fun PantallaAfegir(vm: ConsumViewModel) {
             Via.QR -> AmbQr(acaba)
             Via.PLACA -> AmbPlaca(acaba)
             Via.MARCA -> AmbMarca(acaba) { via = Via.PLACA }
+            Via.SENSE -> AmbTipus(vm.resumMes?.preuMitja ?: vm.infoPreu?.ara?.preu ?: vm.config.tarifa.preuFix, acaba)
         }
     }
 }
@@ -733,5 +740,71 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
                 ) { Text(stringResource(R.string.afegir_afegeix_lo)) }
             }
         }
+    }
+}
+
+/**
+ * Un aparell sense etiqueta, placa ni model (maqueta 7): el tipus, com funciona i la potència, la típica del tipus
+ * si no se'n sap cap altra. Si està sempre encès, gasta aquesta potència tot l'any; si no, el consum típic del
+ * tipus, a escala amb la potència. [preu]: €/kWh, per dir quant costa.
+ */
+@Composable
+private fun ColumnScope.AmbTipus(preu: Double, acaba: (Aparell) -> Unit) {
+    val context = LocalContext.current
+    var categoria by rememberSaveable { mutableStateOf<Categoria?>(null) }
+    var nom by rememberSaveable { mutableStateOf("") }
+    var funciona by rememberSaveable { mutableStateOf(Funcionament.JO) }
+    var w by rememberSaveable { mutableStateOf("") }
+    Targeta {
+        TitolTargeta(stringResource(R.string.afegir_quin_aparell))
+        TriaCategoria(categoria) { c ->
+            categoria = c
+            if (nom.isBlank() || Categoria.entries.any { context.getString(it.nomId) == nom }) nom = context.getString(c.nomId)
+            funciona = c.funciona
+            w = num(c.wTipic)
+        }
+    }
+    val c = categoria ?: return
+    Targeta {
+        OutlinedTextField(nom, { nom = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_nom)) }, singleLine = true)
+        Text(stringResource(R.string.afegir_sense_com), Modifier.padding(top = 10.dp, bottom = 2.dp), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Funcionament.entries.forEach { f ->
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                    .background(if (funciona == f) PrimariFluix else Color.Transparent)
+                    .selectable(funciona == f, role = Role.RadioButton) { funciona = f },
+                verticalAlignment = Alignment.Top,
+            ) {
+                RadioButton(funciona == f, null, Modifier.padding(12.dp))
+                Column(Modifier.padding(top = 12.dp, end = 8.dp, bottom = 8.dp)) {
+                    Text(stringResource(f.nomId), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Nota(stringResource(f.textId))
+                }
+            }
+        }
+        OutlinedTextField(
+            w, { w = it }, Modifier.fillMaxWidth().padding(top = 6.dp), label = { Text(stringResource(R.string.afegir_potencia)) },
+            singleLine = true, suffix = { Text("W") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        )
+        Nota(stringResource(R.string.afegir_sense_potencia_nota), Modifier.padding(top = 2.dp))
+        val pw = llegeixNum(w)?.takeIf { it > 0 }
+        val kwh = pw?.let { if (funciona == Funcionament.SEMPRE) it * 8760 / 1000 else c.kwhAnyTipic * it / c.wTipic }
+        kwh?.let {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Text(stringResource(R.string.afegir_sense_any), Modifier.weight(1f), fontSize = 14.sp)
+                Text(stringResource(R.string.afegir_sense_any_valor, num(it), euros(it / 12 * preu)), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+        Button(
+            onClick = {
+                acaba(
+                    Aparell(
+                        nom = nom.ifBlank { context.getString(c.nomId) }, categoria = c,
+                        font = if (pw == c.wTipic) Font.TIPIC else Font.MANUAL, kwhAny = kwh ?: c.kwhAnyTipic, potenciaW = pw, funciona = funciona,
+                    )
+                )
+            },
+            Modifier.fillMaxWidth().padding(top = 10.dp), enabled = pw != null,
+        ) { Text(stringResource(R.string.afegir_afegeix_lo)) }
     }
 }

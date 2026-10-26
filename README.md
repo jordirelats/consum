@@ -12,11 +12,13 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
 - **Historial:** el consum per dies, setmanes i mesos, en kWh i en euros.
   - Els moments punta: el minut de més consum i els 5 que gastaven més, amb des de quan eren encesos. Si un salt no s'assembla a cap aparell conegut, l'app pregunta què era i ho aprèn.
 - **Aparells:** el consum de cada aparell, comparat amb el que diu la seva etiqueta energètica.
-  - Els aparells s'afegeixen amb un qüestionari estança per estança, escanejant el QR de l'etiqueta (la base de dades europea EPREL), buscant-ne la marca i el model a l'EPREL, fent una foto de la placa de característiques o a mà.
+  - Els aparells s'afegeixen amb un qüestionari estança per estança, escanejant el QR de l'etiqueta (la base de dades europea EPREL), buscant-ne la marca i el model a l'EPREL, fent una foto de la placa de característiques o, sense cap dada, només amb el tipus.
+  - Cada aparell diu com funciona: sempre encès (router), s'engega sol (nevera, bomba de calor, termo) o l'engega l'usuari. Només aquests últims s'entrenen. El compressor de la nevera, l'app el troba sola a les dades de les nits.
   - Una ajuda diu on és la placa amb el model a cada tipus d'aparell. Una fitxa de l'EPREL, una foto o un PDF es poden compartir amb l'app des d'una altra.
   - L'app llegeix la potència de la foto de la placa amb Tesseract, dins del mòbil.
 - **Entrena:** li ensenyes quan encens o apagues un aparell, i l'app n'aprèn la potència.
-  - Si apareix un consum que no reconeix, t'ho pregunta amb una notificació.
+  - Si el consum es dispara i l'app no sap què és, t'ho pregunta amb una notificació. Tu tries a partir de quant (de 0,5 a 3 kW) i durant quant, i l'app et diu quants avisos t'hauria donat la setmana passada.
+  - D'un aparell que s'engega sol i no gasta sempre igual (una bomba de calor inverter), n'aprèn l'interval de potència amb una sola resposta, i no te'n torna a preguntar.
 - **El preu de la llum:**
   - Espanya: 2.0TD de 3 franges o PVPC.
   - Països Baixos: fix, normaal/dal o dinàmic.
@@ -92,11 +94,11 @@ Fa servir aquestes llibreries i dades, totes amb llicència Apache-2.0:
 **Consum** is an Android app that shows what each household appliance uses and what it costs, using a Shelly energy meter (Gen2/Gen3 with EM1/EM1Data, e.g. Shelly EM Gen3) and no server of its own.
 
 - **Live view and history**, with hour-by-hour prices: Spain 2.0TD/PVPC, Netherlands fixed, normaal/dal or dynamic (EnergyZero), or a single price. Fixed costs are shown separately.
-- **Appliance inventory**: a room-by-room questionnaire, the EU energy label QR (EPREL), a brand and model search on the EPREL website, a photo of the rating plate (read on the device with Tesseract), or manual entry.
+- **Appliance inventory**: a room-by-room questionnaire, the EU energy label QR (EPREL), a brand and model search on the EPREL website, a photo of the rating plate (read on the device with Tesseract), or just the appliance type. Appliances are always on, self-starting (fridge, heat pump, water heater) or switched on by the user; only the last ones need training. The fridge compressor is found automatically in the night-time data.
 - **Contracted power**: how close the house is to it, with an alert above 90 % (immediately, with a persistent notification, or every 15 minutes).
 - **Training**: tell the app when you switch an appliance on or off and it learns its power.
 - **Peak moments**: the busiest minute of each day and the 5 loads behind it, with when each switched on; unknown steps can be labelled to teach the app.
-- **Unexpected-consumption alerts**: the app asks what an unknown load is through a notification.
+- **Unexpected-consumption alerts**: when consumption jumps (a threshold and a duration you choose) and the app cannot explain it, it asks what it is through a notification. A self-starting inverter appliance is learned as a power range from a single answer.
 - **Fill in prices from a contract or bill** (photo or PDF), read on the device.
 - **Privacy**: data stays on the phone. Remote access uses your own Shelly cloud key, which never leaves the device.
 - **Away from home**, consumption is estimated from the cloud energy counter and replaced with the Shelly's per-minute data once the phone is back on the home Wi-Fi.

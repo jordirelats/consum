@@ -14,7 +14,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.TextStyle
-import kotlin.math.abs
 import kotlin.math.max
 
 enum class Periode(@StringRes val nomId: Int) { DIA(R.string.periode_dia), SETMANA(R.string.periode_setmana), MES(R.string.periode_mes) }
@@ -129,6 +128,9 @@ class Repositori(val config: Config, private val bd: BaseDades) {
                     n += files.size
                 }
             }
+            // Amb les dades noves: la nevera i l'interval dels aparells que s'engeguen sols
+            actualitzaNevera()
+            completaIntervals()
             n
         }
     }
@@ -292,12 +294,53 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     /** L'aparell que es diu com la línia de la segona pinça es mesura directament: no s'entrena ni s'endevina. */
     private fun esLinia(a: Aparell) = config.teLinia && a.nom.equals(config.nomLinia, ignoreCase = true)
 
-    fun aparellsAEntrenar() = bd.aparells().filterNot(::esLinia)
+    /**
+     * Els aparells que poden ser un consum: per aprendre'ls, endevinar-los i respondre les preguntes. Ni la línia de
+     * la segona pinça (es mesura) ni els que estan sempre encesos (van dins del fons).
+     */
+    fun aparellsAEntrenar() = bd.aparells().filterNot { esLinia(it) || it.funciona == Funcionament.SEMPRE }
 
     fun referencies(): Map<Long, Referencia> {
-        val valids = aparellsAEntrenar().map { it.id }.toSet()
-        return bd.mostres().filter { it.aparellId in valids }.groupBy { it.aparellId }
-            .mapNotNull { (id, m) -> Referencia.de(id, m) }.associateBy { it.aparellId }
+        val aparells = aparellsAEntrenar()
+        val sols = aparells.filter { it.funciona == Funcionament.SOL }.map { it.id }.toSet()
+        val refs = bd.mostres().filter { m -> aparells.any { it.id == m.aparellId } }.groupBy { it.aparellId }
+            .mapNotNull { (id, m) -> Referencia.de(id, m, ambInterval = id in sols) }.associateBy { it.aparellId }
+        // El compressor de la nevera, trobat sol a les dades: per a la nevera que s'engega sola i no té mostres
+        val w = config.neveraW.takeIf { it > 0 } ?: return refs
+        val nevera = listOf(Categoria.NEVERA, Categoria.CONGELADOR).firstNotNullOfOrNull { cat ->
+            aparells.firstOrNull { it.categoria == cat && it.funciona == Funcionament.SOL && it.id !in refs }
+        } ?: return refs
+        return refs + (nevera.id to Referencia(nevera.id, w, 0, null, automatica = true))
+    }
+
+    /** Busca el compressor de la nevera a les dades de l'última setmana, com a molt un cop al dia. */
+    fun actualitzaNevera() {
+        if (ara() - config.neveraMirada < 20 * 3600) return
+        val linia = config.teLinia
+        val punts = bd.serie(ara() - 7 * 86400, ara() + 60).filterNot { it.aprox }
+            .map { it.ts to (it.wTotal - if (linia) it.wLinia else 0.0) }
+        config.neveraW = potenciaCompressor(punts, zona) ?: 0.0
+        config.neveraMirada = ara()
+    }
+
+    /**
+     * Els aparells que s'engeguen sols aprenen l'interval de potència de l'episodi de cada pregunta resposta, quan
+     * ja n'hi ha les dades exactes (a casa). Des de fora, o si l'episodi va ser curt, es queda amb el salt.
+     */
+    fun completaIntervals() {
+        val sols = bd.aparells().filter { it.funciona == Funcionament.SOL }.map { it.id }.toSet()
+        if (sols.isEmpty()) return
+        val fons = fonsW() ?: return
+        val linia = config.teLinia
+        for (m in bd.mostres()) {
+            if (m.aparellId !in sols || m.font != "pregunta" || m.wMin != null) continue
+            // L'episodi ha d'haver tingut temps d'acabar, i les dades per minut només duren una setmana al Shelly
+            if (m.ts > ara() - 20 * 60 || m.ts < ara() - 8 * 86400) continue
+            val serie = bd.serie(m.ts, m.ts + 3 * 3600)
+            if (serie.isEmpty() || serie.any { it.aprox }) continue
+            val exces = serie.map { it.wTotal - (if (linia) it.wLinia else 0.0) - fons }
+            intervalEpisodi(exces, m.dp)?.let { (lo, hi) -> bd.desaInterval(m.id, lo, hi) }
+        }
     }
 
     fun explicador() = Explicador(referencies().values.toList())
@@ -315,11 +358,15 @@ class Repositori(val config: Config, private val bd: BaseDades) {
      * estava resposta (des de la notificació i des de l'app, o amb dos tocs): no es fa una mostra repetida.
      */
     @Synchronized
-    fun respon(preguntaId: Long, aparellId: Long?): Boolean {
+    fun respon(preguntaId: Long, aparellId: Long?, sol: Boolean = false): Boolean {
         val p = bd.pregunta(preguntaId)?.takeIf { it.estat == EstatPregunta.PENDENT } ?: return false
         if (aparellId != null) {
+            // «S'engega sol»: a partir d'ara se n'aprèn l'interval i no s'avisa quan s'engegui
+            if (sol) bd.aparells().firstOrNull { it.id == aparellId && it.funciona != Funcionament.SOL }
+                ?.let { bd.desaAparell(it.copy(funciona = Funcionament.SOL)) }
             bd.desaMostra(aparellId, p.ts, p.dp, null, "pregunta")
             bd.respon(preguntaId, EstatPregunta.RESPOSTA, aparellId)
+            completaIntervals()
         } else {
             bd.respon(preguntaId, EstatPregunta.IGNORADA, null)
         }
@@ -327,30 +374,43 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     }
 
     /**
-     * Mira si ara hi ha un consum que les referències no expliquen. Si dura 10 minuts o més (amb una
-     * potència semblant), en fa una pregunta, només una per a cada consum. [restaW] és el total menys la línia.
+     * Mira si ara hi ha un consum que les referències no expliquen: si passa del llindar que ha triat l'usuari durant
+     * els minuts que ha triat, en fa una pregunta (amb avís). [restaW] és el total menys la línia.
      */
     @Synchronized
     fun comprovaInesperat(restaW: Double): Pregunta? {
+        val c = config
+        if (!c.avisInesperat) return null
         val fons = fonsW() ?: return null
         val residu = explicador().explica(restaW - fons).residu
-        val c = config
-        if (residu < c.llindarAvis) {
-            c.inesperatDes = 0
-            c.inesperatPregunta = 0
-            return null
-        }
-        val semblant = c.inesperatDes != 0L && abs(residu - c.inesperatW) <= 0.3 * max(residu, c.inesperatW)
-        if (!semblant) {
-            c.inesperatDes = ara()
-            c.inesperatW = residu
-            c.inesperatPregunta = 0
-            return null
-        }
-        if (ara() - c.inesperatDes < 10 * 60 || c.inesperatPregunta != 0L) return null
-        val id = bd.creaPregunta(c.inesperatDes, residu)
+        val d = DetectorInesperat(c.llindarInesperat, c.minutsInesperat, c.inesperatDes, c.inesperatAlt, c.inesperatPregunta != 0L, c.darrerAvisInesperat)
+        val avisa = d.mira(ara(), residu)
+        c.inesperatDes = d.des
+        c.inesperatAlt = d.alt
+        c.darrerAvisInesperat = d.darrerAvis
+        if (!d.avisat) c.inesperatPregunta = 0
+        if (!avisa) return null
+        val id = bd.creaPregunta(d.des, residu)
         c.inesperatPregunta = id
         return bd.pregunta(id)
+    }
+
+    /**
+     * Quins avisos de consum inesperat hauria donat la setmana passada amb un llindar i uns minuts, amb el que l'app
+     * sap ara: quan va començar cada episodi i quants W sense explicar hi havia. Null si encara no hi ha un dia de
+     * dades exactes.
+     */
+    fun simulaAvisos(llindarW: Double, minuts: Int): List<Pair<Long, Double>>? {
+        val serie = bd.serie(ara() - 7 * 86400, ara() + 60).filterNot { it.aprox }
+        if (serie.size < 24 * 60) return null
+        val fons = fonsW() ?: return null
+        val e = explicador()
+        val d = DetectorInesperat(llindarW, minuts)
+        val linia = config.teLinia
+        return serie.mapNotNull { p ->
+            val r = e.explica(max(p.wTotal - (if (linia) p.wLinia else 0.0), 0.0) - fons).residu
+            if (d.mira(p.ts, r)) d.des to r else null
+        }
     }
 
     /**

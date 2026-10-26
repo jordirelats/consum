@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,6 +22,7 @@ import androidx.compose.material.icons.outlined.Power
 import androidx.compose.material.icons.outlined.QuestionMark
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import cat.jordi.consum.R
 import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Font
+import cat.jordi.consum.dades.Funcionament
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -146,8 +147,11 @@ fun PantallaAparells(vm: ConsumViewModel) {
                 }
             }
         } else {
-            // Els que ja tenen referència surten amb el que gasten de debò, a «Mesurat aquest mes»
-            val perEntrenar = vm.aparells.filter { (vm.repartiment?.kwh?.get(it.id) ?: 0.0) == 0.0 }
+            TargetaSempreEnces(vm, preu) { obert = it }
+            TargetaSols(vm) { obert = it }
+            // Els que ja tenen referència surten amb el que gasten de debò, a «Mesurat aquest mes»; els que estan
+            // sempre encesos o s'engeguen sols, a les seves targetes
+            val perEntrenar = vm.aparells.filter { (vm.repartiment?.kwh?.get(it.id) ?: 0.0) == 0.0 && it.funciona == Funcionament.JO }
             if (perEntrenar.isNotEmpty()) Targeta {
                 TitolTargeta(stringResource(R.string.aparells_segons_etiqueta))
                 Nota(stringResource(R.string.aparells_nota_etiqueta, num(preu, 3), euros(perEntrenar.sumOf { it.kwhAny } / 12 * preu)))
@@ -195,6 +199,17 @@ fun PantallaAparells(vm: ConsumViewModel) {
                         TextButton(onClick = { perConfirmar = a to false; obert = null }) { Text(stringResource(R.string.aparells_torna_entrenar)) }
                     }
                     if (a.eprel.isNotBlank()) Text("EPREL ${a.eprel}", color = Suau, fontSize = 12.sp)
+                    // Com funciona: d'això depèn si cal entrenar-lo
+                    Text(stringResource(R.string.aparells_com_funciona), Modifier.padding(top = 6.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Funcionament.entries.forEach { f ->
+                            FilterChip(a.funciona == f, {
+                                val nou = a.copy(funciona = f)
+                                vm.desaAparells(listOf(nou))
+                                obert = nou
+                            }, label = { Text(stringResource(f.nomId)) })
+                        }
+                    }
                     if (a.font == Font.TIPIC) Text(stringResource(R.string.aparells_es_tipic), color = DesconegutText, fontSize = 13.sp)
                 }
             },
@@ -219,5 +234,62 @@ fun PantallaAparells(vm: ConsumViewModel) {
             },
             dismissButton = { TextButton(onClick = { perConfirmar = null }) { Text(stringResource(R.string.escaneig_cancella)) } },
         )
+    }
+}
+
+/**
+ * El que la casa gasta sempre (el fons): els aparells que hi són sempre encesos, amb la seva potència, i la resta
+ * («altres en espera»). Només si se'n sap el fons i hi ha algun aparell sempre encès.
+ */
+@Composable
+private fun TargetaSempreEnces(vm: ConsumViewModel, preu: Double, obre: (Aparell) -> Unit) {
+    val fons = vm.fonsW ?: return
+    val sempre = vm.aparells.filter { it.funciona == Funcionament.SEMPRE }
+    if (sempre.isEmpty()) return
+    Targeta {
+        FilaConsum(
+            Icons.Outlined.Power, SempreFluix, Sempre, stringResource(R.string.aparells_titol_sempre, num(fons)),
+            stringResource(R.string.aparells_sempre_subtitol, euros(fons * 8760 / 1000 / 12 * preu)), "",
+        )
+        sempre.forEach { a ->
+            FilaConsum(
+                icona(a.categoria), SempreFluix, Sempre, a.nom, stringResource(a.font.nomId), "${num(a.wTipic)} W",
+                modifier = Modifier.clickable { obre(a) },
+            )
+        }
+        val resta = fons - sempre.sumOf { it.wTipic }
+        if (resta >= 1) {
+            FilaConsum(
+                Icons.Outlined.Power, SempreFluix, Sempre, stringResource(R.string.aparells_altres_espera),
+                stringResource(R.string.aparells_altres_espera_text), "${num(resta)} W",
+            )
+        }
+    }
+}
+
+/**
+ * Els aparells que s'engeguen sols: com els reconeix l'app (el compressor trobat a les dades, l'interval après d'una
+ * resposta) o que encara no els ha reconegut. No cal entrenar-los i no se n'avisa.
+ */
+@Composable
+private fun TargetaSols(vm: ConsumViewModel, obre: (Aparell) -> Unit) {
+    val sols = vm.aparells.filter { it.funciona == Funcionament.SOL }
+    if (sols.isEmpty()) return
+    Targeta {
+        TitolTargeta(stringResource(R.string.aparells_titol_sols))
+        Nota(stringResource(R.string.aparells_sols_subtitol))
+        sols.forEach { a ->
+            val r = vm.referencies[a.id]
+            val (com, valor) = when {
+                r == null -> stringResource(R.string.aparells_sol_no_encara) to "—"
+                r.automatica -> stringResource(R.string.aparells_sol_trobat) to "${num(r.w)} W"
+                r.wMin != null -> stringResource(R.string.aparells_sol_interval) to "${num(r.min)}–${num(r.max)} W"
+                else -> stringResource(R.string.aparells_sol_apres) to "${num(r.w)} W"
+            }
+            FilaConsum(
+                icona(a.categoria), PrimariFluix, Primari, a.nom, com, valor, if (r?.apresa == true) 3 else null,
+                subtitolColor = if (r == null) Desconegut else Suau, modifier = Modifier.clickable { obre(a) },
+            )
+        }
     }
 }

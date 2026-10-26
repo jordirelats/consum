@@ -3,26 +3,47 @@ package cat.jordi.consum.dades
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Una mostra de l'entrenament: el salt de potència (W) que va fer un aparell en encendre's o en apagar-se,
  * mesurat per l'app quan l'usuari ho va marcar o quan va respondre una pregunta. [durada] és el temps que va
- * estar encès (s), si es coneix.
+ * estar encès (s), si es coneix. [wMin] i [wMax]: l'interval de potència de l'episodi d'una pregunta (W per sobre
+ * del fons), que serveix per als aparells que s'engeguen sols i no gasten sempre igual (els inverter).
  */
-data class Mostra(val id: Long, val aparellId: Long, val ts: Long, val dp: Double, val durada: Long?)
+data class Mostra(
+    val id: Long, val aparellId: Long, val ts: Long, val dp: Double, val durada: Long?,
+    val wMin: Double? = null, val wMax: Double? = null, val font: String = "",
+)
 
-/** El que l'app sap d'un aparell: la potència típica (la mediana de les mostres) i quantes mostres en té. */
-data class Referencia(val aparellId: Long, val w: Double, val mostres: Int, val duradaMin: Double?) {
-    /** Amb tres mostres ja es considera après; amb menys, encara aprenent. */
-    val apresa get() = mostres >= 3
+/**
+ * El que l'app sap d'un aparell: la potència típica (la mediana de les mostres) i quantes mostres en té. Si
+ * s'engega sol i se n'ha après l'interval d'un episodi, [wMin] i [wMax]: explica qualsevol potència d'aquest
+ * interval. [automatica]: l'app l'ha trobat sola a les dades (el compressor de la nevera).
+ */
+data class Referencia(
+    val aparellId: Long, val w: Double, val mostres: Int, val duradaMin: Double?,
+    val wMin: Double? = null, val wMax: Double? = null, val automatica: Boolean = false,
+) {
+    /** Amb tres mostres ja es considera après; si l'ha trobat sola o en sap l'interval, també. */
+    val apresa get() = mostres >= PER_APRENDRE || automatica || wMin != null
+
+    val min get() = wMin ?: w
+    val max get() = wMax ?: w
 
     companion object {
         const val PER_APRENDRE = 3
 
-        fun de(aparellId: Long, mostres: List<Mostra>): Referencia? {
+        /** [ambInterval]: l'aparell s'engega sol, i se'n fa servir l'interval de les preguntes respostes. */
+        fun de(aparellId: Long, mostres: List<Mostra>, ambInterval: Boolean = false): Referencia? {
             if (mostres.isEmpty()) return null
             val durades = mostres.mapNotNull { it.durada }
-            return Referencia(aparellId, mediana(mostres.map { it.dp }), mostres.size, durades.takeIf { it.isNotEmpty() }?.let { mediana(it.map(Long::toDouble)) / 60 })
+            val amb = if (ambInterval) mostres.filter { it.wMin != null && it.wMax != null } else emptyList()
+            return Referencia(
+                aparellId, mediana(mostres.map { it.dp }), mostres.size,
+                durades.takeIf { it.isNotEmpty() }?.let { mediana(it.map(Long::toDouble)) / 60 },
+                wMin = amb.minOfOrNull { it.wMin!! }, wMax = amb.maxOfOrNull { it.wMax!! },
+            )
         }
     }
 }
@@ -44,40 +65,66 @@ data class Explicacio(val aparells: List<Pair<Long, Double>>, val residu: Double
  * Explica un excés de potència sobre el fons amb les referències apreses: busca la combinació d'1 a 3 aparells
  * que s'hi acosta més sense passar-se'n (amb un marge del 15 %, o 40 W). Si la suma es passa una mica, es
  * retalla; el que no s'explica queda com a residu. És aproximat: dos aparells de la mateixa potència es confonen.
+ * Un aparell amb interval (un inverter que s'engega sol) pot posar-hi qualsevol potència del seu interval, però
+ * només explica un excés que hi cap: si n'hi ha més, no se sap si és en marxa, i no se'n resta res (si no, un
+ * consum gran desconegut quedaria per sota del llindar dels avisos).
  */
 class Explicador(referencies: List<Referencia>) {
-    private class Combinacio(val suma: Double, val membres: List<Referencia>)
+    private class Combinacio(val min: Double, val max: Double, val membres: List<Referencia>)
 
-    private val combinacions: List<Combinacio>
+    /** Les combinacions de valors fixos, de suma més petita a més gran; a igual suma, la de menys aparells l'última. */
+    private val fixes: List<Combinacio>
+
+    /** Les que tenen algun aparell amb interval, de menys a més aparells. */
+    private val ambInterval: List<Combinacio>
 
     init {
-        val r = referencies.filter { it.w > 0 }.sortedByDescending { it.w }.take(20)
-        val llista = mutableListOf(Combinacio(0.0, emptyList()))
+        val r = referencies.filter { it.w > 0 }.sortedByDescending { it.max }.take(20)
+        val llista = mutableListOf<Combinacio>()
+        fun afegeix(m: List<Referencia>) {
+            llista += Combinacio(m.sumOf { it.min }, m.sumOf { it.max }, m)
+        }
         for (i in r.indices) {
-            llista += Combinacio(r[i].w, listOf(r[i]))
+            afegeix(listOf(r[i]))
             for (j in i + 1 until r.size) {
-                llista += Combinacio(r[i].w + r[j].w, listOf(r[i], r[j]))
-                for (k in j + 1 until r.size) llista += Combinacio(r[i].w + r[j].w + r[k].w, listOf(r[i], r[j], r[k]))
+                afegeix(listOf(r[i], r[j]))
+                for (k in j + 1 until r.size) afegeix(listOf(r[i], r[j], r[k]))
             }
         }
-        // De més petita a més gran; a igual suma, la de menys aparells queda l'última, que és la que trobarà la cerca
-        combinacions = llista.sortedWith(compareBy<Combinacio> { it.suma }.thenBy { -it.membres.size })
+        val (interval, fix) = llista.partition { c -> c.membres.any { it.wMin != null } }
+        fixes = (listOf(Combinacio(0.0, 0.0, emptyList())) + fix).sortedWith(compareBy<Combinacio> { it.min }.thenBy { -it.membres.size })
+        ambInterval = interval.sortedBy { it.membres.size }
     }
 
     fun explica(exces: Double): Explicacio {
-        if (exces <= 0 || combinacions.size == 1) return Explicacio(emptyList(), max(exces, 0.0))
-        val sostre = exces + max(40.0, 0.15 * exces)
-        // La combinació més gran que no passa del sostre (cerca binària)
+        if (exces <= 0 || (fixes.size == 1 && ambInterval.isEmpty())) return Explicacio(emptyList(), max(exces, 0.0))
+        val marge = max(40.0, 0.15 * exces)
+        // La combinació fixa més gran que no passa del sostre (cerca binària)
         var lo = 0
-        var hi = combinacions.lastIndex
+        var hi = fixes.lastIndex
         while (lo < hi) {
             val mig = (lo + hi + 1) / 2
-            if (combinacions[mig].suma <= sostre) lo = mig else hi = mig - 1
+            if (fixes[mig].min <= exces + marge) lo = mig else hi = mig - 1
         }
-        val tria = combinacions[lo]
+        val fixa = fixes[lo]
+        // Amb un interval, només si l'excés hi cap (dins del marge); i si la fixa ja ho explica amb menys aparells, aquella
+        val interval = ambInterval.firstOrNull { it.min <= exces + marge && it.max >= exces - marge }
+        val tria = when {
+            interval == null -> fixa
+            fixa.membres.isNotEmpty() && exces - fixa.max <= marge && fixa.membres.size <= interval.membres.size -> fixa
+            else -> interval
+        }
         if (tria.membres.isEmpty()) return Explicacio(emptyList(), exces)
-        val factor = if (tria.suma > exces) exces / tria.suma else 1.0
-        return Explicacio(tria.membres.map { it.aparellId to it.w * factor }, max(exces - tria.suma, 0.0))
+        val explicat = min(exces, tria.max)
+        val parts = if (tria.min >= explicat) {
+            // El mínim ja s'hi passa una mica: es retalla tot igual
+            tria.membres.map { it.aparellId to it.min * explicat / tria.min }
+        } else {
+            // Cada interval s'emporta la seva part del que queda per sobre dels mínims
+            val ample = tria.max - tria.min
+            tria.membres.map { it.aparellId to it.min + if (ample > 0) (it.max - it.min) / ample * (explicat - tria.min) else 0.0 }
+        }
+        return Explicacio(parts, max(exces - tria.max, 0.0))
     }
 }
 

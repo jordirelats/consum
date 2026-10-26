@@ -332,6 +332,28 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         desaAparells(listOf(a.copy(id = existent?.id ?: 0)))
     }
 
+    /** Quins avisos hauria donat la setmana passada amb l'ajust de la Configuració. Null mentre es calcula o sense dades. */
+    var previsioAvisos by mutableStateOf<List<Pair<Long, Double>>?>(null)
+        private set
+    var previsioSenseDades by mutableStateOf(false)
+        private set
+    private var feinaPrevisio: Job? = null
+
+    /** Desa l'ajust dels avisos de consum inesperat i torna a comptar quants n'hauria donat. */
+    fun ajustaInesperat(actiu: Boolean, llindarW: Double, minuts: Int) {
+        config.avisInesperat = actiu
+        config.llindarInesperat = llindarW
+        config.minutsInesperat = minuts
+        feinaPrevisio?.cancel()
+        previsioAvisos = null
+        if (!actiu) return
+        feinaPrevisio = viewModelScope.launch {
+            val r = withContext(Dispatchers.Default) { repo.simulaAvisos(llindarW, minuts) }
+            previsioSenseDades = r == null
+            previsioAvisos = r
+        }
+    }
+
     fun esborraAparell(id: Long) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { repo.esborraAparell(id) }
@@ -395,9 +417,10 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         }
     }
 
-    fun respon(pregunta: Pregunta, aparellId: Long?) {
+    /** [sol]: l'usuari diu que l'aparell s'engega sol; se n'aprèn l'interval i no se n'avisa més. */
+    fun respon(pregunta: Pregunta, aparellId: Long?, sol: Boolean = false) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.respon(pregunta.id, aparellId) }
+            withContext(Dispatchers.IO) { repo.respon(pregunta.id, aparellId, sol) }
             // Si la pregunta també és a les notificacions, ja no cal
             NotificationManagerCompat.from(getApplication<Application>()).cancel(pregunta.id.toInt())
             refrescaAra()

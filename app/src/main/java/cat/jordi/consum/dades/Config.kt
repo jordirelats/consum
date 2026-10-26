@@ -48,10 +48,35 @@ class Config(context: Context) {
     private var tarifaText: String? = null
     private var tarifaLlegida: Tarifa? = null
 
-    /** A partir de quants W sense explicar l'app pregunta què és. */
-    var llindarAvis: Double
-        get() = p.getFloat("llindar_avis", 300f).toDouble()
-        set(v) = p.edit().putFloat("llindar_avis", v.toFloat()).apply()
+    /**
+     * Els avisos de consum inesperat: si n'hi ha, a partir de quants W sense explicar i durant quants minuts. Fins a la
+     * 0.19 eren 300 W durant 10 minuts, fixos, i saltaven massa (24 vegades en una setmana a Guíxols).
+     */
+    var avisInesperat: Boolean
+        get() = p.getBoolean("avis_inesperat", true)
+        set(v) = p.edit().putBoolean("avis_inesperat", v).apply()
+    var llindarInesperat: Double
+        get() = p.getFloat("llindar_inesperat", 2000f).toDouble()
+        set(v) = p.edit().putFloat("llindar_inesperat", v.toFloat()).apply()
+    var minutsInesperat: Int
+        get() = p.getInt("minuts_inesperat", 30)
+        set(v) = p.edit().putInt("minuts_inesperat", v).apply()
+
+    // L'última vegada que el consum inesperat passava del llindar, i l'últim avís (s)
+    var inesperatAlt: Long
+        get() = p.getLong("inesperat_alt", 0)
+        set(v) = p.edit().putLong("inesperat_alt", v).apply()
+    var darrerAvisInesperat: Long
+        get() = p.getLong("darrer_avis_inesperat", 0)
+        set(v) = p.edit().putLong("darrer_avis_inesperat", v).apply()
+
+    /** El compressor de la nevera trobat a les dades (W; 0 si no s'ha trobat) i quan s'ha mirat (s). */
+    var neveraW: Double
+        get() = p.getFloat("nevera_w", 0f).toDouble()
+        set(v) = p.edit().putFloat("nevera_w", v.toFloat()).apply()
+    var neveraMirada: Long
+        get() = p.getLong("nevera_mirada", 0)
+        set(v) = p.edit().putLong("nevera_mirada", v).apply()
 
     // El consum inesperat que s'està seguint: des de quan, de quants W, i la pregunta que ja se n'ha fet (0 si cap)
     var inesperatDes: Long
