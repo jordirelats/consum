@@ -69,6 +69,7 @@ object Actualitzacio {
             if (c.responseCode !in 200..299) throw ErrorUsuari(R.string.error_baixada, c.responseCode)
             val total = c.contentLengthLong.takeIf { it > 0 }
             var llegit = 0L
+            var avisat = -1
             c.inputStream.use { entrada ->
                 desti.outputStream().use { sortida ->
                     val buffer = ByteArray(64 * 1024)
@@ -77,7 +78,11 @@ object Actualitzacio {
                         if (n < 0) break
                         sortida.write(buffer, 0, n)
                         llegit += n
-                        if (total != null) progres(llegit.toFloat() / total)
+                        val percent = if (total != null) (llegit * 100 / total).toInt() else -1
+                        if (total != null && percent != avisat) {
+                            avisat = percent
+                            progres(llegit.toFloat() / total)
+                        }
                     }
                 }
             }

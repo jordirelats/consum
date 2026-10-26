@@ -135,7 +135,7 @@ fun PantallaPreu(vm: ConsumViewModel) {
             TargetaEscaneig { lectura = it }
             // En canviar de país es comença amb els valors per defecte d'aquell país: el dinàmic funciona sense escriure res
             Pestanyes(Pais.entries, t.pais, { stringResource(it.nomId) }) { p ->
-                if (p != t.pais) t = Tarifa(pais = p, contracte = if (p == Pais.ALTRE) Contracte.FIX else Contracte.DINAMIC, potenciaKw = t.potenciaKw)
+                if (p != t.pais) t = Tarifa(pais = p, contracte = if (p == Pais.ALTRE) Contracte.FIX else Contracte.DINAMIC, potenciaKw = t.potenciaKw, maxKw = t.maxKw)
             }
             if (t.pais != Pais.ALTRE) {
                 Targeta {

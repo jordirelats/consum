@@ -199,7 +199,7 @@ fun CercaEprelWeb(grups: List<String>, model: String, enAcabar: (Result<List<Str
                 }
             }
             // Si no carrega, no es prova el grup següent: la segona vegada la web ja és a la memòria cau i va més de pressa
-            if (!camp || navegador.js(CercaEprel.jsCerca(model)) != "\"ok\"") break
+            if (!camp || withTimeoutOrNull(5_000) { navegador.js(CercaEprel.jsCerca(model)) } != "\"ok\"") break
             carregada = true
             var numeros = emptyList<String>()
             withTimeoutOrNull(ESPERA_RESULTATS_MS) {

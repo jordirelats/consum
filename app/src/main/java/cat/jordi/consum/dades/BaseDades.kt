@@ -134,14 +134,17 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         ).use { if (it.moveToFirst()) it.getDouble(0) else null }
     }
 
-    /** L'energia per hores (kWh), amb el fons donat en Wh per minut. */
+    /**
+     * L'energia per hores (kWh), amb el fons donat en Wh per minut. El fons es converteix a número a la consulta:
+     * rawQuery passa els arguments com a text, i MIN(número, text) de SQLite torna sempre el número.
+     */
     fun perHores(desDe: Long, finsA: Long, fonsWh: Double): List<Hora> {
         val f = fonsWh.toString()
         return readableDatabase.rawQuery(
             """SELECT (m0.ts / 3600) * 3600 AS h,
-                 SUM(MIN(MAX(m0.wh - IFNULL(m1.wh, 0), 0), ?)),
+                 SUM(MIN(MAX(m0.wh - IFNULL(m1.wh, 0), 0), CAST(? AS REAL))),
                  SUM(IFNULL(m1.wh, 0)),
-                 SUM(MAX(m0.wh - IFNULL(m1.wh, 0) - ?, 0))
+                 SUM(MAX(m0.wh - IFNULL(m1.wh, 0) - CAST(? AS REAL), 0))
                $restaSql GROUP BY h ORDER BY h""",
             arrayOf(f, f, desDe.toString(), finsA.toString())
         ).use { c ->

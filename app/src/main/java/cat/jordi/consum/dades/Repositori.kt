@@ -320,6 +320,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
      * Mira si ara hi ha un consum que les referències no expliquen. Si dura 10 minuts o més (amb una
      * potència semblant), en fa una pregunta, només una per a cada consum. [restaW] és el total menys la línia.
      */
+    @Synchronized
     fun comprovaInesperat(restaW: Double): Pregunta? {
         val fons = fonsW() ?: return null
         val residu = explicador().explica(restaW - fons).residu
@@ -365,14 +366,20 @@ class Repositori(val config: Config, private val bd: BaseDades) {
      * Què hi havia encès en un pic: la línia de la segona pinça, el fons i els trossos d'[AnalisiPics], cadascun amb
      * els aparells après que l'expliquen (si en queda poc per explicar) o, si no, com a desconegut per preguntar-ne.
      */
-    fun analitzaPic(pic: Pic): AnalisiPic {
+    fun analitzaPics(pics: List<Pic>): List<AnalisiPic> {
+        if (pics.isEmpty()) return emptyList()
+        // El que és comú a tots els pics es llegeix un sol cop
+        val fons = fonsW() ?: 0.0
+        val refs = referencies()
+        val aparells = aparells()
+        val aEntrenar = aparells.filterNot(::esLinia)
+        return pics.map { analitzaPic(it, fons, refs, aparells.associateBy { a -> a.id }, aEntrenar) }
+    }
+
+    private fun analitzaPic(pic: Pic, fons: Double, refs: Map<Long, Referencia>, tots: Map<Long, Aparell>, aEntrenar: List<Aparell>): AnalisiPic {
         val linia = config.teLinia
         val serie = bd.serie(pic.ts - AnalisiPics.FINESTRA_S, pic.ts + 1)
-        val fons = fonsW() ?: 0.0
         val trossos = AnalisiPics.trossos(serie.map { it.ts to max(it.wTotal - (if (linia) it.wLinia else 0.0), 0.0) }, fons)
-        val refs = referencies()
-        val tots = aparells().associateBy { it.id }
-        val aEntrenar = aparellsAEntrenar()
         val elements = mutableListOf<ElementPic>()
         val alPic = serie.lastOrNull()
         val wLinia = if (linia) alPic?.wLinia ?: 0.0 else 0.0

@@ -234,7 +234,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
         val p = periode
         val dades = withContext(Dispatchers.IO) {
             Dades(
-                repo.pics(p).map(repo::analitzaPic),
+                repo.analitzaPics(repo.pics(p)),
                 repo.serie24h(), repo.avui(), repo.fonsW(), repo.resum(p), repo.resumMes(), repo.aparells(),
                 repo.infoPreu(), repo.consellLinia(),
                 repo.referencies(), repo.repartimentMes(), repo.preguntesPendents(), repo.aparellsAEntrenar(),

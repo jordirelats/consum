@@ -38,8 +38,15 @@ class Config(context: Context) {
 
     /** Com es paga la llum. Les versions 0.1 i 0.2 només desaven un preu: es converteix en una tarifa de preu únic. */
     var tarifa: Tarifa
-        get() = Tarifa.de(p.getString("tarifa", null)) ?: Tarifa(preuFix = p.getFloat("preu", 0.25f).toDouble())
+        get() = synchronized(this) {
+            // La pantalla la llegeix a cada recomposició: només es torna a llegir el JSON quan ha canviat
+            val text = p.getString("tarifa", null)
+            tarifaLlegida?.takeIf { text == tarifaText }
+                ?: (Tarifa.de(text) ?: Tarifa(preuFix = p.getFloat("preu", 0.25f).toDouble())).also { tarifaText = text; tarifaLlegida = it }
+        }
         set(v) = p.edit().putString("tarifa", v.json()).apply()
+    private var tarifaText: String? = null
+    private var tarifaLlegida: Tarifa? = null
 
     /** A partir de quants W sense explicar l'app pregunta què és. */
     var llindarAvis: Double

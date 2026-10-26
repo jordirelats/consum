@@ -62,7 +62,8 @@ class Sincronitza(context: Context, params: WorkerParameters) : CoroutineWorker(
                         Avisos.avisaPotencia(applicationContext, l.total.w, limit, runCatching { repo.encesAra(l) }.getOrDefault(emptyList()))
                     }
                     val resta = l.total.w - (if (repo.config.teLinia) l.linia?.w ?: 0.0 else 0.0)
-                    repo.comprovaInesperat(resta)?.let { p ->
+                    // Amb l'app oberta ja ho mira ella, cada minut
+                    if (!ConsumApp.oberta) repo.comprovaInesperat(resta)?.let { p ->
                         Avisos.avisa(applicationContext, p, repo.aparellsAEntrenar(), repo.referencies())
                     }
                 }

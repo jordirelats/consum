@@ -176,7 +176,7 @@ object Factura {
      * nova d'aquell país; el tipus de contracte és el que s'ha deduït del document.
      */
     fun aplica(t: Tarifa, l: LecturaFactura, triats: Set<CampFactura>): Tarifa {
-        var r = if (t.pais == l.pais) t.copy(contracte = l.contracte) else Tarifa(pais = l.pais, contracte = l.contracte)
+        var r = if (t.pais == l.pais) t.copy(contracte = l.contracte) else Tarifa(pais = l.pais, contracte = l.contracte, potenciaKw = t.potenciaKw, maxKw = t.maxKw)
         for (p in l.trobats) {
             if (p.camp !in triats) continue
             val v = p.valor

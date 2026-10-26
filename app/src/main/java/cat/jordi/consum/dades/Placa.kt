@@ -117,7 +117,10 @@ object Placa {
         val fitxer = File(arrel, "tessdata/eng.traineddata")
         if (!fitxer.exists()) {
             fitxer.parentFile?.mkdirs()
-            context.assets.open("tessdata/eng.traineddata").use { entrada -> fitxer.outputStream().use { entrada.copyTo(it) } }
+            // Primer a un fitxer temporal: si l'app es tanca a mitja còpia, no queda un model trencat per sempre
+            val temporal = File(fitxer.parentFile, "eng.traineddata.part")
+            context.assets.open("tessdata/eng.traineddata").use { entrada -> temporal.outputStream().use { entrada.copyTo(it) } }
+            if (!temporal.renameTo(fitxer)) throw ErrorUsuari(R.string.error_ocr)
         }
         return arrel
     }

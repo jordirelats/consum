@@ -125,7 +125,7 @@ fun GraficaPotencia(
         if (ambLinia) liniaPunts(serie, Linia, ::x) { y(it.wLinia) }
 
         // Els salts i el pic
-        marques.forEachIndexed { k, (ts, text) ->
+        marques.filter { (ts, _) -> ts >= serie.first().ts && ts <= serie.last().ts }.forEachIndexed { k, (ts, text) ->
             val xx = x(ts)
             drawLine(Desconegut, Offset(xx, 0f), Offset(xx, alt), 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 5f)))
             val estil = EstilEix.copy(color = Desconegut)

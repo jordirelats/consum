@@ -54,7 +54,7 @@ private fun mdns(context: Context, enTrobar: (Trobat) -> Unit): () -> Unit {
         val servei = cua.pollFirst() ?: return
         resolent = true
         @Suppress("DEPRECATION")
-        nsd.resolveService(servei, object : NsdManager.ResolveListener {
+        try { nsd.resolveService(servei, object : NsdManager.ResolveListener {
             override fun onResolveFailed(info: NsdServiceInfo, codi: Int) {
                 resolent = false
                 seguent()
@@ -67,7 +67,10 @@ private fun mdns(context: Context, enTrobar: (Trobat) -> Unit): () -> Unit {
                 resolent = false
                 seguent()
             }
-        })
+        }) } catch (_: IllegalArgumentException) {
+            // Un oient que encara es fa servir (alguns Android antics): se salta aquest servei
+            resolent = false
+        }
     }
 
     val oient = object : NsdManager.DiscoveryListener {

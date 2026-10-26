@@ -31,6 +31,16 @@ class AnalisiPicsTest {
         assertEquals(serie[pic].second, 100.0 + trossos.sumOf { it.w }, 1.0)
     }
 
+    /** Amb un forat d'una hora sense dades, l'anàlisi comença després del forat: no hi ha cap salt fals entre les dues estones. */
+    @Test
+    fun ambUnForat() {
+        val abans = (0..60).map { m -> t0 + m * 60L to 2600.0 }
+        val despres = (120..180).map { m -> t0 + m * 60L to (if (m >= 150) 2600.0 else 100.0) }
+        val trossos = AnalisiPics.trossos(abans + despres, 100.0)
+        val estable = trossos.single { it.tipus == TipusTros.ESTABLE }
+        assertEquals(t0 + 150 * 60L, estable.desDe)
+    }
+
     @Test
     fun senseProuDades() {
         assertTrue(AnalisiPics.trossos(tarda().take(5), 100.0).isEmpty())

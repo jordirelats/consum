@@ -45,7 +45,10 @@ object AnalisiPics {
     private const val MINIM = 300.0
 
     /** [serie]: la potència de la casa sense la línia de la segona pinça (W), minut a minut, acabant al pic. */
-    fun trossos(serie: List<Pair<Long, Double>>, fonsW: Double): List<Tros> {
+    fun trossos(totaLaSerie: List<Pair<Long, Double>>, fonsW: Double): List<Tros> {
+        // Es compta per minuts seguits: si hi ha un forat sense dades de més de 5 minuts, es comença després
+        val forat = (1 until totaLaSerie.size).lastOrNull { totaLaSerie[it].first - totaLaSerie[it - 1].first > 5 * 60 }
+        val serie = if (forat != null) totaLaSerie.subList(forat, totaLaSerie.size) else totaLaSerie
         if (serie.size < 8) return emptyList()
         val r = serie.map { it.second }
         val t = serie.map { it.first }

@@ -82,6 +82,7 @@ class ShellyLocal(private val host: String) {
             val o = rpc("EM1Data.GetData?id=$canal&ts=$ts", 10_000)
             val claus = o.getJSONArray("keys").let { k -> List(k.length()) { k.getString(it) } }
             val iEnergia = claus.indexOf("total_act_energy")
+            if (iEnergia < 0) throw IOException("EM1Data sense total_act_energy")
             val iMax = claus.indexOf("max_act_power")
             val iMin = claus.indexOf("min_act_power")
             val files = mutableListOf<Minut>()
@@ -97,7 +98,8 @@ class ShellyLocal(private val host: String) {
                 }
             }
             enCadaPagina(files)
-            ts = if (o.has("next_record_ts") && !o.isNull("next_record_ts")) o.getLong("next_record_ts") else null
+            // Si el Shelly torna el mateix punt de partida, s'acaba: si no, no se'n sortiria mai
+            ts = if (o.has("next_record_ts") && !o.isNull("next_record_ts")) o.getLong("next_record_ts").takeIf { it > ts!! } else null
         }
     }
 }
