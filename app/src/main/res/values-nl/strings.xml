@@ -672,4 +672,42 @@
     <string name="afegir_sense_potencia_nota">Typisch voor dit soort apparaat. Weet je het vermogen van het jouwe (op de adapter of het typeplaatje), pas het dan aan.</string>
     <string name="afegir_sense_any">Per jaar</string>
     <string name="afegir_sense_any_valor">%1$s kWh · %2$s per maand</string>
+    <string name="principal_estona_passada">Een eerder moment</string>
+    <string name="entrena_passat_titol">Leer het aan met een eerder moment</string>
+    <string name="entrena_passat_text">Weet je wanneer een apparaat aanstond (bijvoorbeeld de vaatwasser gisteren van 17 tot 21 uur), dan zoekt de app het op in de gegevens en leert het vermogen.</string>
+    <string name="entrena_passat_boto">Kies apparaat en tijd</string>
+    <string name="passat_quin_aparell">Welk apparaat was het?</string>
+    <string name="passat_quin_dia">Welke dag?</string>
+    <string name="passat_avui">Vandaag</string>
+    <string name="passat_ahir">Gisteren, %1$s</string>
+    <string name="passat_quina_hora">Hoe laat?</string>
+    <string name="passat_de">Van %1$s</string>
+    <string name="passat_fins">Tot %1$s</string>
+    <string name="passat_de_buit">Van…</string>
+    <string name="passat_fins_buit">Tot…</string>
+    <string name="passat_nota">Neem de tijd gerust wat ruim: de app zoekt zelf de sprongen. Er zijn alleen de gegevens die de telefoon thuis heeft opgehaald (de Shelly bewaart ongeveer 7 dagen).</string>
+    <string name="passat_busca">Zoeken</string>
+    <string name="passat_buscant">Zoeken…</string>
+    <string name="passat_titol">%1$s · %2$s, van %3$s tot %4$s</string>
+    <plurals name="passat_trobats">
+        <item quantity="one">Ik heb %1$d sprong gevonden. Vink hem aan als het dit apparaat was:</item>
+        <item quantity="other">Ik heb %1$d sprongen gevonden. Vink aan welke van dit apparaat waren:</item>
+    </plurals>
+    <string name="passat_tram">%1$s–%2$s · +%3$s</string>
+    <string name="passat_tram_detall">%1$d minuten · %2$s kWh</string>
+    <string name="passat_tram_petit">" · kleiner: misschien iets anders"</string>
+    <string name="passat_quan_funciona">Als het aanstaat</string>
+    <string name="passat_aquesta_vegada">Deze keer</string>
+    <plurals name="passat_mostres">
+        <item quantity="one">%1$d meting (bij aan- of uitzetten).</item>
+        <item quantity="other">%1$d metingen (bij elk aan- en uitzetten).</item>
+    </plurals>
+    <string name="passat_interval_nota">Gaat vanzelf aan: de app leert het vermogensbereik van elke keer.</string>
+    <string name="passat_desa">Opslaan als %1$s</string>
+    <string name="passat_canvia">Andere tijd kiezen</string>
+    <string name="passat_aproximada">Van deze periode heb ik alleen schattingen uit de cloud. Zodra de telefoon thuis is, haalt hij de minuutgegevens van de Shelly op.</string>
+    <string name="passat_sense_dades">Ik heb geen gegevens van deze periode. De Shelly bewaart ongeveer 7 dagen, en de telefoon haalt ze op als hij thuis is.</string>
+    <string name="passat_cap_salt">Ik heb geen sprong van 250 W of meer gevonden. Misschien verbruikt het apparaat minder, of was het een ander moment.</string>
+    <string name="passat_desat">%1$s: %2$s W, aangeleerd van het eerdere moment.</string>
+    <string name="passat_desc_grafica">Grafiek van de periode: %1$d sprongen, %2$d aangevinkt.</string>
 </resources>

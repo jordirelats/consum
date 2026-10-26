@@ -876,4 +876,47 @@
     <string name="afegir_sense_potencia_nota">El típic d\'aquest tipus d\'aparell. Si saps la del teu (és al transformador o a la placa), canvia-la.</string>
     <string name="afegir_sense_any">Tot l\'any</string>
     <string name="afegir_sense_any_valor">%1$s kWh · %2$s al mes</string>
+    <!-- Ensenyar un aparell amb una estona passada (maqueta 8) -->
+    <string name="principal_estona_passada">Una estona passada</string>
+    <string name="entrena_passat_titol">Ensenya-li una estona passada</string>
+    <string name="entrena_passat_text">Si saps quan va funcionar un aparell (per exemple, el rentaplats ahir de 17 a 21 h), l\'app el busca a les dades i n\'aprèn la potència.</string>
+    <string name="entrena_passat_boto">Tria l\'aparell i l\'estona</string>
+    <string name="passat_quin_aparell">Quin aparell era?</string>
+    <string name="passat_quin_dia">Quin dia?</string>
+    <string name="passat_avui">Avui</string>
+    <!-- %1$s és el dia curt: «dg 25» -->
+    <string name="passat_ahir">Ahir, %1$s</string>
+    <string name="passat_quina_hora">A quina hora?</string>
+    <string name="passat_de">De %1$s</string>
+    <string name="passat_fins">Fins a %1$s</string>
+    <string name="passat_de_buit">De…</string>
+    <string name="passat_fins_buit">Fins a…</string>
+    <string name="passat_nota">Pots posar l\'estona una mica llarga: l\'app hi busca els salts. Només hi ha les dades que el mòbil ha recollit a casa (el Shelly en guarda uns 7 dies).</string>
+    <string name="passat_busca">Busca-ho</string>
+    <string name="passat_buscant">Buscant…</string>
+    <!-- %1$s és l\'aparell, %2$s el dia («diumenge 25») i %3$s i %4$s, les hores -->
+    <string name="passat_titol">%1$s · %2$s, de %3$s a %4$s</string>
+    <plurals name="passat_trobats">
+        <item quantity="one">He trobat %1$d salt. Marca\'l si era l\'aparell:</item>
+        <item quantity="other">He trobat %1$d salts. Marca els que eren l\'aparell:</item>
+    </plurals>
+    <!-- %1$s i %2$s són les hores i %3$s, el salt («2,2 kW») -->
+    <string name="passat_tram">%1$s–%2$s · +%3$s</string>
+    <string name="passat_tram_detall">%1$d minuts · %2$s kWh</string>
+    <string name="passat_tram_petit">" · més petit: potser és una altra cosa"</string>
+    <string name="passat_quan_funciona">Quan funciona</string>
+    <string name="passat_aquesta_vegada">Aquesta vegada</string>
+    <plurals name="passat_mostres">
+        <item quantity="one">%1$d mostra (en encendre\'s o en apagar-se).</item>
+        <item quantity="other">%1$d mostres (en encendre\'s i en apagar-se cada vegada).</item>
+    </plurals>
+    <string name="passat_interval_nota">S\'engega sol: l\'app n\'aprèn l\'interval de potència de cada vegada.</string>
+    <string name="passat_desa">Desa-ho com a %1$s</string>
+    <string name="passat_canvia">Canvia l\'estona</string>
+    <string name="passat_aproximada">D\'aquesta estona només tinc dades aproximades, del núvol. Quan el mòbil torni a casa, recollirà les de cada minut del Shelly.</string>
+    <string name="passat_sense_dades">No tinc dades d\'aquesta estona. El Shelly en guarda uns 7 dies, i el mòbil les recull quan és a casa.</string>
+    <string name="passat_cap_salt">No hi he trobat cap salt de 250 W o més. Potser l\'aparell gasta menys, o era una altra estona.</string>
+    <!-- Després de desar: %1$s és l\'aparell i %2$s, els W -->
+    <string name="passat_desat">%1$s: %2$s W, après de l\'estona passada.</string>
+    <string name="passat_desc_grafica">Gràfica de l\'estona: %1$d salts, %2$d marcats.</string>
 </resources>

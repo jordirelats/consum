@@ -18,6 +18,9 @@ import kotlin.math.max
 
 enum class Periode(@StringRes val nomId: Int) { DIA(R.string.periode_dia), SETMANA(R.string.periode_setmana), MES(R.string.periode_mes) }
 
+/** Una estona passada: la potència minut a minut (amb un marge a cada costat) i els trams que hi ha. */
+data class Estona(val desDe: Long, val finsA: Long, val punts: List<Punt>, val trams: List<TramPassat>, val aproximada: Boolean)
+
 /** Una barra de l'historial: una hora o un dia. */
 data class Barra(val etiqueta: String, val hora: Hora)
 
@@ -482,6 +485,43 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val inici = minOf(primer, pic.ts - 30 * 60) - 15 * 60
         val finestra = bd.serie(maxOf(inici, pic.ts - 90 * 60L - 15 * 60), pic.ts + 30 * 60)
         return AnalisiPic(pic, elements.sortedByDescending { it.w }, trossos, finestra)
+    }
+
+    /**
+     * Una estona passada, per ensenyar-hi un aparell: la potència de l'estona (amb un quart d'hora més a cada costat,
+     * per a la gràfica) i els trams que hi ha. Si una part és aproximada (des de fora), no s'hi busca res.
+     */
+    fun estona(desDe: Long, finsA: Long): Estona {
+        val serie = bd.serie(desDe - 15 * 60, finsA + 15 * 60)
+        val dins = serie.filter { it.ts in desDe until finsA }
+        val aproximada = dins.any { it.aprox }
+        val linia = config.teLinia
+        val trams = if (aproximada) emptyList()
+        else EstonaPassada.trams(dins.map { it.ts to max(it.wTotal - (if (linia) it.wLinia else 0.0), 0.0) })
+        return Estona(desDe, finsA, serie, trams, aproximada)
+    }
+
+    /**
+     * Els trams que l'usuari ha marcat d'una estona passada, com a mostres de l'aparell. Si l'engega l'usuari, els salts
+     * en encendre's i en apagar-se (com en directe); si s'engega sol, l'interval de cada tram. Dues vegades la mateixa
+     * estona no fan mostres repetides.
+     */
+    @Synchronized
+    fun ensenyaEstona(aparellId: Long, trams: List<TramPassat>) {
+        val a = bd.aparells().firstOrNull { it.id == aparellId } ?: return
+        for (t in trams) {
+            val durada = t.fi - t.ts + 60
+            if (a.funciona == Funcionament.SOL) {
+                if (bd.teMostra(aparellId, t.ts, "passat")) continue
+                val id = bd.desaMostra(aparellId, t.ts, mediana(t.exces), durada, "passat")
+                val s = t.exces.sorted()
+                bd.desaInterval(id, s[s.size / 10] * 0.8, s.last() * 1.2)
+            } else {
+                val (puja, baixa) = t.mostres
+                if (!bd.teMostra(aparellId, t.ts, "passat")) bd.desaMostra(aparellId, t.ts, puja, durada, "passat")
+                if (!bd.teMostra(aparellId, t.fi, "passat")) bd.desaMostra(aparellId, t.fi, baixa, durada, "passat")
+            }
+        }
     }
 
     /** L'usuari diu quin aparell era un tros d'un pic: és una mostra de l'aparell, com si l'hagués ensenyat en directe. */

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cat.jordi.consum.R
 import cat.jordi.consum.dades.Barra
+import cat.jordi.consum.dades.Estona
 import cat.jordi.consum.dades.Punt
 import cat.jordi.consum.dades.nivellPotencia
 import java.time.Instant
@@ -168,6 +169,61 @@ fun GraficaPotencia(
         }
     }
     Llegenda(serie.any { it.aprox }, limitKw != null)
+}
+
+/**
+ * Una estona passada (maqueta 8): la potència, l'estona que ha dit l'usuari (ratlles de punts) i els trams que l'app
+ * hi ha trobat, en verd els marcats i en gris els altres. [punts] porta un quart d'hora de més a cada costat.
+ */
+@Composable
+fun GraficaEstona(estona: Estona, ambLinia: Boolean, triats: Set<Int>) {
+    val mesura = rememberTextMeasurer()
+    val context = LocalContext.current
+    val serie = estona.punts
+    val descripcio = stringResource(R.string.passat_desc_grafica, estona.trams.size, triats.size)
+    Canvas(Modifier.fillMaxWidth().padding(top = 12.dp).height(150.dp).semantics { contentDescription = descripcio }) {
+        val peu = 20.dp.toPx()
+        val alt = size.height - peu
+        if (serie.size < 2) return@Canvas
+        fun w(p: Punt) = (p.wTotal - if (ambLinia) p.wLinia else 0.0).coerceAtLeast(0.0)
+        val maxim = maxOf(serie.maxOf(::w), 200.0) * 1.05
+        val pasKw = pas(maxim / 1000)
+        val ymax = ceil(maxim / 1000 / pasKw) * pasKw * 1000
+        val etiquetes = generateSequence(0.0) { it + pasKw }.takeWhile { it <= ymax / 1000 + 1e-9 }
+            .map { kw -> kw to context.getString(R.string.grafiques_kw, num(kw, if (pasKw < 1) 1 else 0)) }.toList()
+        val marge = etiquetes.maxOf { mesura.measure(it.second, EstilEix).size.width } + 6.dp.toPx()
+        val ample = size.width - marge
+        val t0 = serie.first().ts.toFloat()
+        val t1 = serie.last().ts.toFloat().coerceAtLeast(t0 + 1)
+        fun x(ts: Long) = marge + (ts - t0) / (t1 - t0) * ample
+        fun y(v: Double) = alt - (v / ymax).toFloat().coerceIn(0f, 1f) * alt
+
+        // Els trams, darrere de la línia
+        estona.trams.forEachIndexed { i, tr ->
+            val color = if (i in triats) VallColor.copy(alpha = 0.16f) else Sempre.copy(alpha = 0.22f)
+            drawRect(color, Offset(x(tr.ts) - 1.dp.toPx(), 0f), Size(x(tr.fi + 60) - x(tr.ts) + 2.dp.toPx(), alt))
+        }
+        for ((kw, text) in etiquetes) {
+            val yy = y(kw * 1000)
+            if (kw > 0) drawLine(Separador, Offset(marge, yy), Offset(size.width, yy))
+            val mida = mesura.measure(text, EstilEix).size
+            drawText(mesura, text, Offset(marge - 4.dp.toPx() - mida.width, yy - mida.height / 2f), EstilEix)
+        }
+        drawLine(Eix.copy(alpha = 0.5f), Offset(marge, alt), Offset(size.width, alt))
+        // L'estona que ha dit l'usuari
+        val punts = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))
+        for (ts in listOf(estona.desDe, estona.finsA)) drawLine(Primari, Offset(x(ts), 0f), Offset(x(ts), alt), 1.5f, pathEffect = punts)
+        val linia = Path().apply {
+            serie.forEachIndexed { i, p -> if (i == 0) moveTo(x(p.ts), y(w(p))) else lineTo(x(p.ts), y(w(p))) }
+        }
+        drawPath(linia, Primari, style = Stroke(1.5.dp.toPx()))
+        for (ts in listOf(estona.desDe, estona.finsA)) {
+            val etiqueta = horaMinut(ts)
+            val mida = mesura.measure(etiqueta, EstilEix).size
+            val xx = (x(ts) - mida.width / 2).coerceIn(marge, size.width - mida.width)
+            drawText(mesura, etiqueta, Offset(xx, alt + 4.dp.toPx()), EstilEix)
+        }
+    }
 }
 
 /** L'hora i el minut d'un instant, com a les etiquetes de la gràfica (20:48). */

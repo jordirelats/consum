@@ -19,6 +19,7 @@ import cat.jordi.consum.dades.AnalisiPic
 import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Avui
 import cat.jordi.consum.dades.ConsellLinia
+import cat.jordi.consum.dades.Estona
 import cat.jordi.consum.dades.Explicador
 import cat.jordi.consum.dades.InfoPreu
 import cat.jordi.consum.dades.Periode
@@ -30,6 +31,7 @@ import cat.jordi.consum.dades.Repartiment
 import cat.jordi.consum.dades.Resum
 import cat.jordi.consum.dades.Tarifa
 import cat.jordi.consum.dades.TextRecurs
+import cat.jordi.consum.dades.TramPassat
 import cat.jordi.consum.dades.Tros
 import cat.jordi.consum.dades.mediana
 import cat.jordi.consum.dades.missatge
@@ -43,7 +45,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Pantalla { CONNECTA, PRINCIPAL, AFEGIR, QUESTIONARI, PREU }
+enum class Pantalla { CONNECTA, PRINCIPAL, AFEGIR, QUESTIONARI, PREU, PASSAT }
 
 enum class Pestanya(@StringRes val nomId: Int) {
     ARA(R.string.pestanya_ara), APARELLS(R.string.pestanya_aparells), ENTRENA(R.string.pestanya_entrena), HISTORIAL(R.string.pestanya_historial)
@@ -338,6 +340,47 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     var previsioSenseDades by mutableStateOf(false)
         private set
     private var feinaPrevisio: Job? = null
+
+    /** L'estona passada que s'ha buscat per ensenyar-hi un aparell (maqueta 8), i si s'està buscant. */
+    var estona by mutableStateOf<Estona?>(null)
+        private set
+    var buscantEstona by mutableStateOf(false)
+        private set
+
+    fun buscaEstona(desDe: Long, finsA: Long) {
+        viewModelScope.launch {
+            buscantEstona = true
+            // Si és a casa, primer recull els minuts que encara no té (l'estona pot ser de fa poc)
+            estona = withContext(Dispatchers.IO) {
+                try {
+                    repo.sincronitza()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                }
+                repo.estona(desDe, finsA)
+            }
+            buscantEstona = false
+        }
+    }
+
+    fun oblidaEstona() {
+        estona = null
+    }
+
+    /** Desa els trams marcats com a mostres de l'aparell i torna a Entrena, amb el que n'ha après. */
+    fun ensenyaEstona(aparell: Aparell, trams: List<TramPassat>) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.ensenyaEstona(aparell.id, trams) }
+            estona = null
+            refrescaAra()
+            val r = referencies[aparell.id]
+            missatgeDe = null
+            missatgeEntrena = if (r != null) TextRecurs(R.string.passat_desat, aparell.nom, num(if (r.wMin != null) r.max else r.w)) else null
+            pantalla = Pantalla.PRINCIPAL
+            pestanya = Pestanya.ENTRENA
+        }
+    }
 
     /** Desa l'ajust dels avisos de consum inesperat i torna a comptar quants n'hauria donat. */
     fun ajustaInesperat(actiu: Boolean, llindarW: Double, minuts: Int) {

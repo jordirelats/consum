@@ -232,11 +232,10 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         esborraMostres(id)
     }
 
-    fun desaMostra(aparellId: Long, ts: Long, dp: Double, durada: Long?, font: String) {
+    fun desaMostra(aparellId: Long, ts: Long, dp: Double, durada: Long?, font: String): Long =
         writableDatabase.insert("mostres", null, ContentValues().apply {
             put("aparell", aparellId); put("ts", ts); put("dp", dp); put("durada", durada); put("font", font)
         })
-    }
 
     fun teMostra(aparellId: Long, ts: Long, font: String): Boolean =
         readableDatabase.rawQuery(

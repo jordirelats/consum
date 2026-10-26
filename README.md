@@ -17,6 +17,7 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
   - Una ajuda diu on és la placa amb el model a cada tipus d'aparell. Una fitxa de l'EPREL, una foto o un PDF es poden compartir amb l'app des d'una altra.
   - L'app llegeix la potència de la foto de la placa amb Tesseract, dins del mòbil.
 - **Entrena:** li ensenyes quan encens o apagues un aparell, i l'app n'aprèn la potència.
+  - També amb una estona passada: «el rentaplats va funcionar ahir de 17 a 21 h». L'app hi busca els salts, te'ls ensenya en una gràfica i tu marques els que eren l'aparell.
   - Si el consum es dispara i l'app no sap què és, t'ho pregunta amb una notificació. Tu tries a partir de quant (de 0,5 a 3 kW) i durant quant, i l'app et diu quants avisos t'hauria donat la setmana passada.
   - D'un aparell que s'engega sol i no gasta sempre igual (una bomba de calor inverter), n'aprèn l'interval de potència amb una sola resposta, i no te'n torna a preguntar.
 - **El preu de la llum:**
@@ -96,7 +97,7 @@ Fa servir aquestes llibreries i dades, totes amb llicència Apache-2.0:
 - **Live view and history**, with hour-by-hour prices: Spain 2.0TD/PVPC, Netherlands fixed, normaal/dal or dynamic (EnergyZero), or a single price. Fixed costs are shown separately.
 - **Appliance inventory**: a room-by-room questionnaire, the EU energy label QR (EPREL), a brand and model search on the EPREL website, a photo of the rating plate (read on the device with Tesseract), or just the appliance type. Appliances are always on, self-starting (fridge, heat pump, water heater) or switched on by the user; only the last ones need training. The fridge compressor is found automatically in the night-time data.
 - **Contracted power**: how close the house is to it, with an alert above 90 % (immediately, with a persistent notification, or every 15 minutes).
-- **Training**: tell the app when you switch an appliance on or off and it learns its power.
+- **Training**: tell the app when you switch an appliance on or off and it learns its power, live or afterwards ("the dishwasher ran yesterday from 5 to 9 pm": the app finds the jumps in that window and you tick the right ones).
 - **Peak moments**: the busiest minute of each day and the 5 loads behind it, with when each switched on; unknown steps can be labelled to teach the app.
 - **Unexpected-consumption alerts**: when consumption jumps (a threshold and a duration you choose) and the app cannot explain it, it asks what it is through a notification. A self-starting inverter appliance is learned as a power range from a single answer.
 - **Fill in prices from a contract or bill** (photo or PDF), read on the device.

@@ -84,6 +84,16 @@ fun PantallaEntrena(vm: ConsumViewModel) {
 
         vm.preguntes.forEach { p -> key(p.id) { TargetaPregunta(vm, p) } }
 
+        // Ensenyar-li una estona passada (maqueta 8): quan no hi eres a temps de tocar el botó
+        Targeta {
+            TitolTargeta(stringResource(R.string.entrena_passat_titol))
+            Nota(stringResource(R.string.entrena_passat_text))
+            Button(
+                onClick = { vm.oblidaEstona(); vm.pantalla = Pantalla.PASSAT },
+                Modifier.fillMaxWidth().padding(top = 8.dp), enabled = vm.aparellsAEntrenar.isNotEmpty(),
+            ) { Text(stringResource(R.string.entrena_passat_boto)) }
+        }
+
         Targeta {
             TitolTargeta(stringResource(R.string.entrena_en_directe))
             Nota(stringResource(R.string.entrena_instruccions))

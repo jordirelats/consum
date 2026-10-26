@@ -6,9 +6,9 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
@@ -58,6 +58,7 @@ import cat.jordi.consum.ui.PantallaAra
 import cat.jordi.consum.ui.PantallaConnecta
 import cat.jordi.consum.ui.PantallaEntrena
 import cat.jordi.consum.ui.PantallaHistorial
+import cat.jordi.consum.ui.PantallaPassat
 import cat.jordi.consum.ui.PantallaPreu
 import cat.jordi.consum.ui.PantallaQuestionari
 import cat.jordi.consum.ui.Pestanya
@@ -151,6 +152,7 @@ private fun Arrel(vm: ConsumViewModel) {
         Pantalla.AFEGIR -> stringResource(R.string.principal_afegeix_aparell)
         Pantalla.QUESTIONARI -> stringResource(R.string.principal_revisem_casa)
         Pantalla.PREU -> stringResource(R.string.principal_preu_llum)
+        Pantalla.PASSAT -> stringResource(R.string.principal_estona_passada)
         Pantalla.PRINCIPAL -> stringResource(if (vm.pestanya == Pestanya.ARA) R.string.principal_casa else vm.pestanya.nomId)
     }
     Scaffold(
@@ -225,6 +227,7 @@ private fun Arrel(vm: ConsumViewModel) {
                 Pantalla.AFEGIR -> PantallaAfegir(vm)
                 Pantalla.QUESTIONARI -> PantallaQuestionari(vm)
                 Pantalla.PREU -> PantallaPreu(vm)
+                Pantalla.PASSAT -> PantallaPassat(vm)
                 Pantalla.PRINCIPAL -> when (vm.pestanya) {
                     Pestanya.ARA -> PantallaAra(vm)
                     Pestanya.APARELLS -> PantallaAparells(vm)
