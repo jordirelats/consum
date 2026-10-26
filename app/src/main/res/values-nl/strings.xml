@@ -587,4 +587,28 @@
     <string name="avis_potencia_ences">Nu: %1$s. Zet je nog iets aan, dan kan de hoofdzekering eruit springen.</string>
     <string name="marca_sense_model">Weet je het modelnummer niet?</string>
     <string name="marca_sense_model_nota">Voeg het toe met het gemiddelde verbruik. Weet je later het modelnummer, zoek het dan hier op: het wordt dan vervangen.</string>
+
+
+    <string name="cerca_tipus">Zoek het soort apparaat</string>
+    <string name="cerca_tipus_esborra">Wissen</string>
+    <string name="cerca_tipus_canvia">Wijzigen</string>
+    <string name="cerca_tipus_cap">Geen soort komt overeen: kies ‘Iets anders’.</string>
+    <string name="cerca_tipus_nevera">ijskast,koel-vriescombinatie,combi</string>
+    <string name="cerca_tipus_congelador">diepvries,vrieskist</string>
+    <string name="cerca_tipus_placa">inductie,keramisch,fornuis,kookplaat</string>
+    <string name="cerca_tipus_forn">elektrische oven,combi-oven</string>
+    <string name="cerca_tipus_rentaplats">afwasmachine,vaatwasmachine</string>
+    <string name="cerca_tipus_rentadora">was,kleding</string>
+    <string name="cerca_tipus_assecadora">droogtrommel,droger</string>
+    <string name="cerca_tipus_televisor">tv,tele,scherm</string>
+    <string name="cerca_tipus_ordinador">pc,laptop,monitor</string>
+    <string name="cerca_tipus_aire">airconditioning,split</string>
+    <string name="cerca_tipus_bomba_calor">verwarming,lucht-water</string>
+    <string name="cerca_tipus_termo">warm water,geiser,close-in</string>
+    <string name="cerca_tipus_cotxe">laadpaal,ev,auto laden</string>
+    <string name="cerca_tipus_estufa">kachel,radiator,verwarming</string>
+    <string name="cerca_tipus_llums">lamp,lampen,licht</string>
+    <string name="cerca_tipus_consola">game,PlayStation,Xbox</string>
+    <string name="cerca_tipus_cafetera">koffie,espresso</string>
+    <string name="cerca_tipus_depuradora">zwembad</string>
 </resources>

@@ -8,12 +8,11 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import cat.jordi.consum.dades.Eprel
-import cat.jordi.consum.dades.Idioma
-import androidx.core.content.IntentCompat
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -44,6 +43,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.core.content.IntentCompat
+import cat.jordi.consum.dades.Eprel
+import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.ui.Compartit
 import cat.jordi.consum.ui.ConsumViewModel
 import cat.jordi.consum.ui.Fons
@@ -205,7 +207,9 @@ private fun Arrel(vm: ConsumViewModel) {
             }
         },
     ) { marge ->
-        Box(Modifier.padding(marge)) {
+        // Amb Android 15 l'app ocupa tota la pantalla i el sistema ja no l'escurça quan surt el teclat: ho fa ella, i
+        // així el camp on s'escriu queda per sobre del teclat a totes les pantalles
+        Box(Modifier.padding(marge).consumeWindowInsets(marge).imePadding()) {
             when (vm.pantalla) {
                 Pantalla.CONNECTA -> PantallaConnecta(vm)
                 Pantalla.AFEGIR -> PantallaAfegir(vm)

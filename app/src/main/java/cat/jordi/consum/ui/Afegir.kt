@@ -2,54 +2,23 @@
 
 package cat.jordi.consum.ui
 
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
 import android.Manifest
 import android.app.SearchManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.key
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import cat.jordi.consum.dades.Document
-import cat.jordi.consum.dades.ErrorUsuari
-import kotlinx.coroutines.Job
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material3.TextButton
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.annotation.StringRes
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
-import cat.jordi.consum.R
-import cat.jordi.consum.dades.LecturaPlaca
-import cat.jordi.consum.dades.Placa
-import cat.jordi.consum.dades.missatge
-import java.io.File
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -60,43 +29,76 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import cat.jordi.consum.R
 import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Categoria
+import cat.jordi.consum.dades.Document
 import cat.jordi.consum.dades.Eprel
+import cat.jordi.consum.dades.ErrorUsuari
 import cat.jordi.consum.dades.FitxaEprel
 import cat.jordi.consum.dades.Font
+import cat.jordi.consum.dades.Idioma
+import cat.jordi.consum.dades.LecturaPlaca
+import cat.jordi.consum.dades.Placa
+import cat.jordi.consum.dades.missatge
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.text.Normalizer
 
 private enum class Via(@StringRes val nomId: Int) { QR(R.string.afegir_via_qr), PLACA(R.string.afegir_via_placa), MARCA(R.string.marca_via) }
 
@@ -524,12 +526,63 @@ private fun ColumnScope.AjudaModel(text: String, enTancar: () -> Unit, enFoto: (
     }
 }
 
-/** Les categories per triar, com a la pestanya Marca i model. */
+/** Altres paraules amb què es pot buscar un tipus d'aparell (sinònimes o més concretes), separades per comes. */
+private val paraules = mapOf(
+    Categoria.NEVERA to R.string.cerca_tipus_nevera, Categoria.CONGELADOR to R.string.cerca_tipus_congelador,
+    Categoria.PLACA to R.string.cerca_tipus_placa, Categoria.FORN to R.string.cerca_tipus_forn,
+    Categoria.RENTAPLATS to R.string.cerca_tipus_rentaplats, Categoria.RENTADORA to R.string.cerca_tipus_rentadora,
+    Categoria.ASSECADORA to R.string.cerca_tipus_assecadora, Categoria.TELEVISOR to R.string.cerca_tipus_televisor,
+    Categoria.ORDINADOR to R.string.cerca_tipus_ordinador, Categoria.AIRE to R.string.cerca_tipus_aire,
+    Categoria.BOMBA_CALOR to R.string.cerca_tipus_bomba_calor, Categoria.TERMO to R.string.cerca_tipus_termo,
+    Categoria.COTXE to R.string.cerca_tipus_cotxe, Categoria.ESTUFA to R.string.cerca_tipus_estufa,
+    Categoria.LLUMS to R.string.cerca_tipus_llums, Categoria.CONSOLA to R.string.cerca_tipus_consola,
+    Categoria.CAFETERA to R.string.cerca_tipus_cafetera, Categoria.DEPURADORA to R.string.cerca_tipus_depuradora,
+)
+
+/** Per comparar sense majúscules ni accents: «Vitroceràmica» i «vitroceramica» són iguals. */
+private fun pla(text: String): String =
+    Normalizer.normalize(text.lowercase(Idioma.locale), Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "").trim()
+
+/**
+ * Els tipus d'aparell per triar, amb un cercador: la llista és llarga. Un cop triat, es plega i només en queda el
+ * triat, amb «Canvia» per tornar-la a obrir.
+ */
 @Composable
 private fun TriaCategoria(triada: Categoria?, enTriar: (Categoria) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Categoria.entries.forEach { c -> FilterChip(selected = c == triada, onClick = { enTriar(c) }, label = { Text(stringResource(c.nomId)) }) }
+    var obert by remember { mutableStateOf(triada == null) }
+    var cerca by remember { mutableStateOf("") }
+    if (triada != null && !obert) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FilterChip(selected = true, onClick = { obert = true }, label = { Text(stringResource(triada.nomId)) })
+            Spacer(Modifier.width(8.dp))
+            TextButton(onClick = { obert = true }) { Text(stringResource(R.string.cerca_tipus_canvia)) }
+        }
+        return
     }
+    OutlinedTextField(
+        cerca, { cerca = it }, Modifier.fillMaxWidth(), placeholder = { Text(stringResource(R.string.cerca_tipus)) },
+        leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true,
+        trailingIcon = {
+            if (cerca.isNotEmpty()) IconButton(onClick = { cerca = "" }) { Icon(Icons.Outlined.Close, stringResource(R.string.cerca_tipus_esborra)) }
+        },
+    )
+    Spacer(Modifier.height(6.dp))
+    val context = LocalContext.current
+    val buscat = pla(cerca)
+    val trobades = if (buscat.isEmpty()) Categoria.entries else Categoria.entries.filter { c ->
+        val noms = listOf(context.getString(c.nomId)) + (paraules[c]?.let { context.getString(it).split(',') } ?: emptyList())
+        noms.any { pla(it).contains(buscat) }
+    }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        trobades.forEach { c ->
+            FilterChip(selected = c == triada, onClick = { enTriar(c); obert = false; cerca = "" }, label = { Text(stringResource(c.nomId)) })
+        }
+        // Si no en surt cap, sempre hi ha «Un altre»
+        if (trobades.isEmpty()) {
+            FilterChip(selected = false, onClick = { enTriar(Categoria.ALTRES); obert = false; cerca = "" }, label = { Text(stringResource(Categoria.ALTRES.nomId)) })
+        }
+    }
+    if (trobades.isEmpty()) Nota(stringResource(R.string.cerca_tipus_cap))
 }
 
 /**

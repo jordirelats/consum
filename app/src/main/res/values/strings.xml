@@ -773,4 +773,28 @@
     <string name="avis_potencia_ences">Ara: %1$s. Si encens res més, pot saltar el comptador.</string>
     <string name="marca_sense_model">No en saps el model?</string>
     <string name="marca_sense_model_nota">Afegeix-lo amb el consum típic. Quan en sàpigues el model, el pots buscar aquí i es posarà al seu lloc.</string>
+
+    <!-- El cercador de tipus d'aparell (0.15). Els cerca_tipus_<tipus> són altres paraules per trobar-lo, separades per comes: no cal traduir-les una per una, posa-hi les que es diguin en la teva llengua -->
+    <string name="cerca_tipus">Busca el tipus d\'aparell</string>
+    <string name="cerca_tipus_esborra">Esborra</string>
+    <string name="cerca_tipus_canvia">Canvia</string>
+    <string name="cerca_tipus_cap">Cap tipus no s\'hi assembla: tria «Un altre».</string>
+    <string name="cerca_tipus_nevera">frigorífic,frigo,combi</string>
+    <string name="cerca_tipus_congelador">arcó congelador,freezer</string>
+    <string name="cerca_tipus_placa">vitroceràmica,vitro,inducció,cuina,fogons</string>
+    <string name="cerca_tipus_forn">forn elèctric,horn</string>
+    <string name="cerca_tipus_rentaplats">rentavaixelles,vaixella</string>
+    <string name="cerca_tipus_rentadora">roba,bugada</string>
+    <string name="cerca_tipus_assecadora">assecadora de roba</string>
+    <string name="cerca_tipus_televisor">tele,TV,pantalla</string>
+    <string name="cerca_tipus_ordinador">PC,portàtil,monitor</string>
+    <string name="cerca_tipus_aire">AC,split,climatitzador,clima</string>
+    <string name="cerca_tipus_bomba_calor">aerotèrmia,calefacció</string>
+    <string name="cerca_tipus_termo">escalfador,aigua calenta,acumulador</string>
+    <string name="cerca_tipus_cotxe">carregador,vehicle,endoll del cotxe</string>
+    <string name="cerca_tipus_estufa">calefactor,radiador</string>
+    <string name="cerca_tipus_llums">llum,bombeta,làmpada</string>
+    <string name="cerca_tipus_consola">videojocs,PlayStation,Xbox</string>
+    <string name="cerca_tipus_cafetera">cafè,Nespresso</string>
+    <string name="cerca_tipus_depuradora">piscina</string>
 </resources>
