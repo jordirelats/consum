@@ -319,9 +319,10 @@ fun GraficaBarres(barres: List<Barra>) {
         drawLine(Eix.copy(alpha = 0.5f), Offset(marge, alt), Offset(size.width, alt))
         val pas = (size.width - marge) / barres.size
         val ample = (pas * 0.72f).coerceAtMost(28.dp.toPx())
+        // Les etiquetes: cada 6 hores o dies; els 12 mesos de l'any (una lletra) i els 7 dies de la setmana, totes
         val cadaQuants = when {
             barres.size > 20 -> 6
-            barres.size > 10 -> 5
+            barres.size > 12 -> 5
             else -> 1
         }
         barres.forEachIndexed { i, b ->

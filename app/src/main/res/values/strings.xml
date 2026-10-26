@@ -221,9 +221,6 @@
     <string name="grafiques_hora">%1$d:00</string>
 
     <!-- Pantalla Historial -->
-    <string name="historial_ultimes_24h">Últimes 24 hores</string>
-    <string name="historial_ultims_7_dies">Últims 7 dies</string>
-    <string name="historial_ultims_30_dies">Últims 30 dies</string>
     <!-- El consum que no s'apaga mai (fons) -->
     <string name="historial_sempre_ences">Sempre encès</string>
     <!-- %1$s són els watts de fons, %2$s el percentatge del total (25 %) i %3$s el que ha costat -->
@@ -771,7 +768,6 @@
     <!-- El dia (dissabte 24) i l'hora (20:48) d'un pic -->
     <string name="pics_dia_hora">%1$s · %2$s</string>
     <string name="pics_toca">Toca\'n un per veure què hi havia encès.</string>
-    <string name="pics_titol_24h">El moment punta de les últimes 24 hores</string>
     <!-- %1$s és el dia: dissabte 24 -->
     <string name="pics_titol_dia">El moment punta de %1$s</string>
     <string name="pics_quan">a les %1$s</string>
@@ -924,4 +920,57 @@
     <!-- Després de desar: %1$s és l\'aparell i %2$s, els W -->
     <string name="passat_desat">%1$s: %2$s W, après de l\'estona passada.</string>
     <string name="passat_desc_grafica">Gràfica de l\'estona: %1$d salts, %2$d marcats.</string>
+    <!-- L'Historial cap enrere (maqueta 10) -->
+    <string name="periode_any">Any</string>
+    <!-- Formats de data (java.time): «dimecres 21 d’octubre», «dimecres 21», «25 d’octubre», «19 d’octubre del 2026» -->
+    <string name="format_dia_llarg">EEEE d MMMM</string>
+    <string name="format_dia_curt">EEEE d</string>
+    <string name="format_dia_mes">d MMMM</string>
+    <string name="format_data_llarga">d MMMM \'del\' yyyy</string>
+    <!-- %1$s és el mes («octubre») i %2$d, l'any -->
+    <string name="historial_mes">%1$s del %2$d</string>
+    <string name="historial_rel_dia_0">avui</string>
+    <string name="historial_rel_dia_1">ahir</string>
+    <plurals name="historial_rel_dia_n">
+        <item quantity="one">fa %1$d dia</item>
+        <item quantity="other">fa %1$d dies</item>
+    </plurals>
+    <string name="historial_rel_setmana_0">aquesta setmana</string>
+    <string name="historial_rel_setmana_1">la setmana passada</string>
+    <plurals name="historial_rel_setmana_n">
+        <item quantity="one">fa %1$d setmana</item>
+        <item quantity="other">fa %1$d setmanes</item>
+    </plurals>
+    <string name="historial_rel_mes_0">aquest mes</string>
+    <string name="historial_rel_mes_1">el mes passat</string>
+    <plurals name="historial_rel_mes_n">
+        <item quantity="one">fa %1$d mes</item>
+        <item quantity="other">fa %1$d mesos</item>
+    </plurals>
+    <string name="historial_rel_any_0">aquest any</string>
+    <string name="historial_rel_any_1">l\'any passat</string>
+    <plurals name="historial_rel_any_n">
+        <item quantity="one">fa %1$d any</item>
+        <item quantity="other">fa %1$d anys</item>
+    </plurals>
+    <string name="historial_anterior">Període anterior</string>
+    <string name="historial_seguent">Període següent</string>
+    <!-- %1$s: «dimecres 21», «la setmana passada», «el 2025» -->
+    <string name="historial_mirant">Estàs mirant %1$s</string>
+    <string name="historial_mirant_any">el %1$d</string>
+    <string name="historial_torna_avui">Torna a avui</string>
+    <string name="historial_comp_dia_ara">Ahir</string>
+    <string name="historial_comp_dia_abans">El dia abans</string>
+    <string name="historial_comp_setmana_ara">La setmana passada</string>
+    <string name="historial_comp_setmana_abans">La setmana abans</string>
+    <string name="historial_comp_mes_ara">El mes passat</string>
+    <string name="historial_comp_mes_abans">El mes abans</string>
+    <string name="historial_comp_any_ara">L\'any passat</string>
+    <string name="historial_comp_any_abans">L\'any abans</string>
+    <!-- %1$s és un dels de dalt («Ahir») i %2$s, els kWh -->
+    <string name="historial_comp">%1$s, %2$s kWh.</string>
+    <string name="historial_comp_sense">%1$s, l\'app encara no en tenia totes les dades.</string>
+    <!-- %1$s és el primer dia amb dades: «19 d’octubre del 2026» -->
+    <string name="historial_sense_dades">En aquest període encara no hi havia dades: l\'app en té des del %1$s.</string>
+    <string name="historial_sense_dades_cap">L\'app encara no té dades de casa.</string>
 </resources>

@@ -159,9 +159,6 @@
     <string name="grafiques_hora">%1$d:00</string>
 
     <!-- Pantalla Historial -->
-    <string name="historial_ultimes_24h">Afgelopen 24 uur</string>
-    <string name="historial_ultims_7_dies">Afgelopen 7 dagen</string>
-    <string name="historial_ultims_30_dies">Afgelopen 30 dagen</string>
     <string name="historial_sempre_ences">Altijd aan</string>
     <string name="historial_fons">%1$s W basisverbruik · %2$s · %3$s</string>
     <string name="historial_cal_un_dia">een dag aan gegevens nodig</string>
@@ -582,7 +579,6 @@
     <string name="pics_mes">De piekmomenten van de maand</string>
     <string name="pics_dia_hora">%1$s · %2$s</string>
     <string name="pics_toca">Tik er een aan om te zien wat er aan stond.</string>
-    <string name="pics_titol_24h">Het piekmoment van de afgelopen 24 uur</string>
     <string name="pics_titol_dia">Het piekmoment van %1$s</string>
     <string name="pics_quan">om %1$s</string>
     <string name="pics_quan_percent">om %1$s · %2$s%% van het maximum</string>
@@ -714,4 +710,51 @@
     <string name="passat_cap_salt">Ik heb geen sprong van 250 W of meer gevonden. Misschien verbruikt het apparaat minder, of was het een ander moment.</string>
     <string name="passat_desat">%1$s: %2$s W, aangeleerd van het eerdere moment.</string>
     <string name="passat_desc_grafica">Grafiek van de periode: %1$d sprongen, %2$d aangevinkt.</string>
+    <string name="periode_any">Jaar</string>
+    <string name="format_dia_llarg">EEEE d MMMM</string>
+    <string name="format_dia_curt">EEEE d</string>
+    <string name="format_dia_mes">d MMMM</string>
+    <string name="format_data_llarga">d MMMM yyyy</string>
+    <string name="historial_mes">%1$s %2$d</string>
+    <string name="historial_rel_dia_0">vandaag</string>
+    <string name="historial_rel_dia_1">gisteren</string>
+    <plurals name="historial_rel_dia_n">
+        <item quantity="one">%1$d dag geleden</item>
+        <item quantity="other">%1$d dagen geleden</item>
+    </plurals>
+    <string name="historial_rel_setmana_0">deze week</string>
+    <string name="historial_rel_setmana_1">vorige week</string>
+    <plurals name="historial_rel_setmana_n">
+        <item quantity="one">%1$d week geleden</item>
+        <item quantity="other">%1$d weken geleden</item>
+    </plurals>
+    <string name="historial_rel_mes_0">deze maand</string>
+    <string name="historial_rel_mes_1">vorige maand</string>
+    <plurals name="historial_rel_mes_n">
+        <item quantity="one">%1$d maand geleden</item>
+        <item quantity="other">%1$d maanden geleden</item>
+    </plurals>
+    <string name="historial_rel_any_0">dit jaar</string>
+    <string name="historial_rel_any_1">vorig jaar</string>
+    <plurals name="historial_rel_any_n">
+        <item quantity="one">%1$d jaar geleden</item>
+        <item quantity="other">%1$d jaar geleden</item>
+    </plurals>
+    <string name="historial_anterior">Vorige periode</string>
+    <string name="historial_seguent">Volgende periode</string>
+    <string name="historial_mirant">Je bekijkt %1$s</string>
+    <string name="historial_mirant_any">%1$d</string>
+    <string name="historial_torna_avui">Terug naar vandaag</string>
+    <string name="historial_comp_dia_ara">Gisteren</string>
+    <string name="historial_comp_dia_abans">De dag ervoor</string>
+    <string name="historial_comp_setmana_ara">Vorige week</string>
+    <string name="historial_comp_setmana_abans">De week ervoor</string>
+    <string name="historial_comp_mes_ara">Vorige maand</string>
+    <string name="historial_comp_mes_abans">De maand ervoor</string>
+    <string name="historial_comp_any_ara">Vorig jaar</string>
+    <string name="historial_comp_any_abans">Het jaar ervoor</string>
+    <string name="historial_comp">%1$s: %2$s kWh.</string>
+    <string name="historial_comp_sense">%1$s: daar had de app nog niet alle gegevens van.</string>
+    <string name="historial_sense_dades">Van deze periode zijn er nog geen gegevens: de app heeft ze sinds %1$s.</string>
+    <string name="historial_sense_dades_cap">De app heeft nog geen gegevens van thuis.</string>
 </resources>

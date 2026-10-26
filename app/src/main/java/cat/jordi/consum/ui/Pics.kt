@@ -94,7 +94,7 @@ fun MomentsPunta(vm: ConsumViewModel) {
         }
     }
     val triat = pics.firstOrNull { it.pic.ts == vm.picTriat } ?: pics.first()
-    TargetaPic(vm, triat, if (vm.periode == Periode.DIA) stringResource(R.string.pics_titol_24h) else stringResource(R.string.pics_titol_dia, dia(triat.pic.ts)))
+    TargetaPic(vm, triat, stringResource(R.string.pics_titol_dia, dia(triat.pic.ts)))
 }
 
 /** Els noms dels que gastaven més en un pic, per a la llista: els aparells coneguts o el salt dels desconeguts. */

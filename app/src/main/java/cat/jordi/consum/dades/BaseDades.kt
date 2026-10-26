@@ -185,6 +185,12 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
             "SELECT ts, valor FROM preus WHERE pais = ? AND ts >= ? AND ts < ?", arrayOf(pais.name, desDe.toString(), finsA.toString())
         ).use { c -> buildMap { while (c.moveToNext()) put(c.getLong(0), c.getDouble(1)) } }
 
+    /** L'energia de tota la casa (kWh) entre dos instants. */
+    fun kwhEntre(desDe: Long, finsA: Long): Double =
+        readableDatabase.rawQuery(
+            "SELECT IFNULL(SUM(wh), 0) FROM minuts WHERE canal = 0 AND ts >= ? AND ts < ?", arrayOf(desDe.toString(), finsA.toString()),
+        ).use { if (it.moveToFirst()) it.getDouble(0) / 1000 else 0.0 }
+
     fun primerTs(): Long? =
         readableDatabase.rawQuery("SELECT MIN(ts) FROM minuts", null).use {
             if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null

@@ -14,9 +14,12 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import kotlin.math.max
 
-enum class Periode(@StringRes val nomId: Int) { DIA(R.string.periode_dia), SETMANA(R.string.periode_setmana), MES(R.string.periode_mes) }
+enum class Periode(@StringRes val nomId: Int) {
+    DIA(R.string.periode_dia), SETMANA(R.string.periode_setmana), MES(R.string.periode_mes), ANY(R.string.periode_any)
+}
 
 /** Una estona passada: la potència minut a minut (amb un marge a cada costat) i els trams que hi ha. */
 data class Estona(val desDe: Long, val finsA: Long, val punts: List<Punt>, val trams: List<TramPassat>, val aproximada: Boolean)
@@ -37,7 +40,17 @@ data class Euros(val sempre: Double, val linia: Double, val desconegut: Double, 
 data class Resum(
     val barres: List<Barra>, val sempre: Double, val linia: Double, val desconegut: Double, val fonsW: Double?, val euros: Euros,
     val aproximat: Boolean = false,
+    /** El període de calendari que es mira (maqueta 10): [primerDia] i, sense incloure'l, [fiDia]. */
+    val primerDia: LocalDate? = null, val fiDia: LocalDate? = null,
+    /** Si és el període d'ara (si no, l'Historial el pinta de color sèpia). */
+    val actual: Boolean = true,
+    /** El total del període d'abans, per comparar; null si l'app encara no en tenia totes les dades. */
+    val anteriorKwh: Double? = null,
+    /** El primer dia amb dades de l'app; si el període és anterior, no en té cap. */
+    val primerDiaDades: LocalDate? = null,
 ) {
+    val ambDades get() = primerDiaDades != null && (fiDia == null || fiDia.isAfter(primerDiaDades))
+
     val total get() = sempre + linia + desconegut
 
     /** El que ha pagat de mitjana cada kWh de la casa, sense els fixos. */
@@ -202,39 +215,55 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         return Avui(hores.sumOf { it.total }, Preus(desDe, ara()).euros(hores, 0.0).consum, bd.teAproximats(desDe, ara() + 60))
     }
 
-    fun resum(periode: Periode): Resum {
+    /**
+     * El resum d'un període de calendari (maqueta 10): el dia, la setmana de dilluns a diumenge, el mes o l'any on cau
+     * [dia]. Les barres són les hores del dia (23 o 25 el dia del canvi d'hora), els dies de la setmana o del mes, o els
+     * mesos de l'any. Els fixos compten els dies amb dades fins avui. També el total del període d'abans, per comparar.
+     */
+    fun resum(periode: Periode, dia: LocalDate = LocalDate.now(zona)): Resum {
         val fons = fonsWh()
         val avui = LocalDate.now(zona)
-        val (barres, euros) = when (periode) {
+        val primer = iniciPeriode(periode, dia)
+        val fi = fiPeriode(periode, dia)
+        val desDe = iniciDia(primer)
+        val finsA = minOf(iniciDia(fi), ara() + 60)
+        val llista = if (finsA > desDe) perHores(desDe, finsA, fons) else emptyList()
+        fun suma(hores: List<Hora>, ts: Long) = Hora(ts, hores.sumOf { it.sempre }, hores.sumOf { it.linia }, hores.sumOf { it.desconegut })
+        val barres = when (periode) {
             Periode.DIA -> {
-                val desDe = iniciHora(ara(), zona) - 23 * 3600
-                val llista = perHores(desDe, ara() + 60, fons)
                 val hores = llista.associateBy { it.ts }
-                (0 until 24).map { i ->
-                    val ts = desDe + i * 3600L
-                    val h = Instant.ofEpochSecond(ts).atZone(zona).hour
-                    Barra("$h", hores[ts] ?: Hora(ts, 0.0, 0.0, 0.0))
-                } to Preus(desDe, ara()).euros(llista, 1.0)
+                (desDe until iniciDia(fi) step 3600L).map { ts ->
+                    Barra("${Instant.ofEpochSecond(ts).atZone(zona).hour}", hores[ts] ?: Hora(ts, 0.0, 0.0, 0.0))
+                }
             }
             Periode.SETMANA, Periode.MES -> {
-                val dies = if (periode == Periode.SETMANA) 7 else 30
-                val primer = avui.minusDays(dies - 1L)
-                val llista = perHores(iniciDia(primer), ara() + 60, fons)
                 val perDia = llista.groupBy { Instant.ofEpochSecond(it.ts).atZone(zona).toLocalDate() }
-                (0 until dies).map { i ->
-                    val dia = primer.plusDays(i.toLong())
-                    val hores = perDia[dia].orEmpty()
+                generateSequence(primer) { it.plusDays(1) }.takeWhile { it.isBefore(fi) }.map { d ->
                     val etiqueta = if (periode == Periode.SETMANA)
-                        dia.dayOfWeek.getDisplayName(TextStyle.SHORT, Idioma.locale).removeSuffix(".")
-                    else dia.dayOfMonth.toString()
-                    Barra(etiqueta, Hora(iniciDia(dia), hores.sumOf { it.sempre }, hores.sumOf { it.linia }, hores.sumOf { it.desconegut }))
-                } to Preus(iniciDia(primer), ara()).euros(llista, dies.toDouble())
+                        d.dayOfWeek.getDisplayName(TextStyle.SHORT, Idioma.locale).removeSuffix(".")
+                    else d.dayOfMonth.toString()
+                    Barra(etiqueta, suma(perDia[d].orEmpty(), iniciDia(d)))
+                }.toList()
+            }
+            Periode.ANY -> {
+                val perMes = llista.groupBy { Instant.ofEpochSecond(it.ts).atZone(zona).monthValue }
+                (1..12).map { m ->
+                    Barra(primer.withMonth(m).month.getDisplayName(TextStyle.NARROW_STANDALONE, Idioma.locale).uppercase(Idioma.locale), suma(perMes[m].orEmpty(), iniciDia(primer.withMonth(m))))
+                }
             }
         }
-        val desDe = if (periode == Periode.DIA) iniciHora(ara(), zona) - 23 * 3600 else iniciDia(avui.minusDays(barres.size - 1L))
+        // Els fixos: els dies del període que tenen dades, fins avui
+        val primerDades = bd.primerTs()?.let { Instant.ofEpochSecond(it).atZone(zona).toLocalDate() }
+        val diesFixos = if (primerDades == null) 0.0
+        else maxOf(0L, ChronoUnit.DAYS.between(maxOf(primer, primerDades), minOf(fi, avui.plusDays(1)))).toDouble()
+        val euros = Preus(desDe, finsA).euros(llista, diesFixos)
+        // El període d'abans, si l'app ja en tenia totes les dades
+        val anterior = mou(periode, primer, -1)
+        val anteriorKwh = if (primerDades != null && !anterior.isBefore(primerDades)) bd.kwhEntre(iniciDia(anterior), desDe) else null
         return Resum(
             barres, barres.sumOf { it.hora.sempre }, barres.sumOf { it.hora.linia }, barres.sumOf { it.hora.desconegut },
-            fons.takeIf { it > 0 }?.times(60), euros, bd.teAproximats(desDe, ara() + 60),
+            fons.takeIf { it > 0 }?.times(60), euros, finsA > desDe && bd.teAproximats(desDe, finsA),
+            primer, fi, !avui.isBefore(primer) && avui.isBefore(fi), anteriorKwh, primerDades,
         )
     }
 
@@ -417,17 +446,13 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     }
 
     /**
-     * Els moments punta d'un període: el minut de més consum de les últimes 24 hores, o, per a la setmana i el mes,
-     * el de cada dia, i els [quants] més alts.
+     * Els moments punta d'un període de calendari: el minut de més consum del dia, o, per a la setmana i el mes, el de
+     * cada dia, i els [quants] més alts. De l'any, cap: seria llegir-ne tots els minuts.
      */
-    fun pics(periode: Periode, quants: Int = 3): List<Pic> {
-        val avui = LocalDate.now(zona)
-        val desDe = when (periode) {
-            Periode.DIA -> ara() - 86400
-            Periode.SETMANA -> iniciDia(avui.minusDays(6))
-            Periode.MES -> iniciDia(avui.minusDays(29))
-        }
-        val serie = bd.serie(desDe, ara() + 60)
+    fun pics(periode: Periode, quants: Int = 3, dia: LocalDate = LocalDate.now(zona)): List<Pic> {
+        if (periode == Periode.ANY) return emptyList()
+        val desDe = iniciDia(iniciPeriode(periode, dia))
+        val serie = bd.serie(desDe, minOf(iniciDia(fiPeriode(periode, dia)), ara() + 60))
         if (serie.isEmpty()) return emptyList()
         val maxims = if (periode == Periode.DIA) listOf(serie.maxBy { it.wTotal })
         else serie.groupBy { Instant.ofEpochSecond(it.ts).atZone(zona).toLocalDate() }.values.map { dia -> dia.maxBy { it.wTotal } }

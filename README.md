@@ -9,7 +9,7 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
 - **Ara:** el consum en directe, el preu del kWh d'aquesta hora i què hi ha encès.
   - Amb la potència contractada, quina part se'n fa servir. A la gràfica, en taronja des del 80 % i en vermell des del 90 %.
   - Un avís quan la casa passa del 90 %. Amb l'app tancada, al moment (amb una notificació fixa) o cada 15 minuts.
-- **Historial:** el consum per dies, setmanes i mesos, en kWh i en euros.
+- **Historial:** el consum per dies, setmanes, mesos i anys, en kWh i en euros, amb fletxes i un calendari per anar als períodes anteriors (que surten d'un altre color) i la comparació amb l'anterior.
   - Els moments punta: el minut de més consum i els 5 que gastaven més, amb des de quan eren encesos. Si un salt no s'assembla a cap aparell conegut, l'app pregunta què era i ho aprèn.
 - **Aparells:** el consum de cada aparell, comparat amb el que diu la seva etiqueta energètica.
   - Els aparells s'afegeixen amb un qüestionari estança per estança, escanejant el QR de l'etiqueta (la base de dades europea EPREL), buscant-ne la marca i el model a l'EPREL, fent una foto de la placa de característiques o, sense cap dada, només amb el tipus.
@@ -94,7 +94,7 @@ Fa servir aquestes llibreries i dades, totes amb llicència Apache-2.0:
 
 **Consum** is an Android app that shows what each household appliance uses and what it costs, using a Shelly energy meter (Gen2/Gen3 with EM1/EM1Data, e.g. Shelly EM Gen3) and no server of its own.
 
-- **Live view and history**, with hour-by-hour prices: Spain 2.0TD/PVPC, Netherlands fixed, normaal/dal or dynamic (EnergyZero), or a single price. Fixed costs are shown separately.
+- **Live view and history** (days, weeks, months and years, browsable back in time): Spain 2.0TD/PVPC, Netherlands fixed, normaal/dal or dynamic (EnergyZero), or a single price. Fixed costs are shown separately.
 - **Appliance inventory**: a room-by-room questionnaire, the EU energy label QR (EPREL), a brand and model search on the EPREL website, a photo of the rating plate (read on the device with Tesseract), or just the appliance type. Appliances are always on, self-starting (fridge, heat pump, water heater) or switched on by the user; only the last ones need training. The fridge compressor is found automatically in the night-time data.
 - **Contracted power**: how close the house is to it, with an alert above 90 % (immediately, with a persistent notification, or every 15 minutes).
 - **Training**: tell the app when you switch an appliance on or off and it learns its power, live or afterwards ("the dishwasher ran yesterday from 5 to 9 pm": the app finds the jumps in that window and you tick the right ones).

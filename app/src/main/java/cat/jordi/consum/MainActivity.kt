@@ -59,6 +59,7 @@ import cat.jordi.consum.ui.PantallaConnecta
 import cat.jordi.consum.ui.PantallaEntrena
 import cat.jordi.consum.ui.PantallaHistorial
 import cat.jordi.consum.ui.PantallaPassat
+import cat.jordi.consum.ui.Sepia
 import cat.jordi.consum.ui.PantallaPreu
 import cat.jordi.consum.ui.PantallaQuestionari
 import cat.jordi.consum.ui.Pestanya
@@ -155,12 +156,14 @@ private fun Arrel(vm: ConsumViewModel) {
         Pantalla.PASSAT -> stringResource(R.string.principal_estona_passada)
         Pantalla.PRINCIPAL -> stringResource(if (vm.pestanya == Pestanya.ARA) R.string.principal_casa else vm.pestanya.nomId)
     }
+    // Un període anterior de l'Historial té la pàgina d'un altre color (maqueta 10)
+    val fons = if (principal && vm.pestanya == Pestanya.HISTORIAL && vm.resum?.actual == false) Sepia else Fons
     Scaffold(
-        containerColor = Fons,
+        containerColor = fons,
         topBar = {
             TopAppBar(
                 title = { Text(titol) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Fons),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = fons),
                 navigationIcon = {
                     if (!principal && vm.config.configurat) {
                         IconButton(onClick = { vm.pantalla = Pantalla.PRINCIPAL }) {

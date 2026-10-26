@@ -52,6 +52,13 @@ import java.text.NumberFormat
 val Primari = Color(0xFF0F766E)
 val PrimariFluix = Color(0xFFCCFBF1)
 val Fons = Color(0xFFF6F7F6)
+
+// L'Historial d'un període anterior (maqueta 10): la pàgina color sèpia, com una foto antiga
+val Sepia = Color(0xFFF3ECE0)
+val SepiaFort = Color(0xFFE9D9BD)
+val SepiaTargeta = Color(0xFFFFFAF2)
+val SepiaVora = Color(0xFFE6D3B3)
+val SepiaText = Color(0xFF5C4316)
 val Suau = Color(0xFF5F6B66)
 val Separador = Color(0xFFE3E7E5)
 val Sempre = Color(0xFF94A3B8)

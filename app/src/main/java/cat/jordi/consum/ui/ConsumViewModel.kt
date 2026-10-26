@@ -35,6 +35,7 @@ import cat.jordi.consum.dades.TramPassat
 import cat.jordi.consum.dades.Tros
 import cat.jordi.consum.dades.mediana
 import cat.jordi.consum.dades.missatge
+import cat.jordi.consum.dades.mou
 import cat.jordi.consum.shelly.Lectura
 import cat.jordi.consum.shelly.Origen
 import kotlinx.coroutines.CancellationException
@@ -44,6 +45,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 
 enum class Pantalla { CONNECTA, PRINCIPAL, AFEGIR, QUESTIONARI, PREU, PASSAT }
 
@@ -98,6 +100,20 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         private set
     var periode by mutableStateOf(Periode.DIA)
         private set
+
+    /**
+     * El dia que es mira a l'Historial (maqueta 10): el període és el dia, la setmana, el mes o l'any on cau. Null vol
+     * dir avui. Es desa, per si es gira la pantalla, i es manté en canviar de pestanya (de dimecres 21 a la seva setmana).
+     */
+    private var diaVistaEstat by mutableStateOf(desat.get<Long>("dia_historial")?.let(LocalDate::ofEpochDay))
+    var diaVista: LocalDate?
+        get() = diaVistaEstat
+        private set(v) {
+            diaVistaEstat = v
+            desat["dia_historial"] = v?.toEpochDay()
+        }
+    val diaHistorial: LocalDate get() = diaVista ?: LocalDate.now()
+
     var resum by mutableStateOf<Resum?>(null)
         private set
     var resumMes by mutableStateOf<Resum?>(null)
@@ -263,10 +279,11 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
 
     private suspend fun refrescaAra() {
         val p = periode
+        val d = diaHistorial
         val dades = withContext(Dispatchers.IO) {
             Dades(
-                repo.analitzaPics(repo.pics(p)),
-                repo.serie24h(), repo.avui(), repo.fonsW(), repo.resum(p), repo.resumMes(), repo.aparells(),
+                repo.analitzaPics(repo.pics(p, dia = d)),
+                repo.serie24h(), repo.avui(), repo.fonsW(), repo.resum(p, d), repo.resumMes(), repo.aparells(),
                 repo.infoPreu(), repo.consellLinia(),
                 repo.referencies(), repo.repartimentMes(), repo.preguntesPendents(), repo.aparellsAEntrenar(),
             )
@@ -285,7 +302,7 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         fonsW = dades.fons
         resumMes = dades.mes
         aparells = dades.aparells
-        if (p == periode) {
+        if (p == periode && d == diaHistorial) {
             resum = dades.resum
             pics = dades.pics
         }
@@ -306,6 +323,20 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     fun triaPeriode(p: Periode) {
         periode = p
         picTriat = null
+        refresca()
+    }
+
+    /** El període d'abans o el de després a l'Historial ([n] = -1 o 1); el d'ara, o el que conté [dia]. */
+    fun mouHistorial(n: Long) = veesA(mou(periode, diaHistorial, n))
+
+    fun tornaAvui() = veesA(null)
+
+    fun veesA(dia: LocalDate?) {
+        val avui = LocalDate.now()
+        // No es pot anar més enllà d'avui
+        diaVista = dia?.takeIf { it.isBefore(avui) }
+        picTriat = null
+        resum = null
         refresca()
     }
 
