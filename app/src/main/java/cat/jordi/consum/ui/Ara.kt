@@ -157,10 +157,22 @@ fun PantallaAra(vm: ConsumViewModel) {
                 // Cada cosa, una fila, de més a menys consum (maqueta 9): el que és a 0 W, al final i més apagat
                 val files = mutableListOf<FilaAra>()
                 if (teLinia) {
-                    files += FilaAra(
-                        Icons.Outlined.Bolt, LiniaFluix, Linia, vm.config.nomLinia,
-                        stringResource(if (linia < 10) R.string.ara_linia_apagat else R.string.ara_linia_subtitol, num(linia)), linia, 3,
-                    )
+                    // Els aparells de la línia que l'expliquen (maqueta 12); el que quedi, amb el nom de la línia
+                    val el = vm.explicadorLinia?.explica(linia)
+                    el?.aparells?.forEach { (id, w) ->
+                        val a = vm.aparells.firstOrNull { it.id == id } ?: return@forEach
+                        files += FilaAra(
+                            icona(a.categoria), LiniaFluix, Linia, a.nom, stringResource(R.string.ara_a_la_linia, num(w), vm.config.nomLinia), w,
+                            if (vm.referenciesLinia[id]?.apresa == true) 3 else 2,
+                        )
+                    }
+                    val resta = el?.residu ?: linia
+                    if (el == null || el.aparells.isEmpty() || resta >= 10) {
+                        files += FilaAra(
+                            Icons.Outlined.Bolt, LiniaFluix, Linia, vm.config.nomLinia,
+                            stringResource(if (resta < 10) R.string.ara_linia_apagat else R.string.ara_linia_subtitol, num(resta)), resta, 3,
+                        )
+                    }
                 }
                 if (fons != null) {
                     // Els aparells sempre encesos (el router) diuen que funcionen, amb la seva potència; la resta del fons és «altres en espera»

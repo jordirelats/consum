@@ -113,7 +113,8 @@ fun PantallaAparells(vm: ConsumViewModel) {
                 )
                 // Els aparells après es queden la seva part del que no és fons; la resta, sense identificar
                 val rep = vm.repartiment
-                vm.aparells.filter { (rep?.kwh?.get(it.id) ?: 0.0) > 0.0 }.sortedByDescending { rep!!.euros[it.id] }.forEach { a ->
+                // Els aparells de la línia surten a la targeta de la línia
+                vm.aparells.filter { !aLaLinia(vm, it) && (rep?.kwh?.get(it.id) ?: 0.0) > 0.0 }.sortedByDescending { rep!!.euros[it.id] }.forEach { a ->
                     val apresa = vm.referencies[a.id]?.apresa == true
                     FilaConsum(
                         icona(a.categoria), PrimariFluix, Primari, a.nom,
@@ -147,11 +148,12 @@ fun PantallaAparells(vm: ConsumViewModel) {
                 }
             }
         } else {
+            TargetaLinia(vm) { obert = it }
             TargetaSempreEnces(vm, preu) { obert = it }
             TargetaSols(vm) { obert = it }
             // Els que ja tenen referència surten amb el que gasten de debò, a «Mesurat aquest mes»; els que estan
-            // sempre encesos o s'engeguen sols, a les seves targetes
-            val perEntrenar = vm.aparells.filter { (vm.repartiment?.kwh?.get(it.id) ?: 0.0) == 0.0 && it.funciona == Funcionament.JO }
+            // sempre encesos, s'engeguen sols o són a la línia, a les seves targetes
+            val perEntrenar = vm.aparells.filter { !aLaLinia(vm, it) && (vm.repartiment?.kwh?.get(it.id) ?: 0.0) == 0.0 && it.funciona == Funcionament.JO }
             if (perEntrenar.isNotEmpty()) Targeta {
                 TitolTargeta(stringResource(R.string.aparells_segons_etiqueta))
                 Nota(stringResource(R.string.aparells_nota_etiqueta, num(preu, 3), euros(perEntrenar.sumOf { it.kwhAny } / 12 * preu)))
@@ -190,12 +192,19 @@ fun PantallaAparells(vm: ConsumViewModel) {
                     if (a.classe.isNotBlank()) Text(stringResource(R.string.aparells_classe, a.classe))
                     Text(stringResource(R.string.aparells_kwh_euros_any, num(a.kwhAny), num(a.kwhAny * preu)))
                     a.esperaW?.let { Text(stringResource(R.string.aparells_en_espera, num(it, 1))) }
-                    vm.referencies[a.id]?.let { r ->
+                    (vm.referencies[a.id] ?: vm.referenciesLinia[a.id])?.let { r ->
                         Text(
                             r.duradaMin?.let { pluralStringResource(R.plurals.aparells_referencia_durada, r.mostres, num(r.w), r.mostres, num(it)) }
                                 ?: pluralStringResource(R.plurals.aparells_referencia, r.mostres, num(r.w), r.mostres),
                             color = Primari, fontSize = 13.sp,
                         )
+                        // Com és (maqueta 12): constant, polsa, arrencada suau o amb un pic
+                        r.forma?.let { f ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                DibuixForma(f, Primari)
+                                Text("  " + stringResource(f.textId), color = Primari, fontSize = 13.sp)
+                            }
+                        }
                         TextButton(onClick = { perConfirmar = a to false; obert = null }) { Text(stringResource(R.string.aparells_torna_entrenar)) }
                     }
                     if (a.eprel.isNotBlank()) Text("EPREL ${a.eprel}", color = Suau, fontSize = 12.sp)
@@ -204,11 +213,19 @@ fun PantallaAparells(vm: ConsumViewModel) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Funcionament.entries.forEach { f ->
                             FilterChip(a.funciona == f, {
-                                val nou = a.copy(funciona = f)
+                                // Un aparell sempre encès va dins del fons de tota la casa: no pot ser a la línia
+                                val nou = a.copy(funciona = f, linia = a.linia && f != Funcionament.SEMPRE)
                                 vm.desaAparells(listOf(nou))
                                 obert = nou
                             }, label = { Text(stringResource(f.nomId)) })
                         }
+                    }
+                    // A la línia de la pinça 2 (maqueta 12): s'aprèn d'allà
+                    if (vm.config.teLinia && a.funciona != Funcionament.SEMPRE && !a.nom.equals(vm.config.nomLinia, ignoreCase = true)) {
+                        FilterChip(a.linia, {
+                            vm.posaALinia(a, !a.linia)
+                            obert = a.copy(linia = !a.linia)
+                        }, label = { Text(stringResource(R.string.aparells_a_la_linia, vm.config.nomLinia)) })
                     }
                     if (a.font == Font.TIPIC) Text(stringResource(R.string.aparells_es_tipic), color = DesconegutText, fontSize = 13.sp)
                 }
@@ -273,7 +290,7 @@ private fun TargetaSempreEnces(vm: ConsumViewModel, preu: Double, obre: (Aparell
  */
 @Composable
 private fun TargetaSols(vm: ConsumViewModel, obre: (Aparell) -> Unit) {
-    val sols = vm.aparells.filter { it.funciona == Funcionament.SOL }
+    val sols = vm.aparells.filter { it.funciona == Funcionament.SOL && !aLaLinia(vm, it) }
     if (sols.isEmpty()) return
     Targeta {
         TitolTargeta(stringResource(R.string.aparells_titol_sols))
@@ -287,8 +304,69 @@ private fun TargetaSols(vm: ConsumViewModel, obre: (Aparell) -> Unit) {
                 else -> stringResource(R.string.aparells_sol_apres) to "${num(r.w)} W"
             }
             FilaConsum(
-                icona(a.categoria), PrimariFluix, Primari, a.nom, com, valor, if (r?.apresa == true) 3 else null,
-                subtitolColor = if (r == null) Desconegut else Suau, modifier = Modifier.clickable { obre(a) },
+                icona(a.categoria), PrimariFluix, Primari, a.nom, listOfNotNull(com, textFirma(r)).joinToString(" · "), valor, if (r?.apresa == true) 3 else null,
+                subtitolColor = if (r == null) Desconegut else Suau, modifier = Modifier.clickable { obre(a) }, liniesSubtitol = 2,
+            )
+        }
+    }
+}
+
+/** Si l'aparell és a la línia de la pinça 2 (i no és la línia mateixa). */
+private fun aLaLinia(vm: ConsumViewModel, a: Aparell) =
+    vm.config.teLinia && a.linia && !a.nom.equals(vm.config.nomLinia, ignoreCase = true)
+
+/**
+ * La línia de la pinça 2 (maqueta 12): quins aparells hi ha connectats i què n'ha après l'app. Els aparells de la línia es
+ * mesuren aquí: l'app n'aprèn la firma sola i ja no els busca a la resta de la casa.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TargetaLinia(vm: ConsumViewModel, obre: (Aparell) -> Unit) {
+    if (!vm.config.teLinia) return
+    val nom = vm.config.nomLinia
+    val candidats = vm.aparells.filter { it.funciona != Funcionament.SEMPRE && !it.nom.equals(nom, ignoreCase = true) }
+    if (candidats.isEmpty()) return
+    val dins = candidats.filter { it.linia }
+    var tots by remember { mutableStateOf(false) }
+    val rep = vm.repartiment
+    Targeta {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Bolt, null, tint = Linia, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            TitolTargeta(stringResource(R.string.linia_titol, nom), Modifier.padding(top = 6.dp))
+        }
+        Text(stringResource(R.string.linia_que_hi_ha), Modifier.padding(top = 4.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        // Primer els que ja hi són; la resta, plegats si són molts
+        val ordenats = dins + candidats.filterNot { it.linia }
+        val visibles = if (tots || ordenats.size <= 6) ordenats else ordenats.take(maxOf(6, dins.size))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            visibles.forEach { a ->
+                FilterChip(a.linia, { vm.posaALinia(a, !a.linia) }, label = { Text(a.nom) })
+            }
+            if (visibles.size < ordenats.size) {
+                FilterChip(false, { tots = true }, label = { Text(stringResource(R.string.linia_mes)) })
+            }
+        }
+        Nota(stringResource(R.string.linia_nota))
+        dins.forEach { a ->
+            val r = vm.referenciesLinia[a.id]
+            val kwh = rep?.kwh?.get(a.id) ?: 0.0
+            val sub = when {
+                r == null -> stringResource(R.string.linia_encara_no)
+                else -> listOfNotNull(
+                    pluralStringResource(R.plurals.linia_apres, r.mostres, r.mostres, if (r.wMin != null) "${num(r.min)}–${num(r.max)}" else num(r.w)),
+                    textFirma(r),
+                ).joinToString(" · ")
+            }
+            FilaConsum(
+                icona(a.categoria), LiniaFluix, Linia, a.nom, sub, "${num(kwh, 1)} kWh", if (r?.apresa == true) 3 else null,
+                subtitolColor = if (r == null) Desconegut else Suau, modifier = Modifier.clickable { obre(a) }, liniesSubtitol = 3,
+            )
+        }
+        if (dins.isNotEmpty() && (rep?.liniaAltresKwh ?: 0.0) >= 0.05) {
+            FilaConsum(
+                Icons.Outlined.QuestionMark, LiniaFluix, Linia, stringResource(R.string.linia_altres),
+                stringResource(R.string.linia_altres_text), "${num(rep!!.liniaAltresKwh, 1)} kWh",
             )
         }
     }

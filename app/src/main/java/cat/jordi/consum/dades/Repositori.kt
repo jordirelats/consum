@@ -74,8 +74,14 @@ data class InfoPreu(
     val properes: List<HoraPreu>,
 )
 
-/** El consum del mes repartit entre els aparells après; el residu és el que encara no s'explica. */
-data class Repartiment(val kwh: Map<Long, Double>, val euros: Map<Long, Double>, val residuKwh: Double, val residuEuros: Double)
+/**
+ * El consum del mes repartit entre els aparells après; el residu és el que encara no s'explica. Els aparells de la línia
+ * de la pinça 2 (maqueta 12) s'hi reparteixen la línia, i el que no expliquen és [liniaAltresKwh].
+ */
+data class Repartiment(
+    val kwh: Map<Long, Double>, val euros: Map<Long, Double>, val residuKwh: Double, val residuEuros: Double,
+    val liniaAltresKwh: Double = 0.0, val liniaAltresEuros: Double = 0.0,
+)
 
 /** Què costaria la línia de la segona pinça si gastés a les hores barates. */
 data class ConsellLinia(val estalviMes: Double, val percentCar: Int)
@@ -145,9 +151,12 @@ class Repositori(val config: Config, private val bd: BaseDades) {
                     n += files.size
                 }
             }
-            // Amb les dades noves: la nevera i l'interval dels aparells que s'engeguen sols
+            // Amb les dades noves: la nevera, l'interval dels aparells que s'engeguen sols, els aparells de la línia i el
+            // que es repeteix (maqueta 12)
             actualitzaNevera()
             completaIntervals()
+            aprenLinia()
+            actualitzaRepetits()
             n
         }
     }
@@ -328,11 +337,112 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     /** L'aparell que es diu com la línia de la segona pinça es mesura directament: no s'entrena ni s'endevina. */
     private fun esLinia(a: Aparell) = config.teLinia && a.nom.equals(config.nomLinia, ignoreCase = true)
 
+    /** Un aparell que és a la línia de la segona pinça (maqueta 12): s'aprèn de la línia, i no es busca a la resta. */
+    private fun aLaLinia(a: Aparell) = config.teLinia && a.linia && !esLinia(a)
+
     /**
-     * Els aparells que poden ser un consum: per aprendre'ls, endevinar-los i respondre les preguntes. Ni la línia de
-     * la segona pinça (es mesura) ni els que estan sempre encesos (van dins del fons).
+     * Els aparells que poden ser un consum de la resta de la casa: per aprendre'ls, endevinar-los i respondre les
+     * preguntes. Ni la línia de la segona pinça ni els seus aparells (es mesuren), ni els que estan sempre encesos (van
+     * dins del fons).
      */
-    fun aparellsAEntrenar() = bd.aparells().filterNot { esLinia(it) || it.funciona == Funcionament.SEMPRE }
+    fun aparellsAEntrenar() = bd.aparells().filterNot { esLinia(it) || aLaLinia(it) || it.funciona == Funcionament.SEMPRE }
+
+    /** Els aparells de la línia de la segona pinça que poden ser un consum. */
+    fun aparellsLinia() = bd.aparells().filter { aLaLinia(it) && it.funciona != Funcionament.SEMPRE }
+
+    /**
+     * Posa un aparell a la línia de la pinça 2, o el treu. En treure'l, fora el que n'havia après de la línia: si no, el
+     * que era d'un altre aparell (marcat per error) explicaria consums de la resta de la casa.
+     */
+    @Synchronized
+    fun posaALinia(a: Aparell, si: Boolean) {
+        bd.desaAparell(a.copy(linia = si))
+        if (!si) bd.esborraMostres(a.id, "linia")
+    }
+
+    /** Les referències dels aparells de la línia, apreses de la línia. */
+    fun referenciesLinia(): Map<Long, Referencia> {
+        val aparells = aparellsLinia()
+        val sols = aparells.filter { it.funciona == Funcionament.SOL }.map { it.id }.toSet()
+        return bd.mostres().filter { m -> aparells.any { it.id == m.aparellId } }.groupBy { it.aparellId }
+            .mapNotNull { (id, m) -> Referencia.de(id, m, ambInterval = id in sols) }.associateBy { it.aparellId }
+    }
+
+    /** Qui explica la línia: null si no s'hi ha dit cap aparell. */
+    fun explicadorLinia(): Explicador? = if (aparellsLinia().isEmpty()) null else Explicador(referenciesLinia().values.toList())
+
+    /**
+     * Aprèn sola els aparells de la línia (maqueta 12): cada episodi acabat de la línia, de 10 minuts o més, és una mostra
+     * de l'aparell de la línia que s'hi assembla clarament ([triaLinia]). Ningú més no hi gasta, i per això no cal
+     * preguntar-ho. A Guíxols, la bomba de calor de l'aigua: 486–492 W durant uns 70 minuts. Com a molt cada mitja hora.
+     * D'un en un (la sincronització i els canvis de l'usuari): si no, un episodi faria dues mostres.
+     */
+    @Synchronized
+    fun aprenLinia(forca: Boolean = false) {
+        if (!config.teLinia) return
+        if (!forca && ara() - config.liniaMirada < 30 * 60) return
+        config.liniaMirada = ara()
+        val aparells = aparellsLinia()
+        if (aparells.isEmpty()) return
+        val minuts = bd.minutsW(linia = true, ara() - 8 * 86400, ara() + 60)
+        val darrer = minuts.lastOrNull()?.ts ?: return
+        val sols = aparells.filter { it.funciona == Funcionament.SOL }.map { it.id }.toSet()
+        var refs = referenciesLinia()
+        for (ep in Episodis.troba(minuts)) {
+            // Només els que ja han acabat, els llargs i un sol cop cadascun
+            if (ep.fi > darrer - 5 * 60 || ep.minuts < 10 || bd.hiHaMostra(ep.ts, "linia")) continue
+            val a = triaLinia(ep, aparells, refs) ?: continue
+            bd.desaMostra(a.id, ep.ts, ep.w, ep.durada, "linia", if (a.id in sols) ep.interval else null, ep.variacio, ep.arrencada)
+            refs = referenciesLinia()
+        }
+    }
+
+    /**
+     * Busca a la resta de la casa el que es repeteix sempre igual (maqueta 12) i que encara no se sap què és, per
+     * preguntar-ho un cop. Amb l'última setmana de dades exactes, com a molt cada 6 hores. Els que ja s'han respost o
+     * ignorat no es tornen a preguntar. Amb el mateix bloqueig que [responRepetit], perquè una resposta no torni com a
+     * pendent.
+     */
+    @Synchronized
+    fun actualitzaRepetits(forca: Boolean = false) {
+        if (!forca && ara() - config.repetitsMirats < 6 * 3600) return
+        config.repetitsMirats = ara()
+        val minuts = bd.minutsW(linia = false, ara() - 7 * 86400, ara() + 60)
+        // Amb menys d'un dia no es pot dir que res es repeteixi
+        if (minuts.size < 24 * 60) return
+        val e = explicador()
+        val vistos = bd.repetits().filter { it.estat != EstatPregunta.PENDENT }
+        val nous = Episodis.repetits(Episodis.troba(minuts)).map(Episodis::repetit).filter { r ->
+            vistos.none { Episodis.mateix(it, r.w, r.minuts) } && e.explica(r.w).residu > 0.25 * r.w
+        }.sortedByDescending { it.kwh }.take(3)
+        bd.substitueixRepetits(nous)
+    }
+
+    fun repetitsPendents() = bd.repetits(EstatPregunta.PENDENT)
+
+    /**
+     * Respon què és una cosa que es repeteix: cada cop (els 12 més recents) passa a ser una mostra de l'aparell, amb la
+     * seva durada i la seva firma. Si s'engega sol, amb l'interval de potència del grup. Torna false si ja estava resposta.
+     */
+    @Synchronized
+    fun responRepetit(id: Long, aparellId: Long?, sol: Boolean = false): Boolean {
+        val r = bd.repetits(EstatPregunta.PENDENT).firstOrNull { it.id == id } ?: return false
+        if (aparellId == null) {
+            bd.responRepetit(id, EstatPregunta.IGNORADA, null)
+            return true
+        }
+        var a = bd.aparells().firstOrNull { it.id == aparellId } ?: return false
+        if (sol && a.funciona != Funcionament.SOL) {
+            a = a.copy(funciona = Funcionament.SOL)
+            bd.desaAparell(a)
+        }
+        val interval = if (a.funciona == Funcionament.SOL) r.wMin * 0.9 to r.wMax * 1.1 else null
+        for ((ts, w, minuts) in r.cops.takeLast(12)) {
+            if (!bd.teMostra(aparellId, ts, "repetit")) bd.desaMostra(aparellId, ts, w, minuts * 60L, "repetit", interval, r.variacio, r.arrencada)
+        }
+        bd.responRepetit(id, EstatPregunta.RESPOSTA, aparellId)
+        return true
+    }
 
     fun referencies(): Map<Long, Referencia> {
         val aparells = aparellsAEntrenar()
@@ -554,11 +664,16 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val fons = fonsW() ?: 0.0
         val refs = referencies()
         val aparells = aparells()
-        val aEntrenar = aparells.filterNot(::esLinia)
-        return pics.map { analitzaPic(it, fons, refs, aparells.associateBy { a -> a.id }, aEntrenar) }
+        val aEntrenar = aparellsAEntrenar()
+        val linia = explicadorLinia()
+        val refsLinia = referenciesLinia()
+        return pics.map { analitzaPic(it, fons, refs, aparells.associateBy { a -> a.id }, aEntrenar, linia, refsLinia) }
     }
 
-    private fun analitzaPic(pic: Pic, fons: Double, refs: Map<Long, Referencia>, tots: Map<Long, Aparell>, aEntrenar: List<Aparell>): AnalisiPic {
+    private fun analitzaPic(
+        pic: Pic, fons: Double, refs: Map<Long, Referencia>, tots: Map<Long, Aparell>, aEntrenar: List<Aparell>,
+        explicadorLinia: Explicador?, refsLinia: Map<Long, Referencia>,
+    ): AnalisiPic {
         val linia = config.teLinia
         val serie = bd.serie(pic.ts - AnalisiPics.FINESTRA_S, pic.ts + 1)
         // Amb minuts aproximats (des de fora, trams plans de mitjanes) no es poden veure salts: tot queda sense identificar
@@ -567,7 +682,13 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val elements = mutableListOf<ElementPic>()
         val alPic = serie.lastOrNull()
         val wLinia = if (linia) alPic?.wLinia ?: 0.0 else 0.0
-        if (wLinia > 0) elements += LiniaPic(wLinia)
+        if (wLinia > 0) {
+            // Els aparells de la línia que l'expliquen (maqueta 12); el que quedi, la línia
+            val e = explicadorLinia?.explica(wLinia)
+            e?.aparells?.forEach { (id, w) -> tots[id]?.let { a -> elements += AparellPic(a, w, null, refsLinia[id]?.apresa == true) } }
+            val resta = e?.residu ?: wLinia
+            if (resta > 0) elements += LiniaPic(resta)
+        }
         if (fons > 0) elements += SempreEncesPic(minOf(fons, pic.w - wLinia))
         // Un aparell només pot ser en un tros: primer els estables i el que ja hi era, que són més segurs
         val usats = mutableSetOf<Long>()
@@ -575,15 +696,20 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             // El que puja i baixa es compara amb la seva potència típica, i els aparells que l'expliquen s'emporten tot el tros
             val variable = tros.tipus == TipusTros.VARIABLE
             val objectiu = if (variable) tros.mostra else tros.w
-            val e = Explicador(refs.values.filter { it.aparellId !in usats }).explica(objectiu)
-            if (e.aparells.isNotEmpty() && e.residu <= 0.25 * objectiu) {
+            // Primer els aparells de la forma que toca (maqueta 12): el que puja i baixa, els que polsen; el que és estable, els
+            // que no. Si no l'expliquen, tots.
+            val lliures = refs.values.filter { it.aparellId !in usats }
+            val explicat = { e: Explicacio -> e.aparells.isNotEmpty() && e.residu <= 0.25 * objectiu }
+            val e = Explicador(lliures.filter { (it.forma == Forma.POLSA) == variable }).explica(objectiu).takeIf(explicat)
+                ?: Explicador(lliures).explica(objectiu)
+            if (explicat(e)) {
                 usats += e.aparells.map { it.first }
                 val escala = if (variable) tros.w / e.aparells.sumOf { it.second } else 1.0
                 e.aparells.forEach { (id, w) ->
                     tots[id]?.let { a -> elements += AparellPic(a, w * escala, tros.desDe.takeIf { tros.tipus != TipusTros.JA_HI_ERA }, refs[id]?.apresa == true) }
                 }
             } else {
-                elements += DesconegutPic(tros, endevina(tros.mostra, aEntrenar.filter { it.id !in usats }, refs))
+                elements += DesconegutPic(tros, endevina(tros.mostra, aEntrenar.filter { it.id !in usats }, refs, forma = if (variable) Forma.POLSA else null))
             }
         }
         // El que queda (el que els aparells no expliquen del tot): sense identificar
@@ -646,38 +772,68 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val fons = fonsW() ?: return emptyList()
         val noms = aparells().associate { it.id to it.nom }
         val llista = explicador().explica(l.total.w - wLinia - fons).aparells.mapNotNull { (id, w) -> noms[id]?.let { it to w } }.toMutableList()
-        if (wLinia >= AnalisiPics.LLINDAR) llista += config.nomLinia to wLinia
+        if (wLinia >= AnalisiPics.LLINDAR) {
+            // Els aparells de la línia que l'expliquen; el que quedi, amb el nom de la línia
+            val e = explicadorLinia()?.explica(wLinia)
+            e?.aparells?.forEach { (id, w) -> noms[id]?.let { llista += it to w } }
+            val resta = e?.residu ?: wLinia
+            if (resta >= AnalisiPics.LLINDAR) llista += config.nomLinia to resta
+        }
         return llista.sortedByDescending { it.second }.take(3)
     }
 
-    /** Reparteix el consum sense identificar del mes entre els aparells après, minut a minut, al preu de cada hora. */
+    /**
+     * Reparteix el consum sense identificar del mes entre els aparells après, minut a minut, al preu de cada hora; i la
+     * línia de la pinça 2 entre els seus aparells. Amb la durada de la firma ([ajustaDurades]): un aparell no es queda una
+     * estona molt més llarga del que dura.
+     */
     fun repartimentMes(): Repartiment {
         val desDe = iniciDia(LocalDate.now(zona).withDayOfMonth(1))
-        val explicador = explicador()
+        val refs = referencies()
+        val explicador = Explicador(refs.values.toList())
+        val refsLinia = referenciesLinia()
+        val linia = if (aparellsLinia().isEmpty()) null else Explicador(refsLinia.values.toList())
         val fons = fonsWh() * 60
         val p = Preus(desDe, ara())
+        val serie = bd.serie(desDe, ara() + 60)
         val kwh = mutableMapOf<Long, Double>()
         val euros = mutableMapOf<Long, Double>()
-        var residuKwh = 0.0
-        var residuEuros = 0.0
-        for (punt in bd.serie(desDe, ara() + 60)) {
-            val exces = max(punt.wTotal - punt.wLinia, 0.0) - fons
-            if (exces <= 0) continue
+        fun suma(punt: Punt, e: Explicacio): Double {
             val preu = p.de(punt.ts)
-            // Un minut aproximat és la mitjana d'una estona: no es pot dir quins aparells hi havia
-            if (punt.aprox) {
-                residuKwh += exces / 60_000
-                residuEuros += exces / 60_000 * preu
-                continue
-            }
-            val e = explicador.explica(exces)
             for ((id, w) in e.aparells) {
                 kwh[id] = (kwh[id] ?: 0.0) + w / 60_000
                 euros[id] = (euros[id] ?: 0.0) + w / 60_000 * preu
             }
+            return preu
+        }
+        var residuKwh = 0.0
+        var residuEuros = 0.0
+        // La resta de la casa, el que passa del fons; un minut aproximat és la mitjana d'una estona: no es pot dir quins
+        // aparells hi havia, i va sencer al residu
+        val resta = serie.filter { it.wTotal - it.wLinia - fons > 0 }
+        val explicacions = ajustaDurades(
+            resta.map { pt ->
+                val exces = max(pt.wTotal - pt.wLinia, 0.0) - fons
+                pt.ts to if (pt.aprox) Explicacio(emptyList(), exces) else explicador.explica(exces)
+            }, refs,
+        )
+        resta.zip(explicacions).forEach { (pt, e) ->
+            val preu = suma(pt, e)
             residuKwh += e.residu / 60_000
             residuEuros += e.residu / 60_000 * preu
         }
-        return Repartiment(kwh, euros, residuKwh, residuEuros)
+        // La línia, entre els seus aparells (maqueta 12)
+        var liniaKwh = 0.0
+        var liniaEuros = 0.0
+        if (linia != null) {
+            val ambLinia = serie.filter { it.wLinia > 0 }
+            val e = ajustaDurades(ambLinia.map { pt -> pt.ts to if (pt.aprox) Explicacio(emptyList(), pt.wLinia) else linia.explica(pt.wLinia) }, refsLinia)
+            ambLinia.zip(e).forEach { (pt, el) ->
+                val preu = suma(pt, el)
+                liniaKwh += el.residu / 60_000
+                liniaEuros += el.residu / 60_000 * preu
+            }
+        }
+        return Repartiment(kwh, euros, residuKwh, residuEuros, liniaKwh, liniaEuros)
     }
 }

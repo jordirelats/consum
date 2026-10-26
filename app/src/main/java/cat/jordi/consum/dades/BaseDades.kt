@@ -29,7 +29,7 @@ data class Hora(val ts: Long, val sempre: Double, val linia: Double, val descone
  * (aprox = 2, maqueta 11) omplen les absències llargues i el d'abans de l'app; els exactes, que es baixen
  * del Shelly a casa, els substitueixen.
  */
-class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 6) {
+class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 7) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -39,17 +39,28 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         db.execSQL(
             """CREATE TABLE aparells (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT NOT NULL,
                categoria TEXT NOT NULL, font TEXT NOT NULL, kwh_any REAL NOT NULL, espera_w REAL,
-               marca TEXT, model TEXT, classe TEXT, eprel TEXT, creat INTEGER NOT NULL, potencia_w REAL, funciona TEXT)"""
+               marca TEXT, model TEXT, classe TEXT, eprel TEXT, creat INTEGER NOT NULL, potencia_w REAL, funciona TEXT,
+               linia INTEGER NOT NULL DEFAULT 0)"""
         )
         creaPreus(db)
         creaEntrenament(db)
+        creaRepetits(db)
+    }
+
+    /** El que es repeteix sempre igual (versió 7, maqueta 12), per preguntar-ne un cop. */
+    private fun creaRepetits(db: SQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE repetits (id INTEGER PRIMARY KEY AUTOINCREMENT, w REAL NOT NULL, wmin REAL NOT NULL, wmax REAL NOT NULL,
+               minuts REAL NOT NULL, cada REAL NOT NULL, kwh REAL NOT NULL, variacio REAL, arrencada REAL, cops TEXT NOT NULL,
+               estat TEXT NOT NULL, aparell INTEGER)"""
+        )
     }
 
     /** L'entrenament (versió 3): les mostres de cada aparell i les preguntes sobre consums desconeguts. */
     private fun creaEntrenament(db: SQLiteDatabase) {
         db.execSQL(
             """CREATE TABLE mostres (id INTEGER PRIMARY KEY AUTOINCREMENT, aparell INTEGER NOT NULL, ts INTEGER NOT NULL,
-               dp REAL NOT NULL, durada INTEGER, font TEXT NOT NULL, wmin REAL, wmax REAL)"""
+               dp REAL NOT NULL, durada INTEGER, font TEXT NOT NULL, wmin REAL, wmax REAL, variacio REAL, arrencada REAL)"""
         )
         db.execSQL(
             """CREATE TABLE preguntes (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, dp REAL NOT NULL,
@@ -77,6 +88,15 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
                 db.execSQL("ALTER TABLE mostres ADD COLUMN wmin REAL")
                 db.execSQL("ALTER TABLE mostres ADD COLUMN wmax REAL")
             }
+        }
+        // Versió 7 (maqueta 12): els aparells de la línia de la pinça 2, la firma de les mostres i el que es repeteix
+        if (oldVersion < 7) {
+            db.execSQL("ALTER TABLE aparells ADD COLUMN linia INTEGER NOT NULL DEFAULT 0")
+            if (oldVersion >= 3) {
+                db.execSQL("ALTER TABLE mostres ADD COLUMN variacio REAL")
+                db.execSQL("ALTER TABLE mostres ADD COLUMN arrencada REAL")
+            }
+            creaRepetits(db)
         }
     }
 
@@ -123,6 +143,19 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         ).use { c ->
             buildList { while (c.moveToNext()) add(Punt(c.getLong(0), c.getDouble(1), c.getDouble(2), c.getInt(3) != 0)) }
         }
+
+    /**
+     * Els minuts exactes amb la potència màxima i la mínima, per buscar-hi episodis (maqueta 12): de la línia ([linia]), o
+     * de la resta de la casa (el total menys la línia; el màxim i el mínim del total, menys la mitjana de la línia).
+     */
+    fun minutsW(linia: Boolean, desDe: Long, finsA: Long): List<MinutW> {
+        val sql = if (linia) "SELECT ts, wh * 60, IFNULL(pmax, wh * 60), IFNULL(pmin, wh * 60) FROM minuts WHERE canal = 1 AND aprox = 0 AND ts >= ? AND ts < ? ORDER BY ts"
+        else """SELECT m0.ts, (m0.wh - IFNULL(m1.wh, 0)) * 60, IFNULL(m0.pmax, m0.wh * 60) - IFNULL(m1.wh, 0) * 60,
+                IFNULL(m0.pmin, m0.wh * 60) - IFNULL(m1.wh, 0) * 60 $restaSql AND m0.aprox = 0 ORDER BY m0.ts"""
+        return readableDatabase.rawQuery(sql, arrayOf(desDe.toString(), finsA.toString())).use { c ->
+            buildList { while (c.moveToNext()) add(MinutW(c.getLong(0), c.getDouble(1), c.getDouble(2), c.getDouble(3))) }
+        }
+    }
 
     /** El pic instantani (W) d'un minut exacte del total, o null si no se sap. */
     fun pmax(ts: Long): Double? =
@@ -267,7 +300,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     fun aparells(): List<Aparell> =
         readableDatabase.rawQuery(
-            "SELECT id, nom, categoria, font, kwh_any, espera_w, marca, model, classe, eprel, potencia_w, funciona FROM aparells ORDER BY kwh_any DESC", null
+            "SELECT id, nom, categoria, font, kwh_any, espera_w, marca, model, classe, eprel, potencia_w, funciona, linia FROM aparells ORDER BY kwh_any DESC", null
         ).use { c ->
             buildList {
                 while (c.moveToNext()) {
@@ -280,7 +313,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
                             marca = c.getString(6) ?: "", model = c.getString(7) ?: "",
                             classe = c.getString(8) ?: "", eprel = c.getString(9) ?: "",
                             potenciaW = if (c.isNull(10)) null else c.getDouble(10),
-                            funciona = Funcionament.de(c.getString(11), categoria),
+                            funciona = Funcionament.de(c.getString(11), categoria), linia = c.getInt(12) != 0,
                         )
                     )
                 }
@@ -292,7 +325,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
             put("nom", a.nom); put("categoria", a.categoria.name); put("font", a.font.name)
             put("kwh_any", a.kwhAny); put("espera_w", a.esperaW); put("marca", a.marca)
             put("model", a.model); put("classe", a.classe); put("eprel", a.eprel); put("potencia_w", a.potenciaW)
-            put("funciona", a.funciona.name)
+            put("funciona", a.funciona.name); put("linia", if (a.linia) 1 else 0)
         }
         if (a.id == 0L) {
             v.put("creat", System.currentTimeMillis() / 1000)
@@ -307,10 +340,18 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         esborraMostres(id)
     }
 
-    fun desaMostra(aparellId: Long, ts: Long, dp: Double, durada: Long?, font: String): Long =
+    fun desaMostra(
+        aparellId: Long, ts: Long, dp: Double, durada: Long?, font: String,
+        interval: Pair<Double, Double>? = null, variacio: Double? = null, arrencada: Double? = null,
+    ): Long =
         writableDatabase.insert("mostres", null, ContentValues().apply {
             put("aparell", aparellId); put("ts", ts); put("dp", dp); put("durada", durada); put("font", font)
+            put("wmin", interval?.first); put("wmax", interval?.second); put("variacio", variacio); put("arrencada", arrencada)
         })
+
+    /** Si algun aparell ja té una mostra d'aquest instant i d'aquesta font. */
+    fun hiHaMostra(ts: Long, font: String): Boolean =
+        readableDatabase.rawQuery("SELECT 1 FROM mostres WHERE ts = ? AND font = ? LIMIT 1", arrayOf(ts.toString(), font)).use { it.moveToFirst() }
 
     fun teMostra(aparellId: Long, ts: Long, font: String): Boolean =
         readableDatabase.rawQuery(
@@ -318,12 +359,13 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         ).use { it.moveToFirst() }
 
     fun mostres(): List<Mostra> =
-        readableDatabase.rawQuery("SELECT id, aparell, ts, dp, durada, wmin, wmax, font FROM mostres ORDER BY ts", null).use { c ->
+        readableDatabase.rawQuery("SELECT id, aparell, ts, dp, durada, wmin, wmax, font, variacio, arrencada FROM mostres ORDER BY ts", null).use { c ->
+            fun real(i: Int) = if (c.isNull(i)) null else c.getDouble(i)
             buildList {
                 while (c.moveToNext()) add(
                     Mostra(
                         c.getLong(0), c.getLong(1), c.getLong(2), c.getDouble(3), if (c.isNull(4)) null else c.getLong(4),
-                        if (c.isNull(5)) null else c.getDouble(5), if (c.isNull(6)) null else c.getDouble(6), c.getString(7) ?: "",
+                        real(5), real(6), c.getString(7) ?: "", real(8), real(9),
                     )
                 )
             }
@@ -336,6 +378,11 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     fun esborraMostres(aparellId: Long) {
         writableDatabase.delete("mostres", "aparell = ?", arrayOf(aparellId.toString()))
+    }
+
+    /** Les mostres d'un aparell d'una font (les apreses de la línia, en treure'l de la línia). */
+    fun esborraMostres(aparellId: Long, font: String) {
+        writableDatabase.delete("mostres", "aparell = ? AND font = ?", arrayOf(aparellId.toString(), font))
     }
 
     fun creaPregunta(ts: Long, dp: Double): Long =
@@ -359,5 +406,64 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     fun respon(id: Long, estat: EstatPregunta, aparellId: Long?) {
         writableDatabase.update("preguntes", ContentValues().apply { put("estat", estat.name); put("aparell", aparellId) }, "id = ?", arrayOf(id.toString()))
+    }
+
+    // ---------- El que es repeteix (maqueta 12) ----------
+
+    /**
+     * Els pendents es tornen a buscar cada vegada. Un que es torna a trobar s'actualitza i es queda amb el seu id (una
+     * targeta ja dibuixada encara el pot respondre); els que ja no hi són, fora; els nous, a dins.
+     */
+    fun substitueixRepetits(nous: List<Repetit>) {
+        val abans = repetits(EstatPregunta.PENDENT).toMutableList()
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            for (r in nous) {
+                val v = ContentValues().apply {
+                    put("w", r.w); put("wmin", r.wMin); put("wmax", r.wMax); put("minuts", r.minuts); put("cada", r.cadaMinuts)
+                    put("kwh", r.kwh); put("variacio", r.variacio); put("arrencada", r.arrencada)
+                    put("cops", r.cops.joinToString(";") { (ts, w, m) -> "$ts,${w.toInt()},$m" })
+                    put("estat", r.estat.name)
+                }
+                val mateix = abans.firstOrNull { Episodis.mateix(it, r.w, r.minuts) }
+                if (mateix != null) {
+                    abans -= mateix
+                    db.update("repetits", v, "id = ?", arrayOf(mateix.id.toString()))
+                } else {
+                    db.insert("repetits", null, v)
+                }
+            }
+            for (r in abans) db.delete("repetits", "id = ?", arrayOf(r.id.toString()))
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun repetits(estat: EstatPregunta? = null): List<Repetit> =
+        readableDatabase.rawQuery(
+            "SELECT id, w, wmin, wmax, minuts, cada, kwh, variacio, arrencada, cops, estat, aparell FROM repetits" +
+                (if (estat != null) " WHERE estat = ?" else "") + " ORDER BY kwh DESC",
+            estat?.let { arrayOf(it.name) },
+        ).use { c ->
+            fun real(i: Int) = if (c.isNull(i)) null else c.getDouble(i)
+            buildList {
+                while (c.moveToNext()) {
+                    val cops = c.getString(9).split(";").mapNotNull { s ->
+                        s.split(",").takeIf { it.size == 3 }?.let { (ts, w, m) -> Triple(ts.toLong(), w.toDouble(), m.toInt()) }
+                    }
+                    add(
+                        Repetit(
+                            c.getLong(0), c.getDouble(1), c.getDouble(2), c.getDouble(3), c.getDouble(4), c.getDouble(5), c.getDouble(6),
+                            real(7), real(8), cops, EstatPregunta.valueOf(c.getString(10)), if (c.isNull(11)) null else c.getLong(11),
+                        )
+                    )
+                }
+            }
+        }
+
+    fun responRepetit(id: Long, estat: EstatPregunta, aparellId: Long?) {
+        writableDatabase.update("repetits", ContentValues().apply { put("estat", estat.name); put("aparell", aparellId) }, "id = ?", arrayOf(id.toString()))
     }
 }

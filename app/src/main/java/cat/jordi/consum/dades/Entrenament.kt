@@ -9,27 +9,33 @@ import kotlin.math.min
  * Una mostra de l'entrenament: el salt de potència (W) que va fer un aparell en encendre's o en apagar-se,
  * mesurat per l'app quan l'usuari ho va marcar o quan va respondre una pregunta. [durada] és el temps que va
  * estar encès (s), si es coneix. [wMin] i [wMax]: l'interval de potència de l'episodi d'una pregunta (W per sobre
- * del fons), que serveix per als aparells que s'engeguen sols i no gasten sempre igual (els inverter).
+ * del fons), que serveix per als aparells que s'engeguen sols i no gasten sempre igual (els inverter). [variacio] i
+ * [arrencada]: la firma de l'episodi (vegeu [Episodi]), quan se sap.
  */
 data class Mostra(
     val id: Long, val aparellId: Long, val ts: Long, val dp: Double, val durada: Long?,
     val wMin: Double? = null, val wMax: Double? = null, val font: String = "",
+    val variacio: Double? = null, val arrencada: Double? = null,
 )
 
 /**
  * El que l'app sap d'un aparell: la potència típica (la mediana de les mostres) i quantes mostres en té. Si
  * s'engega sol i se n'ha après l'interval d'un episodi, [wMin] i [wMax]: explica qualsevol potència d'aquest
- * interval. [automatica]: l'app l'ha trobat sola a les dades (el compressor de la nevera).
+ * interval. [automatica]: l'app l'ha trobat sola a les dades (el compressor de la nevera). [variacio] i [arrencada]: la
+ * mediana de la firma de les mostres (maqueta 12), d'on surt la [forma].
  */
 data class Referencia(
     val aparellId: Long, val w: Double, val mostres: Int, val duradaMin: Double?,
     val wMin: Double? = null, val wMax: Double? = null, val automatica: Boolean = false,
+    val variacio: Double? = null, val arrencada: Double? = null,
 ) {
     /** Amb tres mostres ja es considera après; si l'ha trobat sola o en sap l'interval, també. */
     val apresa get() = mostres >= PER_APRENDRE || automatica || wMin != null
 
     val min get() = wMin ?: w
     val max get() = wMax ?: w
+
+    val forma get() = Forma.de(variacio, arrencada)
 
     companion object {
         const val PER_APRENDRE = 3
@@ -43,6 +49,8 @@ data class Referencia(
                 aparellId, mediana(mostres.map { it.dp }), mostres.size,
                 durades.takeIf { it.isNotEmpty() }?.let { mediana(it.map(Long::toDouble)) / 60 },
                 wMin = amb.minOfOrNull { it.wMin!! }, wMax = amb.maxOfOrNull { it.wMax!! },
+                variacio = mostres.mapNotNull { it.variacio }.takeIf { it.isNotEmpty() }?.let(::mediana),
+                arrencada = mostres.mapNotNull { it.arrencada }.takeIf { it.isNotEmpty() }?.let(::mediana),
             )
         }
     }
@@ -128,6 +136,60 @@ class Explicador(referencies: List<Referencia>) {
     }
 }
 
-/** Els aparells que més s'assemblen a un consum desconegut, per proposar-los a la pregunta. */
-fun endevina(w: Double, aparells: List<Aparell>, referencies: Map<Long, Referencia>, quants: Int = 2): List<Aparell> =
-    aparells.sortedBy { a -> abs(ln(max(referencies[a.id]?.w ?: a.potenciaW ?: a.categoria.wTipic, 1.0) / max(w, 1.0))) }.take(quants)
+/**
+ * La durada de la firma (maqueta 12), aplicada al repartiment minut a minut: un aparell que cada vegada funciona uns pocs
+ * minuts no pot ser una estona seguida molt més llarga (més de 3 vegades la seva durada, i de 5 minuts); i si el seu cicle
+ * és curt (15 minuts o menys), tampoc una de molt més curta (menys de la meitat, sense el primer i l'últim minut, que són
+ * a mitges i sovint no s'expliquen): un minut solt d'un altre aparell. Aquells
+ * minuts no són seus, i passen al residu. Sense això, un interval après (una estufa de 0,9–1,1 kW que s'engega 3 minuts)
+ * es quedava qualsevol minut d'aquesta potència. [minuts]: (inici del minut, explicació), en ordre.
+ */
+fun ajustaDurades(minuts: List<Pair<Long, Explicacio>>, refs: Map<Long, Referencia>): List<Explicacio> {
+    val treure = Array(minuts.size) { mutableSetOf<Long>() }
+    for (r in refs.values) {
+        val durada = r.duradaMin ?: continue
+        val limit = max(5.0, 3 * durada)
+        val minim = if (durada <= 15) max(0.0, durada - 2) / 2 else 0.0
+        var inici = -1
+        fun tanca(fi: Int) {
+            if (inici >= 0 && (fi - inici > limit || fi - inici < minim)) for (i in inici until fi) treure[i] += r.aparellId
+            inici = -1
+        }
+        for (i in minuts.indices) {
+            val hi = minuts[i].second.aparells.any { it.first == r.aparellId }
+            val seguit = i > 0 && minuts[i].first - minuts[i - 1].first == 60L
+            if (!hi || !seguit) tanca(i)
+            if (hi && inici < 0) inici = i
+        }
+        tanca(minuts.size)
+    }
+    return minuts.mapIndexed { i, (_, e) ->
+        if (treure[i].isEmpty()) e
+        else {
+            val (fora, queden) = e.aparells.partition { it.first in treure[i] }
+            Explicacio(queden, e.residu + fora.sumOf { it.second })
+        }
+    }
+}
+
+/**
+ * Els aparells que més s'assemblen a un consum desconegut, per proposar-los a la pregunta: per la potència i, si se'n sap
+ * la firma (maqueta 12), també per quant dura i com és. Dos de la mateixa potència ja no queden empatats si un dura 3
+ * minuts i l'altre 10, o si un polsa i l'altre és constant.
+ */
+fun endevina(
+    w: Double, aparells: List<Aparell>, referencies: Map<Long, Referencia>, quants: Int = 2,
+    minuts: Double? = null, forma: Forma? = null,
+): List<Aparell> = aparells.sortedBy { a -> distancia(w, minuts, forma, a, referencies[a.id]) }.take(quants)
+
+/**
+ * Com s'assembla un consum a un aparell (0: igual): la potència (un interval après la conté sencera), i la durada i la forma
+ * quan se saben de totes dues bandes. Les unitats són logaritmes: ×2 de potència fa 0,7.
+ */
+fun distancia(w: Double, minuts: Double?, forma: Forma?, a: Aparell, r: Referencia?): Double {
+    val dw = if (r?.wMin != null && w in r.min..r.max) 0.0
+    else abs(ln(max(r?.w ?: a.wTipic, 1.0) / max(w, 1.0)))
+    val dd = if (minuts != null && r?.duradaMin != null) 0.5 * abs(ln(max(r.duradaMin, 1.0) / max(minuts, 1.0))) else 0.0
+    val df = if (forma != null && r?.forma != null && forma != r.forma) 0.5 else 0.0
+    return dw + dd + df
+}

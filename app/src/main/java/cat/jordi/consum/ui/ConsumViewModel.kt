@@ -28,6 +28,7 @@ import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Punt
 import cat.jordi.consum.dades.Referencia
 import cat.jordi.consum.dades.Repartiment
+import cat.jordi.consum.dades.Repetit
 import cat.jordi.consum.dades.Resum
 import cat.jordi.consum.dades.Tarifa
 import cat.jordi.consum.dades.TextRecurs
@@ -141,6 +142,16 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     var preguntes by mutableStateOf<List<Pregunta>>(emptyList())
         private set
     var aparellsAEntrenar by mutableStateOf<List<Aparell>>(emptyList())
+        private set
+
+    /** La línia de la pinça 2 (maqueta 12): els seus aparells, les seves referències i qui l'explica (null sense aparells). */
+    var referenciesLinia by mutableStateOf<Map<Long, Referencia>>(emptyMap())
+        private set
+    var explicadorLinia by mutableStateOf<Explicador?>(null)
+        private set
+
+    /** El que es repeteix sempre igual i encara no se sap què és (maqueta 12). */
+    var repetits by mutableStateOf<List<Repetit>>(emptyList())
         private set
 
     /** L'aparell que s'està mesurant ara (si n'hi ha) i el missatge del resultat de l'últim. */
@@ -288,6 +299,7 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
                 repo.serie24h(), repo.avui(), repo.fonsW(), repo.resum(p, d), repo.resumMes(), repo.aparells(),
                 repo.infoPreu(), repo.consellLinia(),
                 repo.referencies(), repo.repartimentMes(), repo.preguntesPendents(), repo.aparellsAEntrenar(),
+                repo.referenciesLinia(), repo.explicadorLinia(), repo.repetitsPendents(),
             )
         }
         serie = dades.serie
@@ -301,6 +313,9 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         repartiment = dades.repartiment
         preguntes = dades.preguntes
         aparellsAEntrenar = dades.aEntrenar
+        referenciesLinia = dades.referenciesLinia
+        explicadorLinia = dades.explicadorLinia
+        repetits = dades.repetits
         fonsW = dades.fons
         resumMes = dades.mes
         aparells = dades.aparells
@@ -316,6 +331,7 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         val aparells: List<Aparell>, val preu: InfoPreu, val consell: ConsellLinia?,
         val referencies: Map<Long, Referencia>, val repartiment: Repartiment, val preguntes: List<Pregunta>,
         val aEntrenar: List<Aparell>,
+        val referenciesLinia: Map<Long, Referencia>, val explicadorLinia: Explicador?, val repetits: List<Repetit>,
     )
 
     fun refresca() {
@@ -357,6 +373,29 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     fun desaAparells(llista: List<Aparell>) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { llista.forEach(repo::desaAparell) }
+            refrescaAra()
+        }
+    }
+
+    /**
+     * Posa un aparell a la línia de la pinça 2, o el treu (maqueta 12). Tot seguit l'app n'aprèn el que ja hi ha a la
+     * línia, i torna a mirar què es repeteix a la resta de la casa, que ja no el té.
+     */
+    fun posaALinia(a: Aparell, si: Boolean) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repo.posaALinia(a, si)
+                repo.aprenLinia(forca = true)
+                repo.actualitzaRepetits(forca = true)
+            }
+            refrescaAra()
+        }
+    }
+
+    /** Què és una cosa que es repeteix ([aparellId] null: «No ho sé»). [sol]: s'engega sola. */
+    fun responRepetit(r: Repetit, aparellId: Long?, sol: Boolean) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.responRepetit(r.id, aparellId, sol) }
             refrescaAra()
         }
     }

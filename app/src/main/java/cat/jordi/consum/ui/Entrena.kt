@@ -50,6 +50,7 @@ import cat.jordi.consum.dades.Funcionament
 import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Punt
 import cat.jordi.consum.dades.Referencia
+import cat.jordi.consum.dades.Repetit
 import cat.jordi.consum.dades.endevina
 import java.time.Instant
 import java.time.ZoneId
@@ -83,6 +84,8 @@ fun PantallaEntrena(vm: ConsumViewModel) {
         }
 
         vm.preguntes.forEach { p -> key(p.id) { TargetaPregunta(vm, p) } }
+        // El que es repeteix sempre igual (maqueta 12): preguntat un cop
+        vm.repetits.forEach { r -> key("r${r.id}") { TargetaRepetit(vm, r) } }
 
         // Ensenyar-li una estona passada (maqueta 8): quan no hi eres a temps de tocar el botó
         Targeta {
@@ -210,5 +213,62 @@ private fun MiniGrafica(punts: List<Punt>, inici: Long) {
             }
         }
         drawPath(camí, Desconegut, style = Stroke(2.dp.toPx()))
+    }
+}
+
+/**
+ * Una cosa que es repeteix sempre igual i encara no se sap què és (maqueta 12): quant dura i cada quant, quan passa,
+ * la potència, com és, i cada cop de l'última setmana en una ratlla. Amb una resposta, l'app n'aprèn tots els cops.
+ */
+@Composable
+private fun TargetaRepetit(vm: ConsumViewModel, r: Repetit) {
+    var totes by remember { mutableStateOf(false) }
+    // Si sembla que s'engega sol (de nit, molts cops al dia), l'app n'aprendrà l'interval i no n'avisarà
+    var sol by remember(r.id) { mutableStateOf(r.sembla(ZoneId.systemDefault())) }
+    val minuts = num(r.minuts)
+    val titol = when {
+        r.cadaMinuts >= 20 * 60 -> stringResource(R.string.repetit_un_cop_al_dia, minuts)
+        r.cadaMinuts >= 90 -> stringResource(R.string.repetit_cada_hores, minuts, num(r.cadaMinuts / 60))
+        else -> stringResource(R.string.repetit_cada_minuts, minuts, num(r.cadaMinuts))
+    }
+    Targeta {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Pastilla(pluralStringResource(R.plurals.repetit_cops, r.cops.size, r.cops.size), Desconegut, DesconegutFluix)
+            Spacer(Modifier.width(8.dp))
+            Text(titol, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.repetit_detall, stringResource(r.quan(ZoneId.systemDefault()).textId), num(r.wMin), num(r.wMax), num(r.kwh, 1)),
+                Modifier.weight(1f), fontSize = 13.sp, lineHeight = 18.sp, color = Suau,
+            )
+        }
+        r.forma?.let { f ->
+            Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                DibuixForma(f, Desconegut)
+                Text("  " + stringResource(f.textId), fontSize = 13.sp, color = Suau)
+            }
+        }
+        TiraSetmana(r.cops.map { it.first }, Desconegut, stringResource(R.string.repetit_tira, r.cops.size))
+        Text(stringResource(R.string.repetit_que_es), Modifier.padding(top = 6.dp), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        val ordenats = endevina(r.w, vm.aparellsAEntrenar, vm.referencies, vm.aparellsAEntrenar.size, r.minuts, r.forma)
+        FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            (if (totes) ordenats else ordenats.take(4)).forEach { a ->
+                SuggestionChip(onClick = { vm.responRepetit(r, a.id, sol) }, label = { Text(a.nom) })
+            }
+            if (!totes && ordenats.size > 4) SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
+            SuggestionChip(onClick = { vm.responRepetit(r, null, false) }, label = { Text(stringResource(R.string.entrena_no_ho_se)) })
+        }
+        if (vm.aparellsAEntrenar.isEmpty()) Nota(stringResource(R.string.entrena_primer_afegeix), Modifier.padding(top = 4.dp))
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp).toggleable(sol, role = Role.Switch) { sol = it },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.funciona_sol), fontSize = 14.sp)
+                Text(stringResource(R.string.entrena_sol_text), fontSize = 12.sp, color = Suau)
+            }
+            Switch(sol, null)
+        }
     }
 }

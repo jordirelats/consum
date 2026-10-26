@@ -194,14 +194,14 @@ fun Punts(n: Int) {
 @Composable
 fun FilaConsum(
     icona: ImageVector, fons: Color, color: Color, titol: String, subtitol: String, valor: String,
-    punts: Int? = null, subtitolColor: Color = Suau, modifier: Modifier = Modifier,
+    punts: Int? = null, subtitolColor: Color = Suau, modifier: Modifier = Modifier, liniesSubtitol: Int = 1,
 ) {
     Row(modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
         Bombolla(icona, fons, color)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(titol, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(subtitol, fontSize = 12.sp, color = textFort(subtitolColor), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(subtitol, fontSize = 12.sp, lineHeight = 16.sp, color = textFort(subtitolColor), maxLines = liniesSubtitol, overflow = TextOverflow.Ellipsis)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(valor, fontSize = 15.sp, fontWeight = FontWeight.Medium)

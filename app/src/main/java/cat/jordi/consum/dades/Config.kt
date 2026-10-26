@@ -96,6 +96,14 @@ class Config(context: Context) {
         get() = p.getLong("nevera_mirada", 0)
         set(v) = p.edit().putLong("nevera_mirada", v).apply()
 
+    /** Quan s'han buscat per últim cop els episodis de la línia i el que es repeteix (maqueta 12, s). */
+    var liniaMirada: Long
+        get() = p.getLong("linia_mirada", 0)
+        set(v) = p.edit().putLong("linia_mirada", v).apply()
+    var repetitsMirats: Long
+        get() = p.getLong("repetits_mirats", 0)
+        set(v) = p.edit().putLong("repetits_mirats", v).apply()
+
     // El consum inesperat que s'està seguint: des de quan, de quants W, i la pregunta que ja se n'ha fet (0 si cap)
     var inesperatDes: Long
         get() = p.getLong("inesperat_des", 0)

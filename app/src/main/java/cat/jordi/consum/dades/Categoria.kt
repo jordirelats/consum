@@ -90,6 +90,8 @@ data class Aparell(
     /** La potència de la placa de característiques (W), si se n'ha fet la foto, o la que s'ha posat a mà. */
     val potenciaW: Double? = null,
     val funciona: Funcionament = categoria.funciona,
+    /** És a la línia de la segona pinça (maqueta 12): s'aprèn d'allà i no es busca a la resta de la casa. */
+    val linia: Boolean = false,
 ) {
     /** Encara ve del qüestionari o d'un valor típic: falta escanejar-ne l'etiqueta (el router i semblants no en tenen). */
     val perCompletar get() = font == Font.TIPIC && funciona != Funcionament.SEMPRE

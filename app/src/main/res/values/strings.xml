@@ -989,4 +989,46 @@
     <string name="connecta_nuvol_quadra">Els kWh i els euros d\'aquestes hores quadren amb els del Shelly. No hi ha el detall de cada minut: aquells dies no tenen moments punta ni aparells.</string>
     <string name="historial_del_nuvol">del núvol, per hores</string>
     <string name="historial_nuvol_nota">El que és lila ve del núvol: sense moments punta ni aparells.</string>
+
+    <!-- Maqueta 12: detectar millor. La «firma» d'un aparell: com és la seva potència quan funciona -->
+    <string name="forma_constant">constant, s\'engega de cop</string>
+    <string name="forma_polsa">polsa: puja i baixa dins de cada minut</string>
+    <string name="forma_suau">arrencada suau, com els inverter</string>
+    <string name="forma_pic">arrenca amb un pic, com els motors</string>
+    <!-- Quant dura cada vegada que funciona; %1$s és un número -->
+    <string name="firma_minuts">uns %1$s min</string>
+    <!-- Una cosa que es repeteix sempre igual i que l'app no sap què és: quan passa -->
+    <string name="repetit_nits_cap_setmana">Les nits del cap de setmana</string>
+    <string name="repetit_nits">Sobretot a la nit</string>
+    <string name="repetit_cap_setmana">Sobretot el cap de setmana</string>
+    <string name="repetit_sempre">A qualsevol hora</string>
+    <!-- %1$s: quants minuts dura; %2$s: cada quantes hores o minuts -->
+    <string name="repetit_un_cop_al_dia">%1$s minuts, un cop al dia</string>
+    <string name="repetit_cada_hores">%1$s minuts, cada %2$s hores</string>
+    <string name="repetit_cada_minuts">%1$s minuts, cada %2$s minuts</string>
+    <plurals name="repetit_cops">
+        <item quantity="one">%d cop</item>
+        <item quantity="other">%d cops</item>
+    </plurals>
+    <!-- %1$s: quan passa; %2$s–%3$s: la potència; %4$s: els kWh de la setmana -->
+    <string name="repetit_detall">%1$s · %2$s–%3$s W · %4$s kWh la setmana</string>
+    <!-- Per a la lectura de pantalla: la ratlla de la setmana amb un punt per a cada cop -->
+    <string name="repetit_tira">Els %1$d cops de l\'última setmana</string>
+    <string name="repetit_que_es">Què és?</string>
+    <!-- La línia de la segona pinça i els aparells que hi ha connectats; %1$s és el nom de la línia -->
+    <string name="aparells_a_la_linia">A la línia «%1$s»</string>
+    <string name="linia_titol">%1$s · pinça 2</string>
+    <string name="linia_que_hi_ha">Què hi ha connectat en aquesta línia?</string>
+    <string name="linia_mes">Més…</string>
+    <string name="linia_nota">Aquests aparells es mesuren aquí. L\'app n\'aprèn la firma sola i ja no els busca a la resta de la casa.</string>
+    <string name="linia_encara_no">Encara no l\'ha vist funcionar</string>
+    <!-- %1$d: quantes vegades l'ha vist; %2$s: la potència (W) -->
+    <plurals name="linia_apres">
+        <item quantity="one">%2$s W · après d\'%1$d cop</item>
+        <item quantity="other">%2$s W · après de %1$d cops</item>
+    </plurals>
+    <string name="linia_altres">Altres de la línia</string>
+    <string name="linia_altres_text">el que no és cap d\'aquests aparells</string>
+    <!-- A «Què hi ha encès ara»: %1$s W i el nom de la línia -->
+    <string name="ara_a_la_linia">%1$s W · a la línia «%2$s»</string>
 </resources>

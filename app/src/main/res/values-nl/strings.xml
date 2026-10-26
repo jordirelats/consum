@@ -771,4 +771,38 @@
     <string name="connecta_nuvol_quadra">De kWh en euro’s van deze uren kloppen met die van de Shelly. Er zijn geen minuutgegevens: die dagen hebben geen piekmomenten of apparaten.</string>
     <string name="historial_del_nuvol">uit de cloud, per uur</string>
     <string name="historial_nuvol_nota">Wat paars is, komt uit de cloud: zonder piekmomenten of apparaten.</string>
+
+    <!-- Maqueta 12: beter herkennen. De «handtekening» van een apparaat: hoe het vermogen eruitziet als het aan staat -->
+    <string name="forma_constant">constant, springt direct aan</string>
+    <string name="forma_polsa">pulseert: gaat binnen elke minuut op en neer</string>
+    <string name="forma_suau">start zacht, zoals inverters</string>
+    <string name="forma_pic">start met een piek, zoals motoren</string>
+    <string name="firma_minuts">ca. %1$s min</string>
+    <string name="repetit_nits_cap_setmana">In de nachten van het weekend</string>
+    <string name="repetit_nits">Vooral \'s nachts</string>
+    <string name="repetit_cap_setmana">Vooral in het weekend</string>
+    <string name="repetit_sempre">Op elk moment</string>
+    <string name="repetit_un_cop_al_dia">%1$s minuten, één keer per dag</string>
+    <string name="repetit_cada_hores">%1$s minuten, elke %2$s uur</string>
+    <string name="repetit_cada_minuts">%1$s minuten, elke %2$s minuten</string>
+    <plurals name="repetit_cops">
+        <item quantity="one">%d keer</item>
+        <item quantity="other">%d keer</item>
+    </plurals>
+    <string name="repetit_detall">%1$s · %2$s–%3$s W · %4$s kWh per week</string>
+    <string name="repetit_tira">De %1$d keer van de afgelopen week</string>
+    <string name="repetit_que_es">Wat is het?</string>
+    <string name="aparells_a_la_linia">Op meetklem 2 («%1$s»)</string>
+    <string name="linia_titol">%1$s · meetklem 2</string>
+    <string name="linia_que_hi_ha">Wat zit er op deze groep?</string>
+    <string name="linia_mes">Meer…</string>
+    <string name="linia_nota">Deze apparaten worden hier gemeten. De app leert hun handtekening zelf en zoekt ze niet meer in de rest van het huis.</string>
+    <string name="linia_encara_no">Nog niet aan gezien</string>
+    <plurals name="linia_apres">
+        <item quantity="one">%2$s W · geleerd van %1$d keer</item>
+        <item quantity="other">%2$s W · geleerd van %1$d keer</item>
+    </plurals>
+    <string name="linia_altres">Overig op deze groep</string>
+    <string name="linia_altres_text">wat geen van deze apparaten is</string>
+    <string name="ara_a_la_linia">%1$s W · op groep «%2$s»</string>
 </resources>
