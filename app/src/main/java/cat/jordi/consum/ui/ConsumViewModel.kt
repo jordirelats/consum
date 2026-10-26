@@ -411,6 +411,12 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         }
     }
 
+    /** La potència contractada, des de la pregunta de la pantalla Ara. */
+    fun desaPotencia(kw: Double) {
+        config.tarifa = config.tarifa.ambLimit(kw)
+        Vigilancia.actualitza(getApplication())
+    }
+
     fun desaTarifa(t: Tarifa) {
         config.tarifa = t
         Vigilancia.actualitza(getApplication())

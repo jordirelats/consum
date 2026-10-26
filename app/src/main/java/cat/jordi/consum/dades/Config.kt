@@ -79,6 +79,11 @@ class Config(context: Context) {
         get() = p.getBoolean("avis_potencia", true)
         set(v) = p.edit().putBoolean("avis_potencia", v).apply()
 
+    /** Si l'usuari ha dit «Ara no» a la pregunta de la potència contractada, a la pantalla Ara. */
+    var potenciaNoPreguntis: Boolean
+        get() = p.getBoolean("potencia_no_preguntis", false)
+        set(v) = p.edit().putBoolean("potencia_no_preguntis", v).apply()
+
     /** Amb l'app tancada: al moment (el servei que vigila cada 10 s) o cada 15 minuts (el treball de fons). */
     var avisAlMoment: Boolean
         get() = p.getBoolean("avis_al_moment", true)

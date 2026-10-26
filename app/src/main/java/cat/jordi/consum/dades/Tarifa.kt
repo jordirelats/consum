@@ -69,11 +69,18 @@ data class Tarifa(
      * són 8 kW. A Espanya és [potenciaKw]. Null si no s'ha posat.
      */
     val maxKw: Double? = null,
+    /**
+     * Espanya: si l'usuari ha posat la [potenciaKw] (a mà o des de la factura). Fins aleshores, els 4,6 kW per
+     * defecte serveixen per calcular el terme de potència, però no per avisar: amb una potència més alta, l'avís
+     * del 90 % saltaria sense motiu.
+     */
+    val potenciaPosada: Boolean = false,
 ) {
     /** La potència contractada (kW): fins on es pot arribar abans que salti. Null si no se sap. */
-    val limitKw: Double? get() = if (pais == Pais.ES) potenciaKw else maxKw
+    val limitKw: Double? get() = if (pais == Pais.ES) potenciaKw.takeIf { potenciaPosada } else maxKw
 
-    fun ambLimit(kw: Double?) = if (pais == Pais.ES) copy(potenciaKw = kw ?: potenciaKw) else copy(maxKw = kw)
+    fun ambLimit(kw: Double?) =
+        if (pais == Pais.ES) copy(potenciaKw = kw ?: potenciaKw, potenciaPosada = kw != null) else copy(maxKw = kw)
 
     val dinamica get() = contracte == Contracte.DINAMIC && pais != Pais.ALTRE
 
@@ -135,6 +142,7 @@ data class Tarifa(
         put("comptadorMes", comptadorMes); put("boSocialDia", boSocialDia); put("iee", iee); put("iva", iva); put("ebKwh", ebKwh)
         put("proveidorDia", proveidorDia); put("xarxaDia", xarxaDia); put("descompteDia", descompteDia); put("fixosMes", fixosMes)
         maxKw?.let { put("maxKw", it) }
+        put("potenciaPosada", potenciaPosada)
     }.toString()
 
     companion object {
@@ -164,6 +172,8 @@ data class Tarifa(
                     descompteDia = if (antiga) o.optDouble("descompteAny", 628.96) / 365 else o.optDouble("descompteDia", d.descompteDia),
                     fixosMes = o.optDouble("fixosMes", d.fixosMes),
                     maxKw = o.optDouble("maxKw").takeIf { !it.isNaN() },
+                    // Fins a la 0.17 no es desava: si la potència no és la de per defecte, és que l'usuari l'ha posada
+                    potenciaPosada = o.optBoolean("potenciaPosada", o.has("potenciaKw") && o.optDouble("potenciaKw") != d.potenciaKw),
                 )
             }.getOrNull()
         }

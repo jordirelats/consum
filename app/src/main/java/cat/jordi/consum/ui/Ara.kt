@@ -13,16 +13,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Power
 import androidx.compose.material.icons.outlined.QuestionMark
 import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -32,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cat.jordi.consum.R
@@ -39,6 +48,7 @@ import cat.jordi.consum.dades.Contracte
 import cat.jordi.consum.dades.Franja
 import cat.jordi.consum.dades.InfoPreu
 import cat.jordi.consum.dades.NivellPotencia
+import cat.jordi.consum.dades.Pais
 import cat.jordi.consum.dades.nivellPotencia
 import cat.jordi.consum.shelly.Origen
 
@@ -99,6 +109,18 @@ fun PantallaAra(vm: ConsumViewModel) {
                 }
                 Nota(stringResource(R.string.ara_limit_text), Modifier.padding(top = 4.dp))
             }
+        }
+
+        // A Espanya, mentre no s'ha posat la potència contractada no s'avisa: es pregunta aquí
+        var potenciaResposta by remember { mutableStateOf(false) }
+        val tarifa = vm.config.tarifa
+        if (!potenciaResposta && tarifa.pais == Pais.ES && limit == null && !vm.config.potenciaNoPreguntis) {
+            PreguntaPotencia(
+                desa = { vm.desaPotencia(it); potenciaResposta = true },
+                // A la pantalla del preu, la foto o el PDF de la factura també en treuen la potència contractada
+                factura = { vm.pantalla = Pantalla.PREU },
+                araNo = { vm.config.potenciaNoPreguntis = true; potenciaResposta = true },
+            )
         }
 
         if (info != null) PastillaPreu(info) { vm.pantalla = Pantalla.PREU }
@@ -179,6 +201,30 @@ private fun BarraPotencia(w: Double, limitKw: Double, nivell: NivellPotencia) {
             for ((marca, color) in listOf(0.8f to PotenciaAlta, 0.9f to PotenciaLimit)) {
                 drawLine(color, Offset(size.width * marca, -3.dp.toPx()), Offset(size.width * marca, alt + 3.dp.toPx()), 2.dp.toPx())
             }
+        }
+    }
+}
+
+/** Quina potència hi ha contractada, perquè l'app sàpiga quan avisar. */
+@Composable
+private fun PreguntaPotencia(desa: (Double) -> Unit, factura: () -> Unit, araNo: () -> Unit) {
+    var text by rememberSaveable { mutableStateOf("") }
+    val kw = llegeixNum(text, milers = false)?.takeIf { it in 1.0..100.0 }
+    Targeta(color = PrimariFluix) {
+        TitolTargeta(stringResource(R.string.ara_potencia_titol))
+        Nota(stringResource(R.string.ara_potencia_text))
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                text, { text = it }, Modifier.weight(1f), singleLine = true,
+                suffix = { Text("kW") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            )
+            Spacer(Modifier.width(8.dp))
+            Button(onClick = { kw?.let(desa) }, enabled = kw != null) { Text(stringResource(R.string.connecta_desa)) }
+        }
+        Row {
+            TextButton(onClick = factura) { Text(stringResource(R.string.ara_potencia_factura)) }
+            TextButton(onClick = araNo) { Text(stringResource(R.string.ara_potencia_ara_no)) }
         }
     }
 }

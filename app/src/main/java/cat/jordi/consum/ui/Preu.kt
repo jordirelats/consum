@@ -142,7 +142,7 @@ fun PantallaPreu(vm: ConsumViewModel) {
             TargetaEscaneig { lectura = it }
             // En canviar de país es comença amb els valors per defecte d'aquell país: el dinàmic funciona sense escriure res
             Pestanyes(Pais.entries, t.pais, { stringResource(it.nomId) }) { p ->
-                if (p != t.pais) t = Tarifa(pais = p, contracte = if (p == Pais.ALTRE) Contracte.FIX else Contracte.DINAMIC, potenciaKw = t.potenciaKw, maxKw = t.maxKw)
+                if (p != t.pais) t = Tarifa(pais = p, contracte = if (p == Pais.ALTRE) Contracte.FIX else Contracte.DINAMIC, potenciaKw = t.potenciaKw, maxKw = t.maxKw, potenciaPosada = t.potenciaPosada)
             }
             if (t.pais != Pais.ALTRE) {
                 Targeta {
@@ -204,7 +204,7 @@ private fun Espanya(t: Tarifa, mercat: List<HoraPreu>?, canvia: (Tarifa) -> Unit
     }
     Targeta {
         TitolTargeta(stringResource(R.string.preu_titol_potencia))
-        CampNum(stringResource(R.string.preu_potencia), t.potenciaKw, "kW") { canvia(t.copy(potenciaKw = it)) }
+        CampNum(stringResource(R.string.preu_potencia), t.potenciaKw, "kW") { canvia(t.copy(potenciaKw = it, potenciaPosada = true)) }
         CampNum("P1", t.potP1, stringResource(R.string.preu_unitat_kw_dia)) { canvia(t.copy(potP1 = it)) }
         CampNum("P2", t.potP2, stringResource(R.string.preu_unitat_kw_dia), stringResource(R.string.preu_sense_impostos)) { canvia(t.copy(potP2 = it)) }
         Text(

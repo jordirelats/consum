@@ -515,6 +515,10 @@
     <string name="ara_part_contractada">%1$s%% van het maximum (%2$s kW)</string>
     <string name="ara_limit_a_prop">Bijna aan het maximum</string>
     <string name="ara_limit_passat">Boven het maximale vermogen</string>
+    <string name="ara_potencia_titol">Welk vermogen heb je gecontracteerd?</string>
+    <string name="ara_potencia_text">Het staat op de factuur (‘Potencia contratada’). Met dit getal waarschuwt de app voordat de hoofdschakelaar eruit springt. Je kunt het ook bij Instellingen invullen.</string>
+    <string name="ara_potencia_ara_no">Niet nu</string>
+    <string name="ara_potencia_factura">Lees het van de factuur</string>
     <string name="ara_limit_text">Zet je nog iets aan, dan kan de hoofdzekering eruit springen. Hieronder zie je wat er nu aan staat.</string>
     <string name="connecta_titol_potencia">Maximaal vermogen en meldingen</string>
     <string name="connecta_potencia_contractada">Maximaal vermogen</string>

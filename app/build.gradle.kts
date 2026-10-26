@@ -12,8 +12,8 @@ android {
         applicationId = "cat.jordi.consum"
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "0.17"
+        versionCode = 18
+        versionName = "0.18"
         // Tesseract porta codi natiu: només el dels mòbils (a la versió de prova, també el de l'emulador)
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }

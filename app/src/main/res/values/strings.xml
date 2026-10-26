@@ -689,6 +689,12 @@
     <string name="ara_part_contractada">el %1$s %% dels %2$s kW contractats</string>
     <string name="ara_limit_a_prop">A prop del límit</string>
     <string name="ara_limit_passat">Per sobre de la potència contractada</string>
+    <!-- La pregunta de la pantalla Ara quan a Espanya encara no s'ha posat la potència contractada -->
+    <string name="ara_potencia_titol">Quina potència tens contractada?</string>
+    <string name="ara_potencia_text">És a la factura («Potencia contratada»). Amb aquest número, l\'app t\'avisa abans que salti el comptador. També la pots posar a la Configuració.</string>
+    <string name="ara_potencia_ara_no">Ara no</string>
+    <!-- Porta a la pantalla del preu, on es pot fer una foto de la factura o triar-ne el PDF -->
+    <string name="ara_potencia_factura">Llegeix-la de la factura</string>
     <string name="ara_limit_text">Si encens res més, pot saltar el comptador. A sota hi ha el que hi ha encès ara.</string>
     <string name="connecta_titol_potencia">Potència contractada i avisos</string>
     <string name="connecta_potencia_contractada">Potència contractada</string>
