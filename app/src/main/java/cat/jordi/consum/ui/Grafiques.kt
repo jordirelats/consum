@@ -328,7 +328,13 @@ fun GraficaBarres(barres: List<Barra>) {
         barres.forEachIndexed { i, b ->
             val x = marge + i * pas + (pas - ample) / 2
             var base = alt
-            for ((kwh, color) in listOf(b.hora.sempre to Sempre, b.hora.linia to Linia, b.hora.desconegut to Desconegut)) {
+            // El que ve del núvol per hores (maqueta 11), en lila a dalt; la resta, repartida com sempre
+            val total = b.hora.total
+            val delShelly = if (total > 0) ((total - b.hora.nuvol) / total).coerceIn(0.0, 1.0) else 1.0
+            for ((kwh, color) in listOf(
+                b.hora.sempre * delShelly to Sempre, b.hora.linia * delShelly to Linia, b.hora.desconegut * delShelly to Desconegut,
+                b.hora.nuvol.coerceAtMost(total) to Nuvol,
+            )) {
                 val h = (kwh / ymax * alt).toFloat()
                 if (h > 0.5f) {
                     drawRoundRect(color, Offset(x, base - h), Size(ample, h), CornerRadius(2.dp.toPx()))

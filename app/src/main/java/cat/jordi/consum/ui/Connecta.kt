@@ -76,6 +76,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -228,6 +229,7 @@ fun PantallaConnecta(vm: ConsumViewModel) {
             }
             if (config.configurat) TargetaAvisPotencia(vm)
             if (config.configurat) TargetaAvisInesperat(vm)
+            if (config.teNuvol) TargetaNuvolHores(vm)
             // Abans d'Android 13 no hi ha idioma per app: fa com el mòbil
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) TargetaIdioma()
             Targeta {
@@ -402,6 +404,54 @@ private fun TargetaAvisInesperat(vm: ConsumViewModel) {
                 fontSize = 13.sp, lineHeight = 18.sp,
             )
         }
+    }
+}
+
+/**
+ * Omplir el que falta amb el consum per hores del núvol (maqueta 11): les vacances de més de 7 dies i el d'abans
+ * d'instal·lar l'app. Es pot apagar; apagada, aquells dies queden sense dades.
+ */
+@Composable
+private fun TargetaNuvolHores(vm: ConsumViewModel) {
+    var actiu by remember { mutableStateOf(vm.config.nuvolHores) }
+    LaunchedEffect(Unit) { vm.miraNuvol() }
+    Targeta {
+        TitolTargeta(stringResource(R.string.connecta_titol_nuvol_hores))
+        Row(
+            Modifier.fillMaxWidth().toggleable(actiu, role = Role.Switch) { actiu = it; vm.ajustaNuvol(it) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.connecta_omple_nuvol), Modifier.weight(1f), fontSize = 14.sp)
+            Switch(actiu, null)
+        }
+        Nota(stringResource(R.string.connecta_nuvol_hores_text), Modifier.padding(top = 2.dp))
+        if (!actiu) return@Targeta
+        val r = vm.resumNuvol
+        when {
+            vm.omplintNuvol -> Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text("  " + stringResource(R.string.connecta_nuvol_omplint), fontSize = 13.sp, color = Suau)
+            }
+            r != null && r.first > 0 -> {
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    Text(stringResource(R.string.connecta_nuvol_recuperat), Modifier.weight(1f), fontSize = 14.sp)
+                    Text(pluralStringResource(R.plurals.connecta_nuvol_dies_kwh, r.first, r.first, num(r.second)), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                }
+                r.third?.let { ts ->
+                    Row(Modifier.fillMaxWidth().padding(top = 2.dp)) {
+                        Text(stringResource(R.string.connecta_nuvol_des_de), Modifier.weight(1f), fontSize = 14.sp)
+                        val d = Instant.ofEpochSecond(ts).atZone(ZoneId.systemDefault()).toLocalDate()
+                        Text(d.format(DateTimeFormatter.ofPattern(stringResource(R.string.format_dia_mes), Idioma.locale)), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+            r != null -> Nota(stringResource(R.string.connecta_nuvol_res), Modifier.padding(top = 6.dp))
+        }
+        Text(
+            stringResource(R.string.connecta_nuvol_quadra), Modifier.padding(top = 8.dp).fillMaxWidth()
+                .background(PrimariFluix.copy(alpha = 0.5f), RoundedCornerShape(10.dp)).padding(10.dp),
+            fontSize = 13.sp, lineHeight = 18.sp,
+        )
     }
 }
 

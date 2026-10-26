@@ -8,18 +8,25 @@ import android.database.sqlite.SQLiteOpenHelper
 /** Un minut del Shelly: l'energia del minut (Wh) i les potències màxima i mínima (W). */
 data class Minut(val ts: Long, val wh: Double, val pmax: Double, val pmin: Double)
 
-/** Un punt de la gràfica: la potència mitjana del minut (W) del total i de la línia. [aprox]: calculat des de fora. */
+/**
+ * Un punt de la gràfica: la potència mitjana del minut (W) del total i de la línia. [aprox]: no és del Shelly minut a
+ * minut (el comptador del núvol repartit, o el consum per hores del núvol).
+ */
 data class Punt(val ts: Long, val wTotal: Double, val wLinia: Double, val aprox: Boolean = false)
 
-/** L'energia d'una hora (kWh) repartida: sempre encès, la línia de la segona pinça i la resta sense identificar. */
-data class Hora(val ts: Long, val sempre: Double, val linia: Double, val desconegut: Double) {
+/**
+ * L'energia d'una hora (kWh) repartida: sempre encès, la línia de la segona pinça i la resta sense identificar.
+ * [nuvol]: quanta ve de les dades per hores del núvol (maqueta 11), que l'Historial pinta en lila.
+ */
+data class Hora(val ts: Long, val sempre: Double, val linia: Double, val desconegut: Double, val nuvol: Double = 0.0) {
     val total get() = sempre + linia + desconegut
 }
 
 /**
  * Les dades queden al mòbil. Canal 0 = pinça 1 (tota la casa), canal 1 = pinça 2 (una línia).
  * La "resta" és el total menys la línia; d'aquí surten el "sempre encès" i el "sense identificar".
- * Els minuts aproximats (aprox = 1) es fan des de fora amb el comptador del núvol; els exactes, que es baixen
+ * Els minuts aproximats (aprox = 1) es fan des de fora amb el comptador del núvol; els del núvol per hores
+ * (aprox = 2, maqueta 11) omplen les absències llargues i el d'abans de l'app; els exactes, que es baixen
  * del Shelly a casa, els substitueixen.
  */
 class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 6) {
@@ -114,7 +121,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
             "SELECT m0.ts, m0.wh * 60, IFNULL(m1.wh, 0) * 60, m0.aprox $restaSql ORDER BY m0.ts",
             arrayOf(desDe.toString(), finsA.toString())
         ).use { c ->
-            buildList { while (c.moveToNext()) add(Punt(c.getLong(0), c.getDouble(1), c.getDouble(2), c.getInt(3) == 1)) }
+            buildList { while (c.moveToNext()) add(Punt(c.getLong(0), c.getDouble(1), c.getDouble(2), c.getInt(3) != 0)) }
         }
 
     /** El pic instantani (W) d'un minut exacte del total, o null si no se sap. */
@@ -122,6 +129,65 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         readableDatabase.rawQuery("SELECT pmax FROM minuts WHERE canal = 0 AND ts = ? AND aprox = 0", arrayOf(ts.toString())).use {
             if (it.moveToFirst() && !it.isNull(0)) it.getDouble(0).takeIf { w -> w > 0 } else null
         }
+
+    // ---------- Les dades per hores del núvol (maqueta 11) ----------
+
+    /** El primer minut exacte (del Shelly), o null. */
+    fun primerExacte(): Long? =
+        readableDatabase.rawQuery("SELECT MIN(ts) FROM minuts WHERE canal = 0 AND aprox = 0", null).use {
+            if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null
+        }
+
+    /** Els minuts exactes d'un canal entre dos instants: l'inici de cada minut i els Wh. */
+    fun minutsExactes(canal: Int, desDe: Long, finsA: Long): Map<Long, Double> =
+        readableDatabase.rawQuery(
+            "SELECT ts, wh FROM minuts WHERE canal = ? AND aprox = 0 AND ts >= ? AND ts < ?", arrayOf(canal.toString(), desDe.toString(), finsA.toString()),
+        ).use { c -> buildMap { while (c.moveToNext()) put(c.getLong(0), c.getDouble(1)) } }
+
+    /**
+     * Els minuts fets amb el consum per hores del núvol: substitueixen els aproximats del comptador (que són pitjors)
+     * d'aquelles hores, i mai no toquen els exactes; quan arriben els del Shelly, aquests els substitueixen.
+     */
+    fun insereixNuvol(canal: Int, minuts: List<Pair<Long, Double>>) {
+        if (minuts.isEmpty()) return
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            // Fora els aproximats i els del núvol d'abans (un dia recent es torna a demanar i pot haver canviat)
+            db.delete("minuts", "canal = ? AND aprox <> 0 AND ts >= ? AND ts <= ?", arrayOf(canal.toString(), minuts.minOf { it.first }.toString(), minuts.maxOf { it.first }.toString()))
+            val sql = db.compileStatement("INSERT OR IGNORE INTO minuts (ts, canal, wh, pmax, pmin, aprox) VALUES (?, ?, ?, ?, ?, 2)")
+            for ((ts, wh) in minuts) {
+                sql.bindLong(1, ts)
+                sql.bindLong(2, canal.toLong())
+                sql.bindDouble(3, wh)
+                sql.bindDouble(4, wh * 60)
+                sql.bindDouble(5, wh * 60)
+                sql.executeInsert()
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /** Si s'apaga l'opció: fora els minuts del núvol per hores. */
+    fun esborraNuvol() {
+        writableDatabase.delete("minuts", "aprox = 2", null)
+    }
+
+    /** Què s'ha recuperat del núvol: quants dies (de la zona del mòbil), quants kWh i des de quan. */
+    fun resumNuvol(): Triple<Int, Double, Long?> =
+        readableDatabase.rawQuery(
+            "SELECT COUNT(DISTINCT date(ts, 'unixepoch', 'localtime')), IFNULL(SUM(wh), 0), MIN(ts) FROM minuts WHERE canal = 0 AND aprox = 2", null,
+        ).use { c ->
+            if (c.moveToFirst()) Triple(c.getInt(0), c.getDouble(1) / 1000, if (c.isNull(2)) null else c.getLong(2)) else Triple(0, 0.0, null)
+        }
+
+    /** Si entre aquestes dues hores hi ha algun minut del núvol per hores. */
+    fun teNuvol(desDe: Long, finsA: Long): Boolean =
+        readableDatabase.rawQuery(
+            "SELECT 1 FROM minuts WHERE aprox = 2 AND ts >= ? AND ts < ? LIMIT 1", arrayOf(desDe.toString(), finsA.toString())
+        ).use { it.moveToFirst() }
 
     /** Si entre aquestes dues hores hi ha algun minut aproximat. */
     fun teAproximats(desDe: Long, finsA: Long): Boolean =
@@ -155,11 +221,14 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
             """SELECT ((m0.ts + CAST(? AS INTEGER)) / 3600) * 3600 - CAST(? AS INTEGER) AS h,
                  SUM(MIN(MAX(m0.wh - IFNULL(m1.wh, 0), 0), CAST(? AS REAL))),
                  SUM(IFNULL(m1.wh, 0)),
-                 SUM(MAX(m0.wh - IFNULL(m1.wh, 0) - CAST(? AS REAL), 0))
+                 SUM(MAX(m0.wh - IFNULL(m1.wh, 0) - CAST(? AS REAL), 0)),
+                 SUM(CASE WHEN m0.aprox = 2 THEN m0.wh ELSE 0 END)
                $restaSql GROUP BY h ORDER BY h""",
             arrayOf(d, d, f, f, desDe.toString(), finsA.toString())
         ).use { c ->
-            buildList { while (c.moveToNext()) add(Hora(c.getLong(0), c.getDouble(1) / 1000, c.getDouble(2) / 1000, c.getDouble(3) / 1000)) }
+            buildList {
+                while (c.moveToNext()) add(Hora(c.getLong(0), c.getDouble(1) / 1000, c.getDouble(2) / 1000, c.getDouble(3) / 1000, c.getDouble(4) / 1000))
+            }
         }
     }
 

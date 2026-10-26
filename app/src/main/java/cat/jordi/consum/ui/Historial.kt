@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -81,6 +82,14 @@ fun PantallaHistorial(vm: ConsumViewModel) {
         Targeta {
             GraficaBarres(r.barres)
             if (r.aproximat) NotaAproximat(stringResource(R.string.historial_aproximat), vm.config.host.isNotBlank())
+            // Els dies que venen del núvol per hores (maqueta 11)
+            if (r.barres.any { it.hora.nuvol > 0 }) {
+                Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(10.dp).background(Nuvol, RoundedCornerShape(2.dp)))
+                    Text("  " + stringResource(R.string.historial_del_nuvol), fontSize = 12.sp, color = Suau)
+                }
+                Nota(stringResource(R.string.historial_nuvol_nota), Modifier.padding(top = 2.dp))
+            }
         }
         // De l'any no se'n busquen: caldria llegir-ne tots els minuts
         if (vm.periode != Periode.ANY) MomentsPunta(vm)

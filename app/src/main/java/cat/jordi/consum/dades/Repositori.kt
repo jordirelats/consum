@@ -7,6 +7,7 @@ import cat.jordi.consum.shelly.Origen
 import cat.jordi.consum.shelly.ShellyLocal
 import cat.jordi.consum.shelly.ShellyNuvol
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -228,7 +229,8 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val desDe = iniciDia(primer)
         val finsA = minOf(iniciDia(fi), ara() + 60)
         val llista = if (finsA > desDe) perHores(desDe, finsA, fons) else emptyList()
-        fun suma(hores: List<Hora>, ts: Long) = Hora(ts, hores.sumOf { it.sempre }, hores.sumOf { it.linia }, hores.sumOf { it.desconegut })
+        fun suma(hores: List<Hora>, ts: Long) =
+            Hora(ts, hores.sumOf { it.sempre }, hores.sumOf { it.linia }, hores.sumOf { it.desconegut }, hores.sumOf { it.nuvol })
         val barres = when (periode) {
             Periode.DIA -> {
                 val hores = llista.associateBy { it.ts }
@@ -345,6 +347,87 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         return refs + (nevera.id to Referencia(nevera.id, w, 0, null, automatica = true))
     }
 
+    // ---------- Les dades per hores del núvol (maqueta 11) ----------
+
+    private val omplintNuvol = Mutex()
+
+    /**
+     * Omple el que falta amb el consum per hores del núvol: els dies sense totes les dades del Shelly (unes vacances de
+     * més de 7 dies, o d'abans d'instal·lar l'app), d'avui cap enrere, fins a un any o fins que el núvol ja no en té (3
+     * dies seguits sense res abans de la primera dada del Shelly). Una petició per dia i per pinça, a menys d'una per
+     * segon, i com a molt [maxDies] per vegada: la vegada següent continua. Els dies de fa més d'una setmana ja mirats no
+     * es tornen a demanar; els recents sí, perquè el núvol els va completant. Només les hores ja passades: l'hora d'ara
+     * la fa el comptador. Torna quants dies ha omplert.
+     */
+    suspend fun omplNuvol(maxDies: Int = 40): Int = withContext(Dispatchers.IO) {
+        val c = config
+        if (!c.nuvolHores || !c.teNuvol) return@withContext 0
+        omplintNuvol.withLock {
+            val nuvol = ShellyNuvol(c.servidorNuvol, c.clauNuvol, c.idDispositiu)
+            val avui = LocalDate.now(zona)
+            val limit = avui.minusDays(365)
+            val primerExacte = bd.primerExacte()?.let { Instant.ofEpochSecond(it).atZone(zona).toLocalDate() }
+            val mirats = c.nuvolMirats.toMutableSet()
+            var demanats = 0
+            var omplerts = 0
+            var buitsSeguits = 0
+            var dia = avui
+            fun omple(canal: Int, hores: List<Pair<Long, Double>>, exactes: Map<Long, Double>) {
+                val minuts = hores.filter { (ts, _) -> ts + 3600 <= ara() }
+                    .flatMap { (ts, wh) -> minutsDelNuvol(ts, wh, exactes.filterKeys { it >= ts && it < ts + 3600 }) }
+                bd.insereixNuvol(canal, minuts)
+            }
+            suspend fun demana(canal: Int, d: LocalDate): List<Pair<Long, Double>> {
+                if (demanats++ > 0) delay(1100)
+                return nuvol.consumHores(canal, d)
+            }
+            try {
+                while (dia.isAfter(limit) && demanats < maxDies && dia.toEpochDay() > c.nuvolSenseAbans) {
+                    val vell = dia.isBefore(avui.minusDays(7))
+                    val e = dia.toEpochDay()
+                    val desDe = iniciDia(dia)
+                    val finsA = minOf(iniciDia(dia.plusDays(1)), ara())
+                    val exactes = bd.minutsExactes(0, desDe, finsA)
+                    val complet = exactes.size >= (finsA - desDe) / 60 - 5
+                    if (complet || (vell && e in mirats)) {
+                        if (vell) mirats += e
+                        dia = dia.minusDays(1)
+                        continue
+                    }
+                    val hores = demana(0, dia)
+                    if (hores.isEmpty()) {
+                        if (vell) mirats += e
+                        // Abans de la primera dada del Shelly, 3 dies seguits sense res: el núvol ja no en té més
+                        if ((primerExacte == null || dia.isBefore(primerExacte)) && ++buitsSeguits >= 3) {
+                            c.nuvolSenseAbans = e
+                            break
+                        }
+                    } else {
+                        buitsSeguits = 0
+                        omple(0, hores, exactes)
+                        if (c.teLinia) omple(1, demana(1, dia), bd.minutsExactes(1, desDe, finsA))
+                        if (vell) mirats += e
+                        omplerts++
+                    }
+                    dia = dia.minusDays(1)
+                }
+            } finally {
+                c.nuvolMirats = mirats.filter { it > limit.toEpochDay() }.toSet()
+                c.nuvolDarrer = ara()
+            }
+            omplerts
+        }
+    }
+
+    /** Apaga l'opció: fora els minuts del núvol per hores, i la vegada que s'encengui es tornarà a mirar tot. */
+    fun oblidaNuvol() {
+        bd.esborraNuvol()
+        config.nuvolMirats = emptySet()
+        config.nuvolSenseAbans = Long.MIN_VALUE
+    }
+
+    fun resumNuvol() = bd.resumNuvol()
+
     /** Busca el compressor de la nevera a les dades de l'última setmana, com a molt un cop al dia. */
     fun actualitzaNevera() {
         if (ara() - config.neveraMirada < 20 * 3600) return
@@ -452,7 +535,8 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     fun pics(periode: Periode, quants: Int = 3, dia: LocalDate = LocalDate.now(zona)): List<Pic> {
         if (periode == Periode.ANY) return emptyList()
         val desDe = iniciDia(iniciPeriode(periode, dia))
-        val serie = bd.serie(desDe, minOf(iniciDia(fiPeriode(periode, dia)), ara() + 60))
+        // Els minuts que no són del Shelly (del núvol) són mitjanes: no poden ser un moment punta
+        val serie = bd.serie(desDe, minOf(iniciDia(fiPeriode(periode, dia)), ara() + 60)).filterNot { it.aprox }
         if (serie.isEmpty()) return emptyList()
         val maxims = if (periode == Periode.DIA) listOf(serie.maxBy { it.wTotal })
         else serie.groupBy { Instant.ofEpochSecond(it.ts).atZone(zona).toLocalDate() }.values.map { dia -> dia.maxBy { it.wTotal } }

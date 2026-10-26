@@ -70,6 +70,10 @@ class Sincronitza(context: Context, params: WorkerParameters) : CoroutineWorker(
             }
         }
         runCatching { repo.actualitzaPreus() }
+        // El que falta, amb el núvol per hores (maqueta 11): com a molt cada 6 hores, i pocs dies per vegada
+        if (repo.config.nuvolHores && System.currentTimeMillis() / 1000 - repo.config.nuvolDarrer > 6 * 3600) {
+            runCatching { repo.omplNuvol(maxDies = 10) }
+        }
         return Result.success()
     }
 }

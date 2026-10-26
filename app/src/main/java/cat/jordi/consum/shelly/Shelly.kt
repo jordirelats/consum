@@ -7,6 +7,10 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /** El que diu una pinça en un instant. */
 data class Canal(val w: Double, val va: Double, val pf: Double, val v: Double)
@@ -115,9 +119,40 @@ class ShellyNuvol(private val servidor: String, private val clau: String, privat
     private fun local(host: String) =
         host == "localhost" || Regex("""(10|127)\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+""").matches(host)
 
+    private val base: String
+        get() {
+            val sense = servidor.substringAfter("://")
+            return if (servidor.startsWith("http://") && local(sense.substringBefore('/').substringBefore(':'))) servidor else "https://$sense"
+        }
+
+    /**
+     * El consum de cada hora d'un dia (maqueta 11), del canal [canal]: (inici de l'hora, s; Wh). El núvol el guarda
+     * des que el Shelly s'hi connecta (a Guíxols, des del 16/09/2026) i quadra amb el del Shelly. Amb un rang d'un dia,
+     * el dóna per hores; les hores que no té (el futur) surten com a «missing» i no hi són. Les dates són a la zona
+     * horària del Shelly, que torna la resposta.
+     */
+    fun consumHores(canal: Int, dia: LocalDate): List<Pair<Long, Double>> {
+        val format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val params = listOf(
+            "id" to idDispositiu, "channel" to "$canal", "date_range" to "custom",
+            "date_from" to "$dia 00:00:00", "date_to" to "${dia.plusDays(1)} 00:00:00", "auth_key" to clau,
+        ).joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
+        val c = URL("$base/v2/statistics/power-consumption/em-1p?$params").openConnection() as HttpURLConnection
+        c.connectTimeout = 10_000
+        c.readTimeout = 15_000
+        val o = JSONObject(llegeix(c))
+        val zona = runCatching { ZoneId.of(o.optString("timezone")) }.getOrDefault(ZoneId.systemDefault())
+        val historial = o.optJSONArray("history") ?: return emptyList()
+        return (0 until historial.length()).mapNotNull { i ->
+            val h = historial.getJSONObject(i)
+            if (h.optBoolean("missing") || !h.has("consumption")) return@mapNotNull null
+            val ts = LocalDateTime.parse(h.getString("datetime"), format).atZone(zona)
+            if (ts.toLocalDate() != dia) return@mapNotNull null
+            ts.toEpochSecond() to h.getDouble("consumption")
+        }
+    }
+
     fun lectura(): Lectura? {
-        val sense = servidor.substringAfter("://")
-        val base = if (servidor.startsWith("http://") && local(sense.substringBefore('/').substringBefore(':'))) servidor else "https://$sense"
         val c = URL("$base/v2/devices/api/get?auth_key=${URLEncoder.encode(clau, "UTF-8")}")
             .openConnection() as HttpURLConnection
         c.connectTimeout = 5000

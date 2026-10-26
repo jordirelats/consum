@@ -48,6 +48,7 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
 - **A casa,** l'app llegeix el Shelly directament per la wifi.
 - **Des de fora,** fa servir el núvol de Shelly amb la teva clau, que no surt del mòbil.
   - El núvol només dona el comptador d'energia, i per això el consum de fora és aproximat. Quan el mòbil torna a casa, l'app el substitueix per les dades de cada minut del Shelly, que en guarda una setmana.
+  - Si el mòbil ha estat fora més d'una setmana, o per als dies d'abans d'instal·lar l'app, l'app pot omplir el que falta amb el consum de cada hora que guarda el núvol de Shelly. Es pot apagar a la Configuració.
 - **Les úniques connexions a internet són aquestes:**
   - els preus de mercat: EnergyZero als Països Baixos i Red Eléctrica a Espanya;
   - les fitxes de les etiquetes energètiques i la cerca per model (la web de l'EPREL);

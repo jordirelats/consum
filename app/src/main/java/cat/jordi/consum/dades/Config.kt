@@ -70,6 +70,24 @@ class Config(context: Context) {
         get() = p.getLong("darrer_avis_inesperat", 0)
         set(v) = p.edit().putLong("darrer_avis_inesperat", v).apply()
 
+    /**
+     * Omplir el que falta amb el consum per hores del núvol (maqueta 11): les absències de més de 7 dies i el d'abans
+     * d'instal·lar l'app. Els dies ja mirats (epoch day, separats per comes), perquè no es tornin a demanar, i el primer
+     * dia que el núvol ja no té (no cal mirar més enrere).
+     */
+    var nuvolHores: Boolean
+        get() = p.getBoolean("nuvol_hores", true)
+        set(v) = p.edit().putBoolean("nuvol_hores", v).apply()
+    var nuvolMirats: Set<Long>
+        get() = text("nuvol_mirats").split(",").mapNotNull { it.toLongOrNull() }.toSet()
+        set(v) = desa("nuvol_mirats", v.sorted().joinToString(","))
+    var nuvolSenseAbans: Long
+        get() = p.getLong("nuvol_sense_abans", Long.MIN_VALUE)
+        set(v) = p.edit().putLong("nuvol_sense_abans", v).apply()
+    var nuvolDarrer: Long
+        get() = p.getLong("nuvol_darrer", 0)
+        set(v) = p.edit().putLong("nuvol_darrer", v).apply()
+
     /** El compressor de la nevera trobat a les dades (W; 0 si no s'ha trobat) i quan s'ha mirat (s). */
     var neveraW: Double
         get() = p.getFloat("nevera_w", 0f).toDouble()

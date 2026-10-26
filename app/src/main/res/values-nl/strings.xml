@@ -757,4 +757,18 @@
     <string name="historial_comp_sense">%1$s: daar had de app nog niet alle gegevens van.</string>
     <string name="historial_sense_dades">Van deze periode zijn er nog geen gegevens: de app heeft ze sinds %1$s.</string>
     <string name="historial_sense_dades_cap">De app heeft nog geen gegevens van thuis.</string>
+    <string name="connecta_titol_nuvol_hores">Uurgegevens uit de cloud</string>
+    <string name="connecta_omple_nuvol">Vul aan wat ontbreekt met de cloud</string>
+    <string name="connecta_nuvol_hores_text">Als de telefoon meer dan 7 dagen niet thuis is geweest (een vakantie) of van vóór de installatie van de app, heeft de Shelly de minuutgegevens niet meer. Dan haalt de app het verbruik per uur uit de cloud van Shelly, met je cloudsleutel, net als wanneer je weg bent.</string>
+    <string name="connecta_nuvol_omplint">Bezig met ophalen uit de cloud…</string>
+    <string name="connecta_nuvol_recuperat">Opgehaald</string>
+    <plurals name="connecta_nuvol_dies_kwh">
+        <item quantity="one">%1$d dag · %2$s kWh</item>
+        <item quantity="other">%1$d dagen · %2$s kWh</item>
+    </plurals>
+    <string name="connecta_nuvol_des_de">Sinds</string>
+    <string name="connecta_nuvol_res">Nog niet nodig: er ontbreekt niets wat de cloud heeft.</string>
+    <string name="connecta_nuvol_quadra">De kWh en euro’s van deze uren kloppen met die van de Shelly. Er zijn geen minuutgegevens: die dagen hebben geen piekmomenten of apparaten.</string>
+    <string name="historial_del_nuvol">uit de cloud, per uur</string>
+    <string name="historial_nuvol_nota">Wat paars is, komt uit de cloud: zonder piekmomenten of apparaten.</string>
 </resources>

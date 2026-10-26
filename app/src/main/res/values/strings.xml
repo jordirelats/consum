@@ -973,4 +973,20 @@
     <!-- %1$s és el primer dia amb dades: «19 d’octubre del 2026» -->
     <string name="historial_sense_dades">En aquest període encara no hi havia dades: l\'app en té des del %1$s.</string>
     <string name="historial_sense_dades_cap">L\'app encara no té dades de casa.</string>
+    <!-- Les dades per hores del núvol (maqueta 11) -->
+    <string name="connecta_titol_nuvol_hores">Dades per hores del núvol</string>
+    <string name="connecta_omple_nuvol">Omple el que falta amb el núvol</string>
+    <string name="connecta_nuvol_hores_text">Quan el mòbil no ha estat a casa més de 7 dies (unes vacances) o d\'abans d\'instal·lar l\'app, el Shelly ja no té el detall de cada minut. Llavors l\'app agafa del núvol de Shelly el consum de cada hora, amb la teva clau del núvol, com quan ets fora.</string>
+    <string name="connecta_nuvol_omplint">Demanant-ho al núvol…</string>
+    <string name="connecta_nuvol_recuperat">Recuperat</string>
+    <!-- %1$d són els dies i %2$s, els kWh -->
+    <plurals name="connecta_nuvol_dies_kwh">
+        <item quantity="one">%1$d dia · %2$s kWh</item>
+        <item quantity="other">%1$d dies · %2$s kWh</item>
+    </plurals>
+    <string name="connecta_nuvol_des_de">Des de</string>
+    <string name="connecta_nuvol_res">Encara no ha calgut: no falta res que el núvol tingui.</string>
+    <string name="connecta_nuvol_quadra">Els kWh i els euros d\'aquestes hores quadren amb els del Shelly. No hi ha el detall de cada minut: aquells dies no tenen moments punta ni aparells.</string>
+    <string name="historial_del_nuvol">del núvol, per hores</string>
+    <string name="historial_nuvol_nota">El que és lila ve del núvol: sense moments punta ni aparells.</string>
 </resources>

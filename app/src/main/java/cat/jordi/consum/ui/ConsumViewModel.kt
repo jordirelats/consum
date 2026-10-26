@@ -220,6 +220,8 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         // Amb l'app oberta, Android deixa engegar la vigilància; si cal, continuarà amb l'app tancada
         if (si) Vigilancia.actualitza(getApplication())
         if (si) comprovaVersio(forcat = false)
+        // El que falta, amb el núvol per hores (maqueta 11), com a molt un cop per hora
+        if (si && config.nuvolHores && config.teNuvol && System.currentTimeMillis() / 1000 - config.nuvolDarrer > 3600) omplNuvol()
         if (!si || !config.configurat) return
         bucles = viewModelScope.launch {
             launch {
@@ -410,6 +412,44 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
             missatgeEntrena = if (r != null) TextRecurs(R.string.passat_desat, aparell.nom, num(if (r.wMin != null) r.max else r.w)) else null
             pantalla = Pantalla.PRINCIPAL
             pestanya = Pestanya.ENTRENA
+        }
+    }
+
+    /** Les dades per hores del núvol (maqueta 11): si s'està omplint, i què se n'ha recuperat (dies, kWh, des de quan). */
+    var omplintNuvol by mutableStateOf(false)
+        private set
+    var resumNuvol by mutableStateOf<Triple<Int, Double, Long?>?>(null)
+        private set
+
+    fun omplNuvol() {
+        if (omplintNuvol) return
+        viewModelScope.launch {
+            omplintNuvol = true
+            try {
+                withContext(Dispatchers.IO) { runCatching { repo.omplNuvol() } }
+                resumNuvol = withContext(Dispatchers.IO) { repo.resumNuvol() }
+                refrescaAra()
+            } finally {
+                omplintNuvol = false
+            }
+        }
+    }
+
+    fun miraNuvol() {
+        viewModelScope.launch { resumNuvol = withContext(Dispatchers.IO) { repo.resumNuvol() } }
+    }
+
+    /** Encén o apaga l'opció; apagada, fora les dades del núvol per hores. */
+    fun ajustaNuvol(actiu: Boolean) {
+        config.nuvolHores = actiu
+        if (actiu) {
+            omplNuvol()
+        } else {
+            viewModelScope.launch {
+                withContext(Dispatchers.IO) { repo.oblidaNuvol() }
+                resumNuvol = Triple(0, 0.0, null)
+                refrescaAra()
+            }
         }
     }
 
