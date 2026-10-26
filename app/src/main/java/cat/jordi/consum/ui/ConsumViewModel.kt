@@ -5,7 +5,9 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.Avisos
@@ -33,6 +35,7 @@ import cat.jordi.consum.dades.mediana
 import cat.jordi.consum.dades.missatge
 import cat.jordi.consum.shelly.Lectura
 import cat.jordi.consum.shelly.Origen
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,12 +49,28 @@ enum class Pestanya(@StringRes val nomId: Int) {
     ARA(R.string.pestanya_ara), APARELLS(R.string.pestanya_aparells), ENTRENA(R.string.pestanya_entrena), HISTORIAL(R.string.pestanya_historial)
 }
 
-class ConsumViewModel(app: Application) : AndroidViewModel(app) {
+class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : AndroidViewModel(app) {
     val repo = (app as ConsumApp).repo
     val config get() = repo.config
 
-    var pantalla by mutableStateOf(if (repo.config.configurat) Pantalla.PRINCIPAL else Pantalla.CONNECTA)
-    var pestanya by mutableStateOf(Pestanya.ARA)
+    // La pantalla i la pestanya es desen: si Android tanca l'app (per exemple, amb la càmera oberta), hi torna
+    private var pantallaEstat by mutableStateOf(
+        desat.get<String>("pantalla")?.let { runCatching { Pantalla.valueOf(it) }.getOrNull() }
+            ?: if (repo.config.configurat) Pantalla.PRINCIPAL else Pantalla.CONNECTA
+    )
+    var pantalla: Pantalla
+        get() = pantallaEstat
+        set(v) {
+            pantallaEstat = v
+            desat["pantalla"] = v.name
+        }
+    private var pestanyaEstat by mutableStateOf(desat.get<String>("pestanya")?.let { runCatching { Pestanya.valueOf(it) }.getOrNull() } ?: Pestanya.ARA)
+    var pestanya: Pestanya
+        get() = pestanyaEstat
+        set(v) {
+            pestanyaEstat = v
+            desat["pestanya"] = v.name
+        }
 
     /** La lectura en directe; null si ara mateix no s'arriba al Shelly ni pel núvol. */
     var lectura by mutableStateOf<Lectura?>(null)
@@ -179,6 +198,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
         bucles?.cancel()
         bucles = null
         ConsumApp.oberta = si
+        if (si && (lectura?.ts ?: 0) < System.currentTimeMillis() / 1000 - 60) lectura = null
         // Amb l'app oberta, Android deixa engegar la vigilància; si cal, continuarà amb l'app tancada
         if (si) Vigilancia.actualitza(getApplication())
         if (si) comprovaVersio(forcat = false)
@@ -219,7 +239,16 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun sincronitzaAra() {
         enCurs++
         sincronitzant = true
-        errorSincronitzacio = runCatching { repo.sincronitza() }.exceptionOrNull()?.let { TextRecurs(R.string.vm_error_sincronitzacio) }
+        errorSincronitzacio = try {
+            repo.sincronitza()
+            null
+        } catch (e: CancellationException) {
+            enCurs--
+            sincronitzant = enCurs > 0
+            throw e
+        } catch (_: Exception) {
+            TextRecurs(R.string.vm_error_sincronitzacio)
+        }
         runCatching { repo.actualitzaPreus() }
         enCurs--
         sincronitzant = enCurs > 0
@@ -252,10 +281,12 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
         preguntes = dades.preguntes
         aparellsAEntrenar = dades.aEntrenar
         fonsW = dades.fons
-        resum = dades.resum
         resumMes = dades.mes
         aparells = dades.aparells
-        pics = dades.pics
+        if (p == periode) {
+            resum = dades.resum
+            pics = dades.pics
+        }
     }
 
     private class Dades(
@@ -309,7 +340,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** El consum sense la línia de la segona pinça, que ja es mesura a part. */
-    fun resta(l: Lectura) = (l.total.w - if (config.teLinia) l.linia?.w ?: 0.0 else 0.0).coerceAtLeast(0.0)
+    fun resta(l: Lectura) = (l.total.w - if (config.teLinia) (l.linia?.w ?: 0.0).coerceAtLeast(0.0) else 0.0).coerceAtLeast(0.0)
 
     private suspend fun comprovaInesperat(resta: Double) {
         val p = withContext(Dispatchers.IO) { repo.comprovaInesperat(resta) } ?: return
@@ -343,15 +374,20 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
                 salt == null -> TextRecurs(R.string.vm_entrena_no_arribo)
                 salt < 15 -> TextRecurs(R.string.vm_entrena_cap_canvi, num(salt))
                 else -> {
-                    val durada = if (encen) null else encesos[aparell.id]?.let { (ara - it) / 1000 }
+                    // Si es va encendre fa més d'un dia, segurament no es va marcar quan es va apagar: no se'n sap la durada
+                    val durada = if (encen) null else encesos[aparell.id]?.let { (ara - it) / 1000 }?.takeIf { it <= 24 * 3600 }
                     withContext(Dispatchers.IO) { repo.desaMostra(aparell.id, salt, durada) }
                     // Només canvia d'encès a apagat (o al revés) si s'ha vist el salt
                     encesos = if (encen) encesos + (aparell.id to ara) else encesos - aparell.id
                     val n = (referencies[aparell.id]?.mostres ?: 0) + 1
-                    TextRecurs(
-                        if (encen) R.string.vm_entrena_desat_encen else R.string.vm_entrena_desat_apaga,
-                        aparell.nom, num(salt), n, Referencia.PER_APRENDRE,
-                    )
+                    if (n > Referencia.PER_APRENDRE) {
+                        TextRecurs(if (encen) R.string.vm_entrena_desat_encen_apres else R.string.vm_entrena_desat_apaga_apres, aparell.nom, num(salt), n)
+                    } else {
+                        TextRecurs(
+                            if (encen) R.string.vm_entrena_desat_encen else R.string.vm_entrena_desat_apaga,
+                            aparell.nom, num(salt), n, Referencia.PER_APRENDRE,
+                        )
+                    }
                 }
             }
             mesurant = null
@@ -362,6 +398,8 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
     fun respon(pregunta: Pregunta, aparellId: Long?) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { repo.respon(pregunta.id, aparellId) }
+            // Si la pregunta també és a les notificacions, ja no cal
+            NotificationManagerCompat.from(getApplication<Application>()).cancel(pregunta.id.toInt())
             refrescaAra()
         }
     }
@@ -375,6 +413,7 @@ class ConsumViewModel(app: Application) : AndroidViewModel(app) {
 
     fun desaTarifa(t: Tarifa) {
         config.tarifa = t
+        Vigilancia.actualitza(getApplication())
         pantalla = Pantalla.PRINCIPAL
         viewModelScope.launch {
             refrescaAra()

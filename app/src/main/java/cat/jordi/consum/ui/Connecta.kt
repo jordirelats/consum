@@ -1,16 +1,10 @@
 package cat.jordi.consum.ui
 
-import android.Manifest
 import android.app.LocaleConfig
 import android.app.LocaleManager
-import android.content.Intent
 import android.os.Build
 import android.os.LocaleList
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -24,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -47,18 +43,19 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.NotificationManagerCompat
 import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.R
 import cat.jordi.consum.Vigilancia
@@ -80,21 +77,21 @@ fun PantallaConnecta(vm: ConsumViewModel) {
     val config = vm.config
     val context = LocalContext.current
     val abast = rememberCoroutineScope()
-    var host by remember { mutableStateOf(config.host) }
+    var host by rememberSaveable { mutableStateOf(config.host) }
     var info by remember { mutableStateOf<InfoShelly?>(null) }
     var provant by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var nomLinia by remember { mutableStateOf(config.nomLinia) }
-    var servidor by remember { mutableStateOf(config.servidorNuvol) }
+    var nomLinia by rememberSaveable { mutableStateOf(config.nomLinia) }
+    var servidor by rememberSaveable { mutableStateOf(config.servidorNuvol) }
     var clau by remember { mutableStateOf(config.clauNuvol) }
-    var idNuvol by remember { mutableStateOf(config.idDispositiu) }
+    var idNuvol by rememberSaveable { mutableStateOf(config.idDispositiu) }
     var provantNuvol by remember { mutableStateOf(false) }
     var nuvol by remember { mutableStateOf<String?>(null) }
     var nuvolOk by remember { mutableStateOf(false) }
     val trobats = remember { mutableStateListOf<Trobat>() }
 
     DisposableEffect(Unit) {
-        val atura = descobreix(context) { t -> if (trobats.none { it.host == t.host }) trobats += t }
+        val atura = descobreix(context, config.host) { t -> if (trobats.none { it.host == t.host }) trobats += t }
         onDispose { atura() }
     }
 
@@ -169,7 +166,7 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                         Text("  " + stringResource(R.string.connecta_info_shelly, it.nom, it.model, it.versio), fontSize = 13.sp, color = Ok)
                     }
                 }
-                error?.let { Text(it, Modifier.padding(top = 8.dp), color = Desconegut, fontSize = 13.sp) }
+                error?.let { Text(it, Modifier.padding(top = 8.dp), color = DesconegutText, fontSize = 13.sp) }
             }
 
             Targeta {
@@ -194,6 +191,8 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                 OutlinedTextField(
                     clau, { clau = it; nuvolOk = false }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.connecta_clau)) }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
+                    // Que el teclat no la recordi ni la proposi
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                 )
                 OutlinedTextField(
                     idNuvol, { idNuvol = it; nuvolOk = false }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.connecta_id)) },
@@ -275,14 +274,10 @@ private fun TargetaAvisPotencia(vm: ConsumViewModel) {
     val context = LocalContext.current
     val config = vm.config
     val tarifa = config.tarifa
-    var kw by remember { mutableStateOf(tarifa.limitKw?.let { num(it, 2) } ?: "") }
+    var kw by rememberSaveable { mutableStateOf(tarifa.limitKw?.let { num(it, 2) } ?: "") }
     var avis by remember { mutableStateOf(config.avisPotencia) }
     var alMoment by remember { mutableStateOf(config.avisAlMoment) }
-    var permis by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
-    val demana = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        permis = it || NotificationManagerCompat.from(context).areNotificationsEnabled()
-        Vigilancia.actualitza(context)
-    }
+    val permis = rememberPermisAvisos { Vigilancia.actualitza(context) }
     fun aplica() = Vigilancia.actualitza(context)
 
     Targeta {
@@ -290,7 +285,7 @@ private fun TargetaAvisPotencia(vm: ConsumViewModel) {
         OutlinedTextField(
             kw, { nou ->
                 kw = nou
-                val valor = nou.replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 }
+                val valor = llegeixNum(nou, milers = false)?.takeIf { it > 0 }
                 if (valor != null || nou.isBlank()) {
                     config.tarifa = config.tarifa.ambLimit(valor)
                     aplica()
@@ -304,9 +299,13 @@ private fun TargetaAvisPotencia(vm: ConsumViewModel) {
             stringResource(if (tarifa.pais == Pais.ES) R.string.connecta_potencia_es else R.string.connecta_potencia_nl),
             Modifier.padding(top = 4.dp),
         )
-        Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp)
+                .toggleable(avis, role = Role.Switch) { avis = it; config.avisPotencia = it; aplica() },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(stringResource(R.string.connecta_avisa_90), Modifier.weight(1f), fontSize = 14.sp)
-            Switch(avis, { avis = it; config.avisPotencia = it; aplica() })
+            Switch(avis, null)
         }
         Nota(stringResource(R.string.connecta_colors_grafica))
         if (avis) {
@@ -316,22 +315,21 @@ private fun TargetaAvisPotencia(vm: ConsumViewModel) {
                 Triple(false, R.string.connecta_cada_15, R.string.connecta_cada_15_text),
             )) {
                 Row(
-                    Modifier.fillMaxWidth().clickable { alMoment = opcio; config.avisAlMoment = opcio; aplica() }.padding(vertical = 4.dp),
+                    Modifier.fillMaxWidth()
+                        .selectable(alMoment == opcio, role = Role.RadioButton) { alMoment = opcio; config.avisAlMoment = opcio; aplica() }
+                        .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    RadioButton(alMoment == opcio, { alMoment = opcio; config.avisAlMoment = opcio; aplica() })
+                    RadioButton(alMoment == opcio, null, Modifier.padding(12.dp))
                     Column(Modifier.padding(top = 12.dp)) {
                         Text(stringResource(titol), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         Nota(stringResource(text))
                     }
                 }
             }
-            if (!permis) {
+            if (!permis.actius) {
                 Nota(stringResource(R.string.connecta_cal_permis), Modifier.padding(top = 4.dp))
-                TextButton(onClick = {
-                    if (Build.VERSION.SDK_INT >= 33) demana.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    else context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
-                }) { Text(stringResource(R.string.entrena_activa_avisos)) }
+                TextButton(onClick = permis.demana) { Text(stringResource(R.string.entrena_activa_avisos)) }
             }
         }
     }

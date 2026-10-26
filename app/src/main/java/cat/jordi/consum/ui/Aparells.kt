@@ -3,6 +3,8 @@ package cat.jordi.consum.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,12 +43,15 @@ import cat.jordi.consum.R
 import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Font
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PantallaAparells(vm: ConsumViewModel) {
     val mes = vm.resumMes
     // El preu mitjà que ha pagat la casa aquest mes; si encara no hi ha dades, el d'ara
     val preu = mes?.preuMitja ?: vm.infoPreu?.ara?.preu ?: vm.config.tarifa.preuFix
     var obert by remember { mutableStateOf<Aparell?>(null) }
+    // L'aparell que es vol esborrar (true) o tornar a entrenar (false), pendent de confirmar
+    var perConfirmar by remember { mutableStateOf<Pair<Aparell, Boolean>?>(null) }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
@@ -61,10 +66,14 @@ fun PantallaAparells(vm: ConsumViewModel) {
             Text(consumIFixos(mes.euros.consum, mes.euros.fixos), fontSize = 13.sp, color = Suau)
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Punts(3); Text(stringResource(R.string.aparells_llegenda_mesurat), fontSize = 11.sp, color = Suau)
-            Punts(2); Text(stringResource(R.string.aparells_llegenda_etiqueta), fontSize = 11.sp, color = Suau)
-            Punts(1); Text(stringResource(R.string.aparells_llegenda_tipic), fontSize = 11.sp, color = Suau)
+        // Si no hi cap en una línia (la lletra gran, el neerlandès), cada element salta sencer a la següent
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            for ((punts, text) in listOf(3 to R.string.aparells_llegenda_mesurat, 2 to R.string.aparells_llegenda_etiqueta, 1 to R.string.aparells_llegenda_tipic)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Punts(punts)
+                    Text(stringResource(text), fontSize = 11.sp, color = Suau)
+                }
+            }
         }
 
         val consells = buildList {
@@ -183,16 +192,32 @@ fun PantallaAparells(vm: ConsumViewModel) {
                                 ?: pluralStringResource(R.plurals.aparells_referencia, r.mostres, num(r.w), r.mostres),
                             color = Primari, fontSize = 13.sp,
                         )
-                        TextButton(onClick = { vm.tornaAEntrenar(a.id); obert = null }) { Text(stringResource(R.string.aparells_torna_entrenar)) }
+                        TextButton(onClick = { perConfirmar = a to false; obert = null }) { Text(stringResource(R.string.aparells_torna_entrenar)) }
                     }
                     if (a.eprel.isNotBlank()) Text("EPREL ${a.eprel}", color = Suau, fontSize = 12.sp)
-                    if (a.font == Font.TIPIC) Text(stringResource(R.string.aparells_es_tipic), color = Desconegut, fontSize = 13.sp)
+                    if (a.font == Font.TIPIC) Text(stringResource(R.string.aparells_es_tipic), color = DesconegutText, fontSize = 13.sp)
                 }
             },
             confirmButton = { TextButton(onClick = { obert = null }) { Text(stringResource(R.string.aparells_dacord)) } },
             dismissButton = {
-                TextButton(onClick = { vm.esborraAparell(a.id); obert = null }) { Text(stringResource(R.string.aparells_esborra), color = Desconegut) }
+                TextButton(onClick = { perConfirmar = a to true; obert = null }) { Text(stringResource(R.string.aparells_esborra), color = PuntaText) }
             },
+        )
+    }
+
+    perConfirmar?.let { (a, esborra) ->
+        AlertDialog(
+            onDismissRequest = { perConfirmar = null },
+            text = { Text(stringResource(if (esborra) R.string.aparells_confirma_esborra else R.string.aparells_confirma_entrena, a.nom)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (esborra) vm.esborraAparell(a.id) else vm.tornaAEntrenar(a.id)
+                    perConfirmar = null
+                }) {
+                    Text(stringResource(if (esborra) R.string.aparells_esborra else R.string.aparells_torna_entrenar), color = PuntaText)
+                }
+            },
+            dismissButton = { TextButton(onClick = { perConfirmar = null }) { Text(stringResource(R.string.escaneig_cancella)) } },
         )
     }
 }

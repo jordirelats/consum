@@ -61,7 +61,7 @@ class Sincronitza(context: Context, params: WorkerParameters) : CoroutineWorker(
                     if (!Vigilancia.enMarxa && limit != null && calAvisarPotencia(repo.config, l.total.w, ConsumApp.oberta)) {
                         Avisos.avisaPotencia(applicationContext, l.total.w, limit, runCatching { repo.encesAra(l) }.getOrDefault(emptyList()))
                     }
-                    val resta = l.total.w - (if (repo.config.teLinia) l.linia?.w ?: 0.0 else 0.0)
+                    val resta = l.total.w - (if (repo.config.teLinia) (l.linia?.w ?: 0.0).coerceAtLeast(0.0) else 0.0)
                     // Amb l'app oberta ja ho mira ella, cada minut
                     if (!ConsumApp.oberta) repo.comprovaInesperat(resta)?.let { p ->
                         Avisos.avisa(applicationContext, p, repo.aparellsAEntrenar(), repo.referencies())

@@ -1,5 +1,6 @@
 package cat.jordi.consum.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,6 +33,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,6 +58,8 @@ val Sempre = Color(0xFF94A3B8)
 val SempreFluix = Color(0xFFEEF2F6)
 val Desconegut = Color(0xFFD97706)
 val DesconegutFluix = Color(0xFFFEF3C7)
+/** El taronja dels textos: el [Desconegut] no arriba al contrast que cal per llegir-lo. */
+val DesconegutText = Color(0xFFB45309)
 val Linia = Color(0xFF2563EB)
 val LiniaFluix = Color(0xFFDBEAFE)
 val Ok = Color(0xFF15803D)
@@ -92,6 +99,22 @@ fun num(x: Double, decimals: Int = 0): String =
     }.format(x)
 
 fun euros(x: Double) = Idioma.euros(num(x, 2))
+
+/**
+ * Un número escrit per l'usuari, amb coma o punt decimal: «358.5» i «1,5» són decimals. Si hi ha punt i coma, el
+ * darrer és el decimal. Amb [milers], «1.150» (com el que posa [num]) són 1150; als preus, un punt sempre és decimal.
+ */
+fun llegeixNum(text: String, milers: Boolean = true): Double? {
+    val t = text.trim().replace(" ", "").replace("\u00A0", "")
+    val decimal = maxOf(t.lastIndexOf(','), t.lastIndexOf('.'))
+    val net = when {
+        ',' in t && '.' in t -> t.substring(0, decimal).replace(".", "").replace(",", "") + "." + t.substring(decimal + 1)
+        ',' in t -> t.replace(',', '.')
+        milers && Regex("""[1-9]\d{0,2}(\.\d{3})+""").matches(t) -> t.replace(".", "")
+        else -> t
+    }
+    return net.toDoubleOrNull()
+}
 
 /** Un text fet fora de la interfície (al ViewModel o a les dades), en la llengua d'ara. */
 @Composable
@@ -171,7 +194,7 @@ fun FilaConsum(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(titol, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(subtitol, fontSize = 12.sp, color = subtitolColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(subtitol, fontSize = 12.sp, color = textFort(subtitolColor), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(valor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
@@ -193,19 +216,22 @@ fun Pastilla(text: String, color: Color, fons: Color, punt: Color? = null) {
             Box(Modifier.size(8.dp).clip(CircleShape).background(punt))
             Spacer(Modifier.width(6.dp))
         }
-        Text(text, fontSize = 13.sp, color = color)
+        Text(text, fontSize = 13.sp, color = textFort(color))
     }
 }
 
 /** Unes pestanyes petites com les de la maqueta (Dia, Setmana, Mes...). */
 @Composable
 fun <T> Pestanyes(opcions: List<T>, triada: T, nom: @Composable (T) -> String, enTriar: (T) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         for (o in opcions) {
             val actiu = o == triada
+            // Amb selected, el lector de pantalla diu quina pestanya està triada
             Surface(
-                onClick = { enTriar(o) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp),
+                selected = actiu, onClick = { enTriar(o) }, modifier = Modifier.weight(1f).semantics { role = Role.Tab }, shape = RoundedCornerShape(10.dp),
                 color = if (actiu) Primari else Color.White,
+                // Amb vora, les que no estan triades també semblen botons dins d'una targeta blanca
+                border = if (actiu) null else BorderStroke(1.dp, Separador),
             ) {
                 Text(
                     nom(o), Modifier.padding(vertical = 8.dp), fontSize = 13.sp,
@@ -228,9 +254,20 @@ fun NotaAproximat(text: String, esCorregira: Boolean) {
 }
 
 val PuntaColor = Color(0xFFDC2626)
+val PuntaText = Color(0xFFB91C1C)
 val PuntaFluix = Color(0xFFFEE2E2)
 val VallColor = Color(0xFF16A34A)
+val VallText = Color(0xFF15803D)
 val VallFluix = Color(0xFFDCFCE7)
+
+/** Per escriure amb el to d'un color de les gràfiques: el mateix to, prou fosc per llegir-lo. */
+fun textFort(c: Color): Color = when (c) {
+    Desconegut -> DesconegutText
+    PuntaColor -> PuntaText
+    VallColor -> VallText
+    Separador, Sempre -> Suau
+    else -> c
+}
 
 /** El color d'una hora: el de la seva franja, o, si el preu és de mercat, segons si és dels més barats o dels més cars del dia. */
 fun colorPreu(h: HoraPreu, dia: List<HoraPreu>): Color = when (h.franja) {

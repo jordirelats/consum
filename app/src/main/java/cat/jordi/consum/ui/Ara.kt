@@ -124,7 +124,7 @@ fun PantallaAra(vm: ConsumViewModel) {
         if (l != null) {
             Targeta {
                 TitolTargeta(stringResource(R.string.ara_que_hi_ha_ences))
-                val linia = if (teLinia) l.linia?.w ?: 0.0 else 0.0
+                val linia = if (teLinia) (l.linia?.w ?: 0.0).coerceAtLeast(0.0) else 0.0
                 val resta = (l.total.w - linia).coerceAtLeast(0.0)
                 val fons = vm.fonsW
                 val sempre = if (fons != null) minOf(resta, fons) else 0.0

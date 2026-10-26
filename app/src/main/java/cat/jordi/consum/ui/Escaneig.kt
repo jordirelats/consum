@@ -151,7 +151,7 @@ fun TargetaEscaneig(enLlegir: (LecturaFactura?) -> Unit) {
     }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { feta -> if (feta) llegeix(uriFoto) }
     val permis = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { si ->
-        if (si) camera.launch(uriFoto) else error = context.getString(R.string.escaneig_sense_permis_camera)
+        if (si) camera.obre(uriFoto) { error = context.getString(R.string.error_sense_app) } else error = context.getString(R.string.escaneig_sense_permis_camera)
     }
     val fitxer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(::llegeix) }
 
@@ -172,17 +172,17 @@ fun TargetaEscaneig(enLlegir: (LecturaFactura?) -> Unit) {
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) camera.launch(uriFoto)
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) camera.obre(uriFoto) { error = context.getString(R.string.error_sense_app) }
                         else permis.launch(Manifest.permission.CAMERA)
                     }) {
                         Icon(Icons.Outlined.PhotoCamera, null)
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.escaneig_foto))
                     }
-                    OutlinedButton(onClick = { fitxer.launch(arrayOf("application/pdf", "image/*")) }) { Text(stringResource(R.string.escaneig_tria)) }
+                    OutlinedButton(onClick = { fitxer.obre(arrayOf("application/pdf", "image/*")) { error = context.getString(R.string.error_sense_app) } }) { Text(stringResource(R.string.escaneig_tria)) }
                 }
             }
-            error?.let { Text(it, Modifier.padding(top = 8.dp), color = Desconegut, fontSize = 13.sp) }
+            error?.let { Text(it, Modifier.padding(top = 8.dp), color = DesconegutText, fontSize = 13.sp) }
         }
     }
 }

@@ -65,7 +65,7 @@ class Vigilancia : Service() {
                 if (ara - comprovat > 60_000 && !ConsumApp.oberta) {
                     comprovat = ara
                     runCatching {
-                        val resta = l.total.w - (if (repo.config.teLinia) l.linia?.w ?: 0.0 else 0.0)
+                        val resta = l.total.w - (if (repo.config.teLinia) (l.linia?.w ?: 0.0).coerceAtLeast(0.0) else 0.0)
                         repo.comprovaInesperat(resta)?.let { p -> Avisos.avisa(this, p, repo.aparellsAEntrenar(), repo.referencies()) }
                     }
                 }

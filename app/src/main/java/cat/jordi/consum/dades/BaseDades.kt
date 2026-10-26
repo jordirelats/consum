@@ -222,6 +222,11 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         })
     }
 
+    fun teMostra(aparellId: Long, ts: Long, font: String): Boolean =
+        readableDatabase.rawQuery(
+            "SELECT 1 FROM mostres WHERE aparell = ? AND ts = ? AND font = ? LIMIT 1", arrayOf(aparellId.toString(), ts.toString(), font),
+        ).use { it.moveToFirst() }
+
     fun mostres(): List<Mostra> =
         readableDatabase.rawQuery("SELECT id, aparell, ts, dp, durada FROM mostres ORDER BY ts", null).use { c ->
             buildList { while (c.moveToNext()) add(Mostra(c.getLong(0), c.getLong(1), c.getLong(2), c.getDouble(3), if (c.isNull(4)) null else c.getLong(4))) }

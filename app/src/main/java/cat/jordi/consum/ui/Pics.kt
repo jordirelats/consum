@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -140,13 +141,14 @@ private fun TargetaPic(vm: ConsumViewModel, a: AnalisiPic, titol: String) {
         GraficaPotencia(a.finestra, vm.config.teLinia, limit, marques, a.pic.ts)
     }
     Targeta {
-        TitolTargeta(stringResource(R.string.pics_gastaven_mes, minOf(QUANTS, a.elements.size)))
+        val n = minOf(QUANTS, a.elements.size)
+        TitolTargeta(pluralStringResource(R.plurals.pics_gastaven_mes, n, n))
         val mostrats = a.elements.take(QUANTS)
         val resta = a.elements.drop(QUANTS).sumOf { it.w }
         mostrats.forEach { e -> ElementDelPic(vm, e, a.pic.w) }
         if (resta > 0) FilaPic(Icons.Outlined.QuestionMark, Sempre, stringResource(R.string.pics_la_resta), "", resta, a.pic.w)
         if (mostrats.any { it is DesconegutPic }) {
-            Nota(stringResource(R.string.pics_aprendra), Modifier.padding(top = 6.dp))
+            Nota(stringResource(if (vm.aparellsAEntrenar.isEmpty()) R.string.entrena_primer_afegeix else R.string.pics_aprendra), Modifier.padding(top = 6.dp))
         }
     }
 }
@@ -173,7 +175,7 @@ private fun ElementDelPic(vm: ConsumViewModel, e: ElementPic, total: Double) {
                     .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
             ) {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text("+${num(e.w / 1000, 1)} kW", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Desconegut)
+                    Text("+${num(e.w / 1000, 1)} kW", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = DesconegutText)
                     Spacer(Modifier.width(8.dp))
                     Text(
                         when (e.tros.tipus) {
@@ -184,11 +186,10 @@ private fun ElementDelPic(vm: ConsumViewModel, e: ElementPic, total: Double) {
                         fontSize = 12.sp, color = Suau,
                     )
                 }
-                Text(stringResource(R.string.pics_que_era), Modifier.padding(top = 2.dp), fontSize = 12.5.sp, color = Suau)
-                val opcions = if (tots) vm.aparellsAEntrenar else e.suggerits
-                if (vm.aparellsAEntrenar.isEmpty()) {
-                    Nota(stringResource(R.string.entrena_primer_afegeix))
-                } else {
+                // Sense cap aparell no es pot dir què era: la nota surt un sol cop, a sota
+                if (vm.aparellsAEntrenar.isNotEmpty()) {
+                    Text(stringResource(R.string.pics_que_era), Modifier.padding(top = 2.dp), fontSize = 12.5.sp, color = Suau)
+                    val opcions = if (tots) vm.aparellsAEntrenar else e.suggerits
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         opcions.forEach { ap -> AssistChip(onClick = { vm.respon(e.tros, ap.id) }, label = { Text(ap.nom) }) }
                         if (!tots) AssistChip(onClick = { tots = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })

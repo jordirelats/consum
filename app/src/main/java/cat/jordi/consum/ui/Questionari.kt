@@ -31,7 +31,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -151,9 +152,11 @@ private val NOMS_PLACA = mapOf(
 @Composable
 fun PantallaQuestionari(vm: ConsumViewModel) {
     val context = LocalContext.current
-    var pas by remember { mutableIntStateOf(0) }
-    // La clau és "estança|pregunta|opció", amb els ids dels textos
-    val triat = remember { mutableStateMapOf<String, Boolean>() }
+    var pas by rememberSaveable { mutableIntStateOf(0) }
+    // La clau és "estança|pregunta|opció", amb els ids dels textos. Es desen les marcades, per si es gira la pantalla
+    val triat = rememberSaveable(
+        saver = listSaver(save = { m -> m.filterValues { it }.keys.toList() }, restore = { l -> mutableStateMapOf(*l.map { it to true }.toTypedArray()) }),
+    ) { mutableStateMapOf<String, Boolean>() }
     val estanca = ESTANCES[pas]
 
     fun clau(p: Pregunta, opcio: Int) = "${estanca.nom}|${p.text}|$opcio"

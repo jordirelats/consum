@@ -6,7 +6,7 @@
 
     <!-- La llengua -->
     <string name="codi_idioma">nl-NL</string>
-    <string name="format_euros">€ %1$s</string>
+    <string name="format_euros">€ %1$s</string>
 
     <!-- Els tipus d'aparell -->
     <string name="categoria_nevera">Koelkast</string>
@@ -143,12 +143,12 @@
     <string name="ara_detall">Nu: %1$s VA · arbeidsfactor %2$s · %3$s V</string>
     <string name="ara_comprova_wifi">Controleer of je telefoon thuis op de wifi zit en of het adres van de Shelly klopt (Instellingen).</string>
     <string name="ara_franja_fins_a">%1$s tot %2$d uur</string>
-    <string name="ara_pastilla_preu">%1$s · € %2$s per kWh</string>
+    <string name="ara_pastilla_preu">%1$s · € %2$s per kWh</string>
     <string name="ara_pastilla_sense_preu">%1$s · nog geen prijs</string>
     <string name="ara_ja_barat">Dit is al een van de goedkope uren.</string>
-    <string name="ara_mes_barata">Het goedkoopste uur van de komende 24 uur is om %1$d uur: € %2$s/kWh (%3$s%% minder).</string>
+    <string name="ara_mes_barata">Het goedkoopste uur van de komende 24 uur is om %1$d uur: € %2$s/kWh (%3$s%% minder).</string>
     <string name="ara_avis_car_titol">Hoog verbruik in een duur uur</string>
-    <string name="ara_avis_car_text">Je verbruikt nu %1$s W tegen € %2$s/kWh. Kun je het om %3$d uur doen, dan kost elk uur zo %4$s in plaats van %5$s.</string>
+    <string name="ara_avis_car_text">Je verbruikt nu %1$s W tegen € %2$s/kWh. Kun je het om %3$d uur doen, dan kost elk uur zo %4$s in plaats van %5$s.</string>
 
     <!-- Gràfiques -->
     <string name="grafiques_sense_dades">Nog geen gegevens</string>
@@ -164,7 +164,7 @@
     <string name="historial_sense_identificar">Niet herkend</string>
     <string name="historial_costos_fixos">Vaste kosten</string>
     <string name="historial_no_depenen_us">los van je verbruik</string>
-    <string name="historial_nota_aparells">Zodra de app je apparaten heeft aangeleerd, zie je ze hier elk met een eigen kleur.</string>
+    <string name="historial_nota_aparells">Het verbruik van elk apparaat dat de app al kent, staat op het tabblad Apparaten.</string>
     <string name="historial_aproximat">Een deel is een schatting: berekend op afstand, met de meterstand uit de Shelly Cloud.</string>
 
     <!-- Pantalla Aparells -->
@@ -172,7 +172,7 @@
     <string name="aparells_llegenda_mesurat">gemeten of aangeleerd</string>
     <string name="aparells_llegenda_etiqueta">energielabel</string>
     <string name="aparells_llegenda_tipic">gemiddeld of niet herkend</string>
-    <string name="aparells_consell_fons">Altijd aan: %1$s W dag en nacht kost € %2$s per jaar. Kijk welke apparaten op stand-by blijven staan.</string>
+    <string name="aparells_consell_fons">Altijd aan: %1$s W dag en nacht kost € %2$s per jaar. Kijk welke apparaten op stand-by blijven staan.</string>
     <string name="aparells_consell_linia">%1$s: %2$d%% van het verbruik valt in de dure uren. In de goedkope uren had het deze maand zo\'n %3$s minder gekost.</string>
     <plurals name="aparells_consell_tipics">
         <item quantity="one">%1$d apparaat heeft een gemiddelde waarde. Scan het energielabel, dan wordt het getal betrouwbaarder.</item>
@@ -192,13 +192,13 @@
     <string name="aparells_comenca_questionari">Begin met de vragenlijst: we lopen ruimte voor ruimte langs, zodat je er geen vergeet.</string>
     <string name="aparells_revisem_casa">Je huis doorlopen</string>
     <string name="aparells_segons_etiqueta">Je apparaten, volgens het energielabel</string>
-    <string name="aparells_nota_etiqueta">Nog niet aangeleerd: dit is wat ze zouden moeten verbruiken, niet wat ze echt verbruiken, bij gemiddeld € %1$s/kWh. Samen %2$s per maand.</string>
+    <string name="aparells_nota_etiqueta">Nog niet aangeleerd: dit is wat ze zouden moeten verbruiken, niet wat ze echt verbruiken, bij gemiddeld € %1$s/kWh. Samen %2$s per maand.</string>
     <string name="aparells_mesurat_pinca2">gemeten met meetklem 2 · label: %1$s kWh/jaar</string>
     <string name="aparells_kwh_any_font">%1$s kWh/jaar · %2$s</string>
     <string name="aparells_euros_mes">%1$s/maand</string>
     <string name="aparells_torna_questionari">Vragenlijst opnieuw invullen</string>
     <string name="aparells_classe">Energieklasse %1$s</string>
-    <string name="aparells_kwh_euros_any">%1$s kWh per jaar ≈ € %2$s per jaar</string>
+    <string name="aparells_kwh_euros_any">%1$s kWh per jaar ≈ € %2$s per jaar</string>
     <string name="aparells_en_espera">Stand-by: %1$s W</string>
     <plurals name="aparells_referencia">
         <item quantity="one">Aangeleerde referentie: %1$s W, uit %2$d meting</item>
@@ -212,6 +212,11 @@
     <string name="aparells_es_tipic">Dit is een gemiddelde waarde: scan het energielabel voor een nauwkeuriger getal.</string>
     <string name="aparells_dacord">Oké</string>
     <string name="aparells_esborra">Verwijderen</string>
+    <string name="grafiques_desc_potencia">Grafiek van het vermogen: het hoogste %1$s kW om %2$s; het laatste %3$s kW.</string>
+    <string name="grafiques_desc_barres">Grafiek van het verbruik: het hoogste %1$s kWh (%2$s).</string>
+    <string name="error_sense_app">Deze telefoon heeft geen app om dit te doen.</string>
+    <string name="aparells_confirma_esborra">Wil je ‘%1$s’ verwijderen? Wat de app ervan heeft aangeleerd, wordt ook verwijderd.</string>
+    <string name="aparells_confirma_entrena">Wil je ‘%1$s’ opnieuw aanleren? De metingen die er al zijn, worden verwijderd.</string>
 
     <!-- Pantalla Entrena -->
     <string name="entrena_avisos_titol">Meldingen bij onverwacht verbruik</string>
@@ -423,7 +428,7 @@
     <string name="preu_resum_nl_fix">Nederland · enkel tarief</string>
     <string name="preu_resum_nl_franges">Nederland · normaal en dal</string>
     <string name="preu_resum_nl_dinamic">Nederland · dynamisch</string>
-    <string name="preu_resum_altre">Enkel tarief · € %1$s per kWh</string>
+    <string name="preu_resum_altre">Enkel tarief · € %1$s per kWh</string>
     <string name="preu_fixos_es">vermogen, meterhuur en sociaal bonus (bono social)</string>
     <string name="preu_fixos_nl">vastrecht en belastingvermindering</string>
     <string name="preu_fixos_altre">vastrecht</string>
@@ -446,7 +451,7 @@
     <string name="preu_kwh_sense_impostos_ajuda">Zoals op de energierekening. De elektriciteitsbelasting en btw (IVA) komen erbij.</string>
     <string name="preu_energia_franges">Energie, per tijdvak</string>
     <string name="preu_franges_es_nota">Piek 10–14 en 18–22 u · midden 8–10, 14–18 en 22–24 u · dal 0–8 u. In het weekend en op feestdagen is het de hele dag dal.</string>
-    <string name="preu_amb_impostos_franges">Zonder belastingen, zoals op de energierekening. Met belastingen: € %1$s, € %2$s en € %3$s.</string>
+    <string name="preu_amb_impostos_franges">Zonder belastingen, zoals op de energierekening. Met belastingen: € %1$s, € %2$s en € %3$s.</string>
     <string name="preu_energia_pvpc">Energie, met een prijs per uur (PVPC)</string>
     <string name="preu_pvpc_nota">De app downloadt elke dag zelf de PVPC-prijzen van Red Eléctrica en telt er de elektriciteitsbelasting en btw (IVA) bij op.</string>
     <string name="preu_desa_i_es_baixaran">Sla op, dan worden de prijzen vanzelf gedownload.</string>
@@ -470,8 +475,8 @@
     <string name="preu_dinamic_nl_nota">De app downloadt elke dag zelf de marktprijs (EnergyZero), inclusief energiebelasting en btw. Daar komt de inkoopvergoeding van je leverancier bij.</string>
     <string name="preu_recarrec_ajuda">De inkoopvergoeding (opslag) van je leverancier, met btw.</string>
     <string name="preu_eb_ajuda">De belasting per kWh, met btw. In 2026: 0,11085.</string>
-    <string name="preu_cada_kwh">Per kWh: € %1$s, alles inbegrepen</string>
-    <string name="preu_cada_kwh_dos">Per kWh: € %1$s en € %2$s, alles inbegrepen</string>
+    <string name="preu_cada_kwh">Per kWh: € %1$s, alles inbegrepen</string>
+    <string name="preu_cada_kwh_dos">Per kWh: € %1$s en € %2$s, alles inbegrepen</string>
     <string name="preu_titol_fixos">Vaste kosten (tellen niet mee bij de apparaten)</string>
     <string name="preu_descompte_ajuda">Gaat af van de andere twee.</string>
     <string name="preu_total_fixos">Totaal vaste kosten: %1$s per maand</string>
@@ -487,6 +492,8 @@
     <string name="vm_entrena_cap_canvi">Ik zie geen verschil (%1$s W). Probeer het opnieuw.</string>
     <string name="vm_entrena_desat_encen">%1$s: +%2$s W. Opgeslagen (meting %3$d van %4$d).</string>
     <string name="vm_entrena_desat_apaga">%1$s: −%2$s W. Opgeslagen (meting %3$d van %4$d).</string>
+    <string name="vm_entrena_desat_encen_apres">%1$s: +%2$s W. Opgeslagen; nu %3$d metingen.</string>
+    <string name="vm_entrena_desat_apaga_apres">%1$s: −%2$s W. Opgeslagen; nu %3$d metingen.</string>
 
     <!-- La potència contractada (0.13) -->
     <string name="avis_canal_potencia">Bijna aan je maximale vermogen</string>
@@ -572,7 +579,10 @@
     <string name="pics_quan">om %1$s</string>
     <string name="pics_quan_percent">om %1$s · %2$s%% van het maximum</string>
     <string name="pics_instantani">Met pieken van %1$s W binnen die minuut.</string>
-    <string name="pics_gastaven_mes">De %1$d die het meest verbruikten</string>
+    <plurals name="pics_gastaven_mes">
+        <item quantity="one">Wat het meest verbruikte</item>
+        <item quantity="other">De %1$d die het meest verbruikten</item>
+    </plurals>
     <string name="pics_la_resta">De rest</string>
     <string name="pics_des_de">sinds %1$s</string>
     <string name="pics_apres">aangeleerd</string>

@@ -62,6 +62,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,7 +105,7 @@ private enum class Via(@StringRes val nomId: Int) { QR(R.string.afegir_via_qr), 
 
 @Composable
 fun PantallaAfegir(vm: ConsumViewModel) {
-    var via by remember { mutableStateOf(if (Compartit.rebut is Rebut.Fitxer) Via.PLACA else Via.QR) }
+    var via by rememberSaveable { mutableStateOf(if (Compartit.rebut is Rebut.Fitxer) Via.PLACA else Via.QR) }
     // El que s'ha compartit amb Consum va a la pestanya que el llegeix, i aquella el recull
     val rebut = Compartit.rebut
     LaunchedEffect(rebut) {
@@ -139,8 +140,8 @@ private fun ColumnScope.AmbQr(acaba: (Aparell) -> Unit) {
     var buscant by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var fitxa by remember { mutableStateOf<FitxaEprel?>(null) }
-    var nom by remember { mutableStateOf("") }
-    var escrit by remember { mutableStateOf("") }
+    var nom by rememberSaveable { mutableStateOf("") }
+    var escrit by rememberSaveable { mutableStateOf("") }
     val teclat = LocalSoftwareKeyboardController.current
 
     fun busca(text: String) {
@@ -152,6 +153,7 @@ private fun ColumnScope.AmbQr(acaba: (Aparell) -> Unit) {
         }
         buscant = true
         error = null
+        fitxa = null
         abast.launch {
             val r = withContext(Dispatchers.IO) { runCatching { Eprel.fitxa(numero) } }
             buscant = false
@@ -197,7 +199,7 @@ private fun ColumnScope.AmbQr(acaba: (Aparell) -> Unit) {
         }
     }
     if (buscant) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-    error?.let { Text(it, color = Desconegut, fontSize = 14.sp) }
+    error?.let { Text(it, color = DesconegutText, fontSize = 14.sp) }
     fitxa?.let { f ->
         Targeta {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -239,10 +241,10 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
     val context = LocalContext.current
     val abast = rememberCoroutineScope()
     val teclat = LocalSoftwareKeyboardController.current
-    var categoria by remember { mutableStateOf<Categoria?>(null) }
-    var marca by remember { mutableStateOf("") }
-    var model by remember { mutableStateOf("") }
-    var ajuda by remember { mutableStateOf(false) }
+    var categoria by rememberSaveable { mutableStateOf<Categoria?>(null) }
+    var marca by rememberSaveable { mutableStateOf("") }
+    var model by rememberSaveable { mutableStateOf("") }
+    var ajuda by rememberSaveable { mutableStateOf(false) }
     var cerca by remember { mutableStateOf<CercaMarca?>(null) }
     var feina by remember { mutableStateOf<Job?>(null) }
     var llegint by remember { mutableStateOf(false) }
@@ -251,9 +253,9 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var nomTrobat by remember { mutableStateOf("") }
     // El nom del formulari a mà: mentre no s'escriu, «<Marca> <Model>» o el tipus d'aparell
-    var nom by remember { mutableStateOf<String?>(null) }
-    var kwh by remember { mutableStateOf("") }
-    var tocat by remember { mutableStateOf(false) }
+    var nom by rememberSaveable { mutableStateOf<String?>(null) }
+    var kwh by rememberSaveable { mutableStateOf("") }
+    var tocat by rememberSaveable { mutableStateOf(false) }
     val buscant = cerca != null || llegint
     val text = "${marca.trim()} ${model.trim()}".trim()
     val c = categoria
@@ -392,7 +394,7 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
             if (noSurt) {
                 val e = error
                 when {
-                    e != null -> Text(e, color = Desconegut, fontSize = 14.sp)
+                    e != null -> Text(e, color = DesconegutText, fontSize = 14.sp)
                     noTrobat -> Nota(stringResource(R.string.cerca_no_trobat))
                     else -> Nota(stringResource(R.string.marca_tipus_sense_etiqueta))
                 }
@@ -413,7 +415,7 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
                 supportingText = { Text(stringResource(if (tocat) R.string.afegir_escrit_per_tu else R.string.afegir_valor_tipic)) },
             )
             Spacer(Modifier.height(10.dp))
-            val valor = kwh.replace(".", "").replace(',', '.').toDoubleOrNull()
+            val valor = llegeixNum(kwh)
             Button(
                 onClick = {
                     acaba(
@@ -549,8 +551,8 @@ private fun pla(text: String): String =
  */
 @Composable
 private fun TriaCategoria(triada: Categoria?, enTriar: (Categoria) -> Unit) {
-    var obert by remember { mutableStateOf(triada == null) }
-    var cerca by remember { mutableStateOf("") }
+    var obert by rememberSaveable { mutableStateOf(triada == null) }
+    var cerca by rememberSaveable { mutableStateOf("") }
     if (triada != null && !obert) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             FilterChip(selected = true, onClick = { obert = true }, label = { Text(stringResource(triada.nomId)) })
@@ -597,11 +599,19 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
     var llegint by remember { mutableStateOf(false) }
     var lectura by remember { mutableStateOf<LecturaPlaca?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var w by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf<Categoria?>(null) }
-    var nom by remember { mutableStateOf("") }
-    var hores by remember { mutableStateOf("") }
+    var w by rememberSaveable { mutableStateOf("") }
+    var categoria by rememberSaveable { mutableStateOf<Categoria?>(null) }
+    var nom by rememberSaveable { mutableStateOf("") }
+    var hores by rememberSaveable { mutableStateOf("") }
+    // Mentre l'usuari no les toqui, les hores surten del consum típic del tipus d'aparell i de la potència
+    var horesTocades by rememberSaveable { mutableStateOf(false) }
     var veureText by remember { mutableStateOf(false) }
+
+    fun calculaHores() {
+        val c = categoria ?: return
+        if (horesTocades) return
+        llegeixNum(w)?.takeIf { it > 0 }?.let { p -> hores = num(c.kwhAnyTipic * 1000 / 365 / p, 1) }
+    }
 
     fun llegeix(uri: Uri, compartit: Boolean = false) {
         llegint = true
@@ -624,6 +634,7 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
                 foto = b
                 lectura = l
                 w = l.w?.let { num(it) } ?: ""
+                calculaHores()
             }.onFailure { error = it.missatge(context) ?: context.getString(R.string.afegir_error_foto) }
         }
     }
@@ -635,7 +646,7 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { feta -> if (feta) llegeix(uriFoto) }
     // L'app declara el permís de càmera (per l'escàner de QR): si no està concedit, Android no deixa obrir la càmera
     val permis = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { si ->
-        if (si) camera.launch(uriFoto) else error = context.getString(R.string.afegir_sense_permis_camera)
+        if (si) camera.obre(uriFoto) { error = context.getString(R.string.error_sense_app) } else error = context.getString(R.string.afegir_sense_permis_camera)
     }
     val galeria = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let { llegeix(it) } }
 
@@ -654,14 +665,14 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) camera.launch(uriFoto)
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) camera.obre(uriFoto) { error = context.getString(R.string.error_sense_app) }
                 else permis.launch(Manifest.permission.CAMERA)
             }, enabled = !llegint) {
                 Icon(Icons.Outlined.PhotoCamera, null)
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.afegir_fes_la_foto))
             }
-            OutlinedButton(onClick = { galeria.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, enabled = !llegint) {
+            OutlinedButton(onClick = { galeria.obre(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) { error = context.getString(R.string.error_sense_app) } }, enabled = !llegint) {
                 Text(stringResource(R.string.afegir_tria_foto))
             }
         }
@@ -672,7 +683,7 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
             Text("  " + stringResource(R.string.afegir_llegint_placa), fontSize = 14.sp, color = Suau)
         }
     }
-    error?.let { Text(it, color = Desconegut, fontSize = 14.sp) }
+    error?.let { Text(it, color = DesconegutText, fontSize = 14.sp) }
     lectura?.let { l ->
         Targeta {
             foto?.let { Image(it.asImageBitmap(), stringResource(R.string.afegir_foto_placa), Modifier.fillMaxWidth().height(150.dp)) }
@@ -684,7 +695,7 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
                 )
                 l.fragment?.let { Nota(stringResource(R.string.afegir_a_la_placa, it)) }
             } else {
-                Text(stringResource(R.string.afegir_sense_potencia), fontSize = 14.sp, color = Desconegut)
+                Text(stringResource(R.string.afegir_sense_potencia), fontSize = 14.sp, color = DesconegutText)
             }
             TextButton(onClick = { veureText = !veureText }) {
                 Text(stringResource(if (veureText) R.string.afegir_amaga_llegit else R.string.afegir_mira_llegit))
@@ -696,26 +707,23 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
             TriaCategoria(categoria) { c ->
                 categoria = c
                 if (nom.isBlank() || Categoria.entries.any { context.getString(it.nomId) == nom }) nom = context.getString(c.nomId)
-                // Les hores que donen el consum típic d'aquest tipus d'aparell amb aquesta potència
-                w.replace(".", "").replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 }?.let { p ->
-                    hores = num(c.kwhAnyTipic * 1000 / 365 / p, 1)
-                }
+                calculaHores()
             }
         }
         categoria?.let { c ->
             Targeta {
                 OutlinedTextField(nom, { nom = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_nom)) }, singleLine = true)
                 OutlinedTextField(
-                    w, { w = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_potencia)) }, singleLine = true, suffix = { Text("W") },
+                    w, { w = it; calculaHores() }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_potencia)) }, singleLine = true, suffix = { Text("W") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
                 OutlinedTextField(
-                    hores, { hores = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_hores_al_dia)) }, singleLine = true,
+                    hores, { hores = it; horesTocades = true }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_hores_al_dia)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     supportingText = { Text(stringResource(R.string.afegir_hores_ajuda)) },
                 )
-                val pw = w.replace(".", "").replace(',', '.').toDoubleOrNull()
-                val ph = hores.replace(',', '.').toDoubleOrNull()
+                val pw = llegeixNum(w)
+                val ph = llegeixNum(hores)
                 val kwh = if (pw != null && ph != null) pw * ph * 365 / 1000 else null
                 kwh?.let { Text(stringResource(R.string.afegir_kwh_any_aprox, num(it)), Modifier.padding(top = 4.dp), fontSize = 15.sp, fontWeight = FontWeight.Medium) }
                 Spacer(Modifier.height(10.dp))

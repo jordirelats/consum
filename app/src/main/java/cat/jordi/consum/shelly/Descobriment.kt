@@ -28,15 +28,19 @@ data class Trobat(val nom: String, val host: String)
  * Busca Shelly a la xarxa local de dues maneres alhora:
  * - per mDNS (els Gen2 i Gen3 s'anuncien com a _shelly._tcp), que molts routers no deixen passar
  *   (sobretot entre la banda de 2,4 GHz i la de 5, o amb repetidors);
- * - preguntant a cada adreça de la wifi si és un Shelly amb mesura d'energia ([escaneja]).
+ * - preguntant a cada adreça de la wifi si és un Shelly amb mesura d'energia ([escaneja]). Si el Shelly que ja hi ha
+ *   configurat ([actual]) respon, no cal: no es fan 254 peticions cada cop que s'obre la configuració.
  * Crida [enTrobar] al fil principal per cada un que troba. Retorna una funció per aturar la cerca.
  */
-fun descobreix(context: Context, enTrobar: (Trobat) -> Unit): () -> Unit {
+fun descobreix(context: Context, actual: String, enTrobar: (Trobat) -> Unit): () -> Unit {
     val principal = Handler(Looper.getMainLooper())
     val troba: (Trobat) -> Unit = { t -> principal.post { enTrobar(t) } }
     val atura = mdns(context, troba)
     val feina = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    feina.launch { escaneja(context, troba) }
+    feina.launch {
+        val ja = actual.takeIf { it.isNotBlank() }?.let(::shellyA)
+        if (ja != null) troba(ja) else escaneja(context, troba)
+    }
     return {
         atura()
         feina.cancel()

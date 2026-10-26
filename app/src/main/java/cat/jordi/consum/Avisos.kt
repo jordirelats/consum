@@ -138,7 +138,11 @@ class RespostaReceiver : BroadcastReceiver() {
         val pendent = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                repo.respon(pregunta, aparell)
+                if (!repo.respon(pregunta, aparell)) {
+                    // Ja s'havia respost des de l'app
+                    NotificationManagerCompat.from(context).cancel(pregunta.toInt())
+                    return@launch
+                }
                 val nom = repo.aparells().firstOrNull { it.id == aparell }?.nom
                 Avisos.confirma(
                     context, pregunta,

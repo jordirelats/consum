@@ -107,12 +107,17 @@ class ShellyLocal(private val host: String) {
 /**
  * El núvol de Shelly (Cloud Control API v2), per veure el consum des de fora de casa.
  * Només dona l'estat del moment, amb el comptador d'energia; l'historial per minuts es recull a casa.
- * Màxim una petició per segon. El servidor va per HTTPS, tret que porti un altre esquema (el núvol fals de les proves).
+ * Màxim una petició per segon. El servidor va per HTTPS: la clau va a l'adreça. Només una adreça de la xarxa local
+ * (el núvol fals de les proves, a l'emulador 10.0.2.2) pot anar per HTTP.
  */
 class ShellyNuvol(private val servidor: String, private val clau: String, private val idDispositiu: String) {
 
+    private fun local(host: String) =
+        host == "localhost" || Regex("""(10|127)\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+""").matches(host)
+
     fun lectura(): Lectura? {
-        val base = if ("://" in servidor) servidor else "https://$servidor"
+        val sense = servidor.substringAfter("://")
+        val base = if (servidor.startsWith("http://") && local(sense.substringBefore('/').substringBefore(':'))) servidor else "https://$sense"
         val c = URL("$base/v2/devices/api/get?auth_key=${URLEncoder.encode(clau, "UTF-8")}")
             .openConnection() as HttpURLConnection
         c.connectTimeout = 5000

@@ -2,13 +2,6 @@
 
 package cat.jordi.consum.ui
 
-import android.Manifest
-import android.content.Context
-import android.content.Intent
-import android.os.Build
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,7 +23,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,12 +35,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.NotificationManagerCompat
 import cat.jordi.consum.R
 import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Pregunta
@@ -56,33 +51,34 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-private fun teAvisos(context: Context) = NotificationManagerCompat.from(context).areNotificationsEnabled()
-
 private fun hora(ts: Long) = Instant.ofEpochSecond(ts).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
 
 @Composable
 fun PantallaEntrena(vm: ConsumViewModel) {
     val context = LocalContext.current
-    var avisos by remember { mutableStateOf(teAvisos(context)) }
-    val demana = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { avisos = it || teAvisos(context) }
+    val avisos = rememberPermisAvisos()
+    // Mentre es mesura (28 s), la pantalla no s'apaga: amb la pantalla apagada no arriben lectures
+    val vista = LocalView.current
+    val mesurant = vm.mesurant != null
+    DisposableEffect(mesurant) {
+        vista.keepScreenOn = mesurant
+        onDispose { vista.keepScreenOn = false }
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        if (!avisos) {
+        if (!avisos.actius) {
             Targeta(color = DesconegutFluix) {
                 TitolTargeta(stringResource(R.string.entrena_avisos_titol))
                 Nota(stringResource(R.string.entrena_avisos_nota))
                 Spacer(Modifier.height(8.dp))
-                Button(onClick = {
-                    if (Build.VERSION.SDK_INT >= 33) demana.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    else context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
-                }) { Text(stringResource(R.string.entrena_activa_avisos)) }
+                Button(onClick = avisos.demana) { Text(stringResource(R.string.entrena_activa_avisos)) }
             }
         }
 
-        vm.preguntes.forEach { p -> TargetaPregunta(vm, p) }
+        vm.preguntes.forEach { p -> key(p.id) { TargetaPregunta(vm, p) } }
 
         Targeta {
             TitolTargeta(stringResource(R.string.entrena_en_directe))

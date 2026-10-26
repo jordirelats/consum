@@ -67,7 +67,7 @@ data class ConsellLinia(val estalviMes: Double, val percentCar: Int)
 class Repositori(val config: Config, private val bd: BaseDades) {
     private val zona get() = ZoneId.systemDefault()
     private val sincronitzant = Mutex()
-    private val intentsPreus = mutableMapOf<LocalDate, Long>()
+    private val intentsPreus = java.util.concurrent.ConcurrentHashMap<LocalDate, Long>()
 
     private fun ara() = System.currentTimeMillis() / 1000
 
@@ -255,7 +255,9 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val franja = properes.first().franja
         val canvia = if (franja == Franja.UNICA || franja == Franja.MERCAT) null
         else properes.drop(1).firstOrNull { it.franja != franja }?.hora
-        return InfoPreu(p.tarifa, properes.first(), canvia, (0 until 24).map { hp(avuiInici + it * 3600L) }, properes)
+        // Les hores d'avui fins a l'inici de demà: els dies del canvi d'hora en tenen 23 o 25
+        val dema = iniciDia(LocalDate.now(zona).plusDays(1))
+        return InfoPreu(p.tarifa, properes.first(), canvia, (avuiInici until dema step 3600L).map { hp(it) }, properes)
     }
 
     /**
@@ -305,15 +307,20 @@ class Repositori(val config: Config, private val bd: BaseDades) {
 
     fun pregunta(id: Long) = bd.pregunta(id)
 
-    /** Respon una pregunta. Si és un aparell, el salt de la pregunta passa a ser una mostra seva. */
-    fun respon(preguntaId: Long, aparellId: Long?) {
-        val p = bd.pregunta(preguntaId) ?: return
+    /**
+     * Respon una pregunta. Si és un aparell, el salt de la pregunta passa a ser una mostra seva. Torna false si ja
+     * estava resposta (des de la notificació i des de l'app, o amb dos tocs): no es fa una mostra repetida.
+     */
+    @Synchronized
+    fun respon(preguntaId: Long, aparellId: Long?): Boolean {
+        val p = bd.pregunta(preguntaId)?.takeIf { it.estat == EstatPregunta.PENDENT } ?: return false
         if (aparellId != null) {
             bd.desaMostra(aparellId, p.ts, p.dp, null, "pregunta")
             bd.respon(preguntaId, EstatPregunta.RESPOSTA, aparellId)
         } else {
             bd.respon(preguntaId, EstatPregunta.IGNORADA, null)
         }
+        return true
     }
 
     /**
@@ -379,7 +386,9 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     private fun analitzaPic(pic: Pic, fons: Double, refs: Map<Long, Referencia>, tots: Map<Long, Aparell>, aEntrenar: List<Aparell>): AnalisiPic {
         val linia = config.teLinia
         val serie = bd.serie(pic.ts - AnalisiPics.FINESTRA_S, pic.ts + 1)
-        val trossos = AnalisiPics.trossos(serie.map { it.ts to max(it.wTotal - (if (linia) it.wLinia else 0.0), 0.0) }, fons)
+        // Amb minuts aproximats (des de fora, trams plans de mitjanes) no es poden veure salts: tot queda sense identificar
+        val trossos = if (serie.any { it.aprox }) emptyList()
+        else AnalisiPics.trossos(serie.map { it.ts to max(it.wTotal - (if (linia) it.wLinia else 0.0), 0.0) }, fons)
         val elements = mutableListOf<ElementPic>()
         val alPic = serie.lastOrNull()
         val wLinia = if (linia) alPic?.wLinia ?: 0.0 else 0.0
@@ -413,11 +422,15 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     }
 
     /** L'usuari diu quin aparell era un tros d'un pic: és una mostra de l'aparell, com si l'hagués ensenyat en directe. */
-    fun respon(aparellId: Long, tros: Tros) = bd.desaMostra(aparellId, tros.desDe, tros.mostra, null, "pic")
+    @Synchronized
+    fun respon(aparellId: Long, tros: Tros) {
+        // Dos tocs seguits (o el mateix pic a la llista i obert) no fan dues mostres
+        if (!bd.teMostra(aparellId, tros.desDe, "pic")) bd.desaMostra(aparellId, tros.desDe, tros.mostra, null, "pic")
+    }
 
     /** Els aparells que expliquen ara el consum (com a molt 3), per dir-ho a l'avís de potència: nom i W. */
     fun encesAra(l: Lectura): List<Pair<String, Double>> {
-        val wLinia = if (config.teLinia) l.linia?.w ?: 0.0 else 0.0
+        val wLinia = if (config.teLinia) (l.linia?.w ?: 0.0).coerceAtLeast(0.0) else 0.0
         val fons = fonsW() ?: return emptyList()
         val noms = aparells().associate { it.id to it.nom }
         val llista = explicador().explica(l.total.w - wLinia - fons).aparells.mapNotNull { (id, w) -> noms[id]?.let { it to w } }.toMutableList()

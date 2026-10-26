@@ -22,7 +22,7 @@
     <!-- El codi de la llengua d'aquesta traducció (BCP 47). Decideix com s'escriuen els números i els dies: posa-hi el teu, per exemple en-GB o es-ES. -->
     <string name="codi_idioma">ca-ES</string>
     <!-- Com s'escriu un import en euros: %1$s és el número ja escrit (12,50). -->
-    <string name="format_euros">%1$s €</string>
+    <string name="format_euros">%1$s €</string>
 
     <!-- Els tipus d'aparell -->
     <string name="categoria_nevera">Nevera</string>
@@ -200,14 +200,14 @@
     <!-- La pastilla del preu: %1$s és el nom de la franja (Punta, Normaal...) i %2$d l'hora en què canvia -->
     <string name="ara_franja_fins_a">%1$s fins a les %2$d h</string>
     <!-- %1$s és la franja (amb el «fins a les» si n'hi ha) i %2$s el preu d'un kWh, amb 3 decimals -->
-    <string name="ara_pastilla_preu">%1$s · el kWh a %2$s €</string>
+    <string name="ara_pastilla_preu">%1$s · el kWh a %2$s €</string>
     <string name="ara_pastilla_sense_preu">%1$s · encara sense preu</string>
     <string name="ara_ja_barat">Ara ja és de les hores barates.</string>
     <!-- %1$d és l'hora més barata, %2$s el seu preu i %3$s quant per cent menys que ara -->
-    <string name="ara_mes_barata">La més barata de les properes 24 h, a les %1$d h: %2$s €/kWh (%3$s %% menys).</string>
+    <string name="ara_mes_barata">La més barata de les properes 24 h, a les %1$d h: %2$s €/kWh (%3$s %% menys).</string>
     <string name="ara_avis_car_titol">Molt consum en una hora cara</string>
     <!-- %1$s són els watts d'ara, %2$s el preu del kWh d'ara, %3$d l'hora més barata, %4$s el que costaria una hora aleshores i %5$s el que costa ara -->
-    <string name="ara_avis_car_text">Ara gastes %1$s W a %2$s €/kWh. Si ho poguessis fer a les %3$d h, cada hora així costaria %4$s en lloc de %5$s.</string>
+    <string name="ara_avis_car_text">Ara gastes %1$s W a %2$s €/kWh. Si ho poguessis fer a les %3$d h, cada hora així costaria %4$s en lloc de %5$s.</string>
 
     <!-- Gràfiques -->
     <string name="grafiques_sense_dades">Encara no hi ha dades</string>
@@ -226,7 +226,7 @@
     <string name="historial_sense_identificar">Sense identificar</string>
     <string name="historial_costos_fixos">Costos fixos</string>
     <string name="historial_no_depenen_us">no depenen de l\'ús</string>
-    <string name="historial_nota_aparells">Quan l\'app hagi après els aparells, aquí sortirà cadascun amb el seu color.</string>
+    <string name="historial_nota_aparells">El consum de cada aparell que l\'app ja coneix és a la pestanya Aparells.</string>
     <string name="historial_aproximat">Una part és aproximada: s\'ha calculat des de fora, amb el comptador del núvol de Shelly.</string>
 
     <!-- Pantalla Aparells -->
@@ -236,7 +236,7 @@
     <string name="aparells_llegenda_etiqueta">etiqueta</string>
     <string name="aparells_llegenda_tipic">típic o sense identificar</string>
     <!-- %1$s són els watts que no s'apaguen mai i %2$s el que costen en un any -->
-    <string name="aparells_consell_fons">Sempre encès: %1$s W dia i nit són %2$s € l\'any. Mira quins aparells es queden en espera.</string>
+    <string name="aparells_consell_fons">Sempre encès: %1$s W dia i nit són %2$s € l\'any. Mira quins aparells es queden en espera.</string>
     <!-- %1$s és el nom de la línia de la segona pinça, %2$d el percentatge en hores cares i %3$s l'estalvi en euros -->
     <string name="aparells_consell_linia">%1$s: el %2$d %% del consum és en hores cares. A les hores barates, aquest mes hauria costat uns %3$s menys.</string>
     <plurals name="aparells_consell_tipics">
@@ -263,7 +263,7 @@
     <string name="aparells_revisem_casa">Revisem la casa</string>
     <string name="aparells_segons_etiqueta">Els teus aparells, segons l\'etiqueta</string>
     <!-- %1$s és el preu mitjà del kWh i %2$s el que sumen al mes els aparells encara no entrenats -->
-    <string name="aparells_nota_etiqueta">Encara no entrenats: és el que haurien de gastar, no el que gasten, a %1$s €/kWh de mitjana. Sumen %2$s al mes.</string>
+    <string name="aparells_nota_etiqueta">Encara no entrenats: és el que haurien de gastar, no el que gasten, a %1$s €/kWh de mitjana. Sumen %2$s al mes.</string>
     <!-- L'aparell que es diu com la línia de la segona pinça: es mesura directament -->
     <string name="aparells_mesurat_pinca2">mesurat a la pinça 2 · l\'etiqueta diu %1$s kWh/any</string>
     <!-- %1$s són els kWh l'any i %2$s d'on surt el valor (Etiqueta, Placa, Valor típic...) -->
@@ -273,7 +273,7 @@
     <string name="aparells_torna_questionari">Torna a fer el qüestionari</string>
     <!-- La fitxa d'un aparell: %1$s és la classe de l'etiqueta (A, B...) -->
     <string name="aparells_classe">Classe energètica %1$s</string>
-    <string name="aparells_kwh_euros_any">%1$s kWh l\'any ≈ %2$s € l\'any</string>
+    <string name="aparells_kwh_euros_any">%1$s kWh l\'any ≈ %2$s € l\'any</string>
     <!-- El consum en espera (stand-by) -->
     <string name="aparells_en_espera">En espera: %1$s W</string>
     <!-- %1$s són els watts de la referència i %2$d les mostres que l'usuari ha ensenyat -->
@@ -290,6 +290,14 @@
     <string name="aparells_es_tipic">És un valor típic: escaneja l\'etiqueta per afinar-lo.</string>
     <string name="aparells_dacord">D\'acord</string>
     <string name="aparells_esborra">Esborra\'l</string>
+    <!-- Quan el mòbil no té cap app de càmera (o de fitxers) que pugui obrir -->
+    <!-- El que llegeix el lector de pantalla en arribar a les gràfiques -->
+    <string name="grafiques_desc_potencia">Gràfica de la potència: el màxim, %1$s kW a les %2$s; l\'última, %3$s kW.</string>
+    <string name="grafiques_desc_barres">Gràfica del consum: el més alt, %1$s kWh (%2$s).</string>
+    <string name="error_sense_app">Aquest mòbil no té cap app per fer-ho.</string>
+    <!-- La confirmació abans d'esborrar un aparell o de tornar-lo a entrenar; %1$s és el nom de l'aparell -->
+    <string name="aparells_confirma_esborra">Vols esborrar «%1$s»? També s\'esborra el que l\'app n\'ha après.</string>
+    <string name="aparells_confirma_entrena">Vols tornar a entrenar «%1$s»? S\'esborren les mostres que en té.</string>
 
     <!-- Pantalla Entrena -->
     <string name="entrena_avisos_titol">Avisos de consum inesperat</string>
@@ -460,14 +468,14 @@
     <string name="escaneig_camp_es_comptador">Lloguer del comptador</string>
     <string name="escaneig_camp_es_bo_social">Finançament del bo social</string>
     <!-- Cada preu amb la seva unitat: %1$s és el número -->
-    <string name="escaneig_unitat_eur_kwh">%1$s €/kWh</string>
+    <string name="escaneig_unitat_eur_kwh">%1$s €/kWh</string>
     <!-- Els fixos per dia del contracte dels Països Baixos (com al contracte) -->
-    <string name="escaneig_unitat_eur_dag">%1$s €/dag</string>
+    <string name="escaneig_unitat_eur_dag">%1$s €/dag</string>
     <string name="escaneig_unitat_kw">%1$s kW</string>
-    <string name="escaneig_unitat_eur_kw_dia">%1$s €/kW i dia</string>
+    <string name="escaneig_unitat_eur_kw_dia">%1$s €/kW i dia</string>
     <string name="escaneig_unitat_percent">%1$s %%</string>
-    <string name="escaneig_unitat_eur_mes">%1$s €/mes</string>
-    <string name="escaneig_unitat_eur_dia">%1$s €/dia</string>
+    <string name="escaneig_unitat_eur_mes">%1$s €/mes</string>
+    <string name="escaneig_unitat_eur_dia">%1$s €/dia</string>
     <!-- %1$s és el país i el tipus de contracte -->
     <string name="escaneig_contracte">Contracte: %1$s</string>
     <string name="escaneig_contracte_nl_fix">Països Baixos · preu fix</string>
@@ -559,7 +567,7 @@
     <string name="preu_resum_nl_franges">Països Baixos · normaal i dal</string>
     <string name="preu_resum_nl_dinamic">Països Baixos · dinàmic</string>
     <!-- Un altre país: %1$s és el preu del kWh -->
-    <string name="preu_resum_altre">Preu únic · %1$s €/kWh</string>
+    <string name="preu_resum_altre">Preu únic · %1$s €/kWh</string>
     <!-- Què hi ha dins dels costos fixos, en minúscula: a la pantalla Aparells hi va al darrere « · no depenen de l'ús» -->
     <string name="preu_fixos_es">potència, comptador i bo social</string>
     <string name="preu_fixos_nl">quotes i descompte d\'impostos</string>
@@ -591,7 +599,7 @@
     <!-- Les hores de cada franja de la tarifa 2.0TD -->
     <string name="preu_franges_es_nota">Punta 10–14 i 18–22 h · pla 8–10, 14–18 i 22–24 h · vall 0–8 h. Els caps de setmana i festius, tot vall.</string>
     <!-- %1$s, %2$s i %3$s són els preus del kWh de punta, pla i vall amb impostos -->
-    <string name="preu_amb_impostos_franges">Sense impostos, com a la factura. Amb impostos: %1$s, %2$s i %3$s €.</string>
+    <string name="preu_amb_impostos_franges">Sense impostos, com a la factura. Amb impostos: %1$s, %2$s i %3$s €.</string>
     <string name="preu_energia_pvpc">Energia, al preu de cada hora (PVPC)</string>
     <string name="preu_pvpc_nota">L\'app baixa sola cada dia el PVPC de Red Eléctrica. Hi suma l\'impost elèctric i l\'IVA.</string>
     <string name="preu_desa_i_es_baixaran">Desa-ho i els preus es baixaran sols.</string>
@@ -621,9 +629,9 @@
     <!-- Ajuda del camp Energiebelasting (EB) -->
     <string name="preu_eb_ajuda">L\'impost de l\'energia, amb IVA. El 2026, 0,11085.</string>
     <!-- %1$s és el preu del kWh amb tot -->
-    <string name="preu_cada_kwh">Cada kWh: %1$s €, tot inclòs</string>
+    <string name="preu_cada_kwh">Cada kWh: %1$s €, tot inclòs</string>
     <!-- %1$s és el preu del kWh normaal i %2$s el del dal, amb tot -->
-    <string name="preu_cada_kwh_dos">Cada kWh: %1$s i %2$s €, tot inclòs</string>
+    <string name="preu_cada_kwh_dos">Cada kWh: %1$s i %2$s €, tot inclòs</string>
     <string name="preu_titol_fixos">Costos fixos (no van als aparells)</string>
     <!-- Ajuda del camp Vermindering energiebelasting -->
     <string name="preu_descompte_ajuda">Es resta dels altres dos.</string>
@@ -647,6 +655,9 @@
     <!-- Mostra desada: %1$s és el nom de l'aparell, %2$s el salt de potència, %3$d quantes mostres té i %4$d quantes en calen -->
     <string name="vm_entrena_desat_encen">%1$s: +%2$s W. Desat (%3$d de %4$d).</string>
     <string name="vm_entrena_desat_apaga">%1$s: −%2$s W. Desat (%3$d de %4$d).</string>
+    <!-- Quan l'aparell ja estava après: %3$d són les mostres que té ara (més de 3) -->
+    <string name="vm_entrena_desat_encen_apres">%1$s: +%2$s W. Desat; ja en té %3$d mostres.</string>
+    <string name="vm_entrena_desat_apaga_apres">%1$s: −%2$s W. Desat; ja en té %3$d mostres.</string>
 
     <!-- La potència contractada (0.13) -->
     <!-- El nom del canal de notificacions -->
@@ -755,7 +766,10 @@
     <string name="pics_quan_percent">a les %1$s · el %2$s %% de la contractada</string>
     <string name="pics_instantani">Amb puntes de %1$s W dins del minut.</string>
     <!-- %1$d és quants n'hi ha (com a molt 5) -->
-    <string name="pics_gastaven_mes">Els %1$d que gastaven més</string>
+    <plurals name="pics_gastaven_mes">
+        <item quantity="one">El que gastava més</item>
+        <item quantity="other">Els %1$d que gastaven més</item>
+    </plurals>
     <string name="pics_la_resta">La resta</string>
     <string name="pics_des_de">des de les %1$s</string>
     <string name="pics_apres">après</string>

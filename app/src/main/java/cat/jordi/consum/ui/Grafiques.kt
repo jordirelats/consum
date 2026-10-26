@@ -21,6 +21,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -60,7 +62,11 @@ fun GraficaPotencia(
     val context = LocalContext.current
     val senseDades = stringResource(R.string.grafiques_sense_dades)
     val contractats = limitKw?.let { stringResource(R.string.grafiques_contractats, num(it, 2)) }
-    Canvas(Modifier.fillMaxWidth().height(170.dp)) {
+    val maxPunt = serie.maxByOrNull { it.wTotal }
+    val descripcio = if (maxPunt != null) stringResource(
+        R.string.grafiques_desc_potencia, num(maxPunt.wTotal / 1000, 1), horaMinut(maxPunt.ts), num(serie.last().wTotal / 1000, 1),
+    ) else ""
+    Canvas(Modifier.fillMaxWidth().height(170.dp).semantics { contentDescription = descripcio }) {
         val peu = 20.dp.toPx()
         val alt = size.height - peu
         if (serie.size < 2) {
@@ -236,7 +242,9 @@ private fun Llegenda(ambAproximat: Boolean, ambLimit: Boolean) {
 fun GraficaBarres(barres: List<Barra>) {
     val mesura = rememberTextMeasurer()
     val context = LocalContext.current
-    Canvas(Modifier.fillMaxWidth().height(170.dp)) {
+    val maxBarra = barres.maxByOrNull { it.hora.total }
+    val descripcio = maxBarra?.let { stringResource(R.string.grafiques_desc_barres, num(it.hora.total, 1), it.etiqueta) } ?: ""
+    Canvas(Modifier.fillMaxWidth().height(170.dp).semantics { contentDescription = descripcio }) {
         val peu = 18.dp.toPx()
         val alt = size.height - peu
         if (barres.isEmpty()) return@Canvas

@@ -2,7 +2,6 @@ package cat.jordi.consum.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +19,8 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -30,12 +31,13 @@ import androidx.compose.ui.unit.sp
 import cat.jordi.consum.R
 import cat.jordi.consum.dades.Contracte
 import cat.jordi.consum.dades.Factura
-import cat.jordi.consum.dades.LecturaFactura
 import cat.jordi.consum.dades.HoraPreu
+import cat.jordi.consum.dades.LecturaFactura
 import cat.jordi.consum.dades.Pais
 import cat.jordi.consum.dades.Tarifa
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.abs
@@ -88,10 +90,10 @@ private fun textNum(x: Double, decimals: Int = 6): String =
 /** Un camp numèric. Només avisa quan el text és un número vàlid. */
 @Composable
 private fun CampNum(etiqueta: String, valor: Double, unitat: String, ajuda: String? = null, enCanviar: (Double) -> Unit) {
-    var text by remember { mutableStateOf(textNum(valor)) }
-    val bo = text.replace(',', '.').toDoubleOrNull() != null
+    var text by rememberSaveable { mutableStateOf(textNum(valor)) }
+    val bo = llegeixNum(text, milers = false) != null
     OutlinedTextField(
-        text, { nou -> text = nou; nou.replace(',', '.').toDoubleOrNull()?.let(enCanviar) },
+        text, { nou -> text = nou; llegeixNum(nou, milers = false)?.let(enCanviar) },
         Modifier.fillMaxWidth(), label = { Text(etiqueta) }, singleLine = true, isError = !bo,
         suffix = { Text(unitat) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -99,21 +101,26 @@ private fun CampNum(etiqueta: String, valor: Double, unitat: String, ajuda: Stri
     )
 }
 
-/** Les 24 hores d'avui amb les franges d'una tarifa que encara no s'ha desat. */
+/** Les hores d'avui (23 o 25 els dies del canvi d'hora) amb les franges d'una tarifa que encara no s'ha desat. */
 private fun franges(t: Tarifa): List<HoraPreu> {
     val zona = ZoneId.systemDefault()
-    val inici = LocalDate.now(zona).atStartOfDay(zona).toEpochSecond()
-    return (0 until 24).map { h -> (inici + h * 3600L).let { HoraPreu(it, h, t.preuKwh(it, zona) { null }, t.franja(it, zona)) } }
+    val avui = LocalDate.now(zona)
+    val inici = avui.atStartOfDay(zona).toEpochSecond()
+    val dema = avui.plusDays(1).atStartOfDay(zona).toEpochSecond()
+    return (inici until dema step 3600L).map { ts ->
+        HoraPreu(ts, Instant.ofEpochSecond(ts).atZone(zona).hour, t.preuKwh(ts, zona) { null }, t.franja(ts, zona))
+    }
 }
 
 @Composable
 fun PantallaPreu(vm: ConsumViewModel) {
-    var t by remember { mutableStateOf(vm.config.tarifa) }
+    // La tarifa que s'està editant es desa com a JSON, per si es gira la pantalla o Android tanca l'app amb la càmera oberta
+    var t by rememberSaveable(stateSaver = Saver<Tarifa, String>(save = { it.json() }, restore = { Tarifa.de(it) })) { mutableStateOf(vm.config.tarifa) }
     val desada = vm.infoPreu
     // El que s'ha llegit d'un contracte o factura i s'està revisant; i quantes vegades se n'han posat preus,
     // perquè els camps es tornin a crear amb els valors nous
     var lectura by remember { mutableStateOf<LecturaFactura?>(null) }
-    var posats by remember { mutableIntStateOf(0) }
+    var posats by rememberSaveable { mutableIntStateOf(0) }
 
     lectura?.let { l ->
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp)) {
@@ -226,26 +233,26 @@ private fun PaisosBaixos(t: Tarifa, mercat: List<HoraPreu>?, canvia: (Tarifa) ->
     Targeta {
         when (t.contracte) {
             Contracte.FIX -> {
-                TitolTargeta("Leveringstarief")
-                CampNum("Leveringstarief", t.preuFix, "€/kWh", stringResource(R.string.preu_amb_iva_sense_eb)) { canvia(t.copy(preuFix = it)) }
+                TitolTargeta(stringResource(R.string.escaneig_camp_nl_enkel))
+                CampNum(stringResource(R.string.escaneig_camp_nl_enkel), t.preuFix, "€/kWh", stringResource(R.string.preu_amb_iva_sense_eb)) { canvia(t.copy(preuFix = it)) }
             }
             Contracte.FRANGES -> {
                 TitolTargeta(stringResource(R.string.preu_titol_normaal_dal))
                 TiraPreus(franges(t), null, 14.dp)
                 Nota(stringResource(R.string.preu_dal_nota), Modifier.padding(vertical = 4.dp))
-                CampNum("Leveringstarief · Normaal", t.normaal, "€/kWh") { canvia(t.copy(normaal = it)) }
-                CampNum("Leveringstarief · Dal", t.dal, "€/kWh", stringResource(R.string.preu_amb_iva_sense_eb)) { canvia(t.copy(dal = it)) }
+                CampNum(stringResource(R.string.escaneig_camp_nl_normaal), t.normaal, "€/kWh") { canvia(t.copy(normaal = it)) }
+                CampNum(stringResource(R.string.escaneig_camp_nl_dal), t.dal, "€/kWh", stringResource(R.string.preu_amb_iva_sense_eb)) { canvia(t.copy(dal = it)) }
             }
             Contracte.DINAMIC -> {
                 TitolTargeta(stringResource(R.string.preu_energia_hora))
                 Nota(stringResource(R.string.preu_dinamic_nl_nota), Modifier.padding(bottom = 6.dp))
                 if (mercat != null) BarresPreu(mercat, null) else Nota(stringResource(R.string.preu_desa_i_es_baixaran))
                 Spacer(Modifier.height(6.dp))
-                CampNum("Inkoopvergoeding", t.recarrec, "€/kWh", stringResource(R.string.preu_recarrec_ajuda)) { canvia(t.copy(recarrec = it)) }
+                CampNum(stringResource(R.string.escaneig_camp_nl_inkoop), t.recarrec, "€/kWh", stringResource(R.string.preu_recarrec_ajuda)) { canvia(t.copy(recarrec = it)) }
             }
         }
         if (t.contracte != Contracte.DINAMIC) {
-            CampNum("Energiebelasting (EB)", t.ebKwh, "€/kWh", stringResource(R.string.preu_eb_ajuda)) { canvia(t.copy(ebKwh = it)) }
+            CampNum(stringResource(R.string.escaneig_camp_nl_eb), t.ebKwh, "€/kWh", stringResource(R.string.preu_eb_ajuda)) { canvia(t.copy(ebKwh = it)) }
             val total = if (t.contracte == Contracte.FIX) stringResource(R.string.preu_cada_kwh, num(t.preuFix + t.ebKwh, 3))
             else stringResource(R.string.preu_cada_kwh_dos, num(t.normaal + t.ebKwh, 3), num(t.dal + t.ebKwh, 3))
             Text(total, fontSize = 13.sp, fontWeight = FontWeight.Medium)
@@ -253,11 +260,11 @@ private fun PaisosBaixos(t: Tarifa, mercat: List<HoraPreu>?, canvia: (Tarifa) ->
     }
     Targeta {
         TitolTargeta(stringResource(R.string.preu_titol_fixos))
-        CampNum("Vaste leveringskosten", t.proveidorDia, stringResource(R.string.preu_unitat_dag)) { canvia(t.copy(proveidorDia = it)) }
-        CampNum("Netbeheerkosten", t.xarxaDia, stringResource(R.string.preu_unitat_dag)) { canvia(t.copy(xarxaDia = it)) }
+        CampNum(stringResource(R.string.escaneig_camp_nl_vaste), t.proveidorDia, stringResource(R.string.preu_unitat_dag)) { canvia(t.copy(proveidorDia = it)) }
+        CampNum(stringResource(R.string.escaneig_camp_nl_netbeheer), t.xarxaDia, stringResource(R.string.preu_unitat_dag)) { canvia(t.copy(xarxaDia = it)) }
         // Al contracte surt amb un menys davant («€- 1,72317»): es guarda sempre en positiu i es resta
         CampNum(
-            "Vermindering energiebelasting", t.descompteDia, stringResource(R.string.preu_unitat_dag), stringResource(R.string.preu_descompte_ajuda),
+            stringResource(R.string.escaneig_camp_nl_vermindering), t.descompteDia, stringResource(R.string.preu_unitat_dag), stringResource(R.string.preu_descompte_ajuda),
         ) { canvia(t.copy(descompteDia = abs(it))) }
         Text(stringResource(R.string.preu_total_fixos, euros(t.fixosDia() * 365 / 12)), fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }

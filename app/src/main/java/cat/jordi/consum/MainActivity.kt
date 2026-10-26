@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
 import cat.jordi.consum.dades.Eprel
@@ -70,15 +72,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Idioma.actualitza(this)
-        enableEdgeToEdge()
-        obre(intent)
-        // En girar la pantalla torna a arribar el mateix intent: el que s'havia compartit ja s'ha recollit
-        if (savedInstanceState == null) rep(intent)
+        // L'app sempre és clara: les icones de les barres d'Android, fosques, també amb el mòbil en mode fosc
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+        )
+        // En girar la pantalla torna a arribar el mateix intent: l'avís i el que s'havia compartit ja s'han recollit
+        if (savedInstanceState == null) {
+            obre(intent)
+            rep(intent)
+        }
         setContent { TemaConsum { Arrel(vm) } }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         obre(intent)
         rep(intent)
     }
@@ -106,7 +115,7 @@ class MainActivity : ComponentActivity() {
             }
             Rebut.Registre(numero)
         } else {
-            val uri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java) ?: return
+            val uri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.takeIf { it.scheme == "content" } ?: return
             nomFitxer(uri)?.let(Eprel::deFitxer)?.let { Rebut.Registre(it) } ?: Rebut.Fitxer(uri)
         }
         Compartit.rebut = rebut
@@ -199,7 +208,8 @@ private fun Arrel(vm: ConsumViewModel) {
                                     null,
                                 )
                             },
-                            label = { Text(stringResource(p.nomId)) },
+                            // Una sola línia: amb la lletra gran, «Geschiedenis» es partia en dues
+                            label = { Text(stringResource(p.nomId), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             colors = NavigationBarItemDefaults.colors(selectedIconColor = Primari, indicatorColor = PrimariFluix),
                         )
                     }
