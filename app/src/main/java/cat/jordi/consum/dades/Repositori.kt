@@ -187,10 +187,13 @@ class Repositori(val config: Config, private val bd: BaseDades) {
 
     private fun iniciDia(data: LocalDate) = data.atStartOfDay(zona).toEpochSecond()
 
+    /** L'energia per hores locals, també a les zones que no van per hores en punt UTC (l'Índia, el Nepal...). */
+    private fun perHores(desDe: Long, finsA: Long, fonsWh: Double) = bd.perHores(desDe, finsA, fonsWh, desfasHora(zona, ara()))
+
     /** El consum d'avui: kWh i euros (sense els fixos), i si una part és aproximada. */
     fun avui(): Avui {
         val desDe = iniciDia(LocalDate.now(zona))
-        val hores = bd.perHores(desDe, ara() + 60, fonsWh())
+        val hores = perHores(desDe, ara() + 60, fonsWh())
         return Avui(hores.sumOf { it.total }, Preus(desDe, ara()).euros(hores, 0.0).consum, bd.teAproximats(desDe, ara() + 60))
     }
 
@@ -199,8 +202,8 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val avui = LocalDate.now(zona)
         val (barres, euros) = when (periode) {
             Periode.DIA -> {
-                val desDe = (ara() / 3600 - 23) * 3600
-                val llista = bd.perHores(desDe, ara() + 60, fons)
+                val desDe = iniciHora(ara(), zona) - 23 * 3600
+                val llista = perHores(desDe, ara() + 60, fons)
                 val hores = llista.associateBy { it.ts }
                 (0 until 24).map { i ->
                     val ts = desDe + i * 3600L
@@ -211,7 +214,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             Periode.SETMANA, Periode.MES -> {
                 val dies = if (periode == Periode.SETMANA) 7 else 30
                 val primer = avui.minusDays(dies - 1L)
-                val llista = bd.perHores(iniciDia(primer), ara() + 60, fons)
+                val llista = perHores(iniciDia(primer), ara() + 60, fons)
                 val perDia = llista.groupBy { Instant.ofEpochSecond(it.ts).atZone(zona).toLocalDate() }
                 (0 until dies).map { i ->
                     val dia = primer.plusDays(i.toLong())
@@ -223,7 +226,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
                 } to Preus(iniciDia(primer), ara()).euros(llista, dies.toDouble())
             }
         }
-        val desDe = if (periode == Periode.DIA) (ara() / 3600 - 23) * 3600 else iniciDia(avui.minusDays(barres.size - 1L))
+        val desDe = if (periode == Periode.DIA) iniciHora(ara(), zona) - 23 * 3600 else iniciDia(avui.minusDays(barres.size - 1L))
         return Resum(
             barres, barres.sumOf { it.hora.sempre }, barres.sumOf { it.hora.linia }, barres.sumOf { it.hora.desconegut },
             fons.takeIf { it > 0 }?.times(60), euros, bd.teAproximats(desDe, ara() + 60),
@@ -235,7 +238,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val fons = fonsWh()
         val avui = LocalDate.now(zona)
         val desDe = iniciDia(avui.withDayOfMonth(1))
-        val hores = bd.perHores(desDe, ara() + 60, fons)
+        val hores = perHores(desDe, ara() + 60, fons)
         return Resum(
             emptyList(), hores.sumOf { it.sempre }, hores.sumOf { it.linia }, hores.sumOf { it.desconegut },
             fons.takeIf { it > 0 }?.times(60), Preus(desDe, ara()).euros(hores, avui.dayOfMonth.toDouble()),
@@ -244,7 +247,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
 
     fun infoPreu(): InfoPreu {
         val ara = ara()
-        val hora = (ara / 3600) * 3600
+        val hora = iniciHora(ara, zona)
         val avuiInici = iniciDia(LocalDate.now(zona))
         val p = Preus(avuiInici, avuiInici + 2 * 86400)
         fun hp(ts: Long) = HoraPreu(
@@ -267,7 +270,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     fun consellLinia(): ConsellLinia? {
         if (!config.teLinia) return null
         val desDe = iniciDia(LocalDate.now(zona).withDayOfMonth(1))
-        val hores = bd.perHores(desDe, ara() + 60, fonsWh())
+        val hores = perHores(desDe, ara() + 60, fonsWh())
         val p = Preus(desDe, ara())
         val preus = hores.map { p.de(it.ts) }.sorted()
         if (preus.size < 24) return null

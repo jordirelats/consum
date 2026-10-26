@@ -20,6 +20,7 @@ import java.net.HttpURLConnection
 import java.net.Inet4Address
 import java.net.URL
 import java.util.ArrayDeque
+import kotlin.math.abs
 
 /** Un Shelly trobat a la wifi. */
 data class Trobat(val nom: String, val host: String)
@@ -93,23 +94,39 @@ private fun mdns(context: Context, enTrobar: (Trobat) -> Unit): () -> Unit {
 }
 
 /**
- * Pregunta a les 254 adreces de la wifi del mòbil (la seva /24) si són un Shelly: /shelly, i després, si té
- * mesura d'energia (em1:0 a Shelly.GetStatus). En pocs segons, amb 48 preguntes alhora.
+ * Pregunta a les adreces de la wifi del mòbil si són un Shelly: /shelly, i després, si té mesura d'energia (em1:0
+ * a Shelly.GetStatus). Amb 48 preguntes alhora, una /24 (254 adreces) es mira en pocs segons.
  */
 private suspend fun escaneja(context: Context, enTrobar: (Trobat) -> Unit) {
     val cm = context.getSystemService(ConnectivityManager::class.java)
     val xarxa = cm.activeNetwork ?: return
     if (cm.getNetworkCapabilities(xarxa)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) return
-    val propia = cm.getLinkProperties(xarxa)?.linkAddresses?.map { it.address }?.filterIsInstance<Inet4Address>()?.firstOrNull() ?: return
-    val b = propia.address.map { it.toInt() and 0xff }
+    val enllac = cm.getLinkProperties(xarxa)?.linkAddresses?.firstOrNull { it.address is Inet4Address } ?: return
     val alhora = Semaphore(48)
     coroutineScope {
-        for (n in 1..254) {
-            if (n == b[3]) continue
-            val ip = "${b[0]}.${b[1]}.${b[2]}.$n"
+        for (ip in adrecesAMirar(enllac.address.address, enllac.prefixLength)) {
             launch { alhora.withPermit { shellyA(ip)?.let(enTrobar) } }
         }
     }
+}
+
+/** Com a molt, una /22: 1.022 adreces, que amb 48 preguntes alhora es miren en uns 15 segons. */
+private const val PREFIX_MINIM = 22
+
+/**
+ * Les adreces de la xarxa de [propia] (4 bytes) amb el prefix [prefix], sense la de la xarxa, la de difusió ni la
+ * pròpia, de les més properes a les més llunyanes: el Shelly sol ser a prop del mòbil, i surt abans. Si la xarxa
+ * és més gran que una /22, es mira la /22 on és el mòbil.
+ */
+internal fun adrecesAMirar(propia: ByteArray, prefix: Int): List<String> {
+    val ip = propia.fold(0L) { acc, b -> (acc shl 8) or (b.toLong() and 0xff) }
+    val p = prefix.coerceIn(PREFIX_MINIM, 30)
+    val mida = 1L shl (32 - p)
+    val inici = ip and (0xffffffffL xor (mida - 1))
+    return (inici + 1 until inici + mida - 1)
+        .filter { it != ip }
+        .sortedBy { abs(it - ip) }
+        .map { a -> "${a shr 24 and 0xff}.${a shr 16 and 0xff}.${a shr 8 and 0xff}.${a and 0xff}" }
 }
 
 /** Si a [ip] hi ha un Shelly Gen2 o Gen3 amb mesura d'energia, el seu nom; si no, null. */
