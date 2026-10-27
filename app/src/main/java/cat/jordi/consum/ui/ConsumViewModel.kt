@@ -25,7 +25,6 @@ import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Avui
 import cat.jordi.consum.dades.ConsellLinia
 import cat.jordi.consum.dades.Estona
-import cat.jordi.consum.dades.Explicador
 import cat.jordi.consum.dades.InfoPreu
 import cat.jordi.consum.dades.Periode
 import cat.jordi.consum.dades.Pic
@@ -42,7 +41,6 @@ import cat.jordi.consum.dades.Resum
 import cat.jordi.consum.dades.Tarifa
 import cat.jordi.consum.dades.TextRecurs
 import cat.jordi.consum.dades.TramPassat
-import cat.jordi.consum.dades.Tros
 import cat.jordi.consum.dades.mediana
 import cat.jordi.consum.dades.missatge
 import cat.jordi.consum.dades.mou
@@ -145,8 +143,6 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     // ---------- Entrenament ----------
     var referencies by mutableStateOf<Map<Long, Referencia>>(emptyMap())
         private set
-    var explicador by mutableStateOf(Explicador(emptyList()))
-        private set
     /** La fitxa d'un aparell (maqueta 13): quin és (desat, per si es gira la pantalla) i què ha gastat. */
     private var aparellObertEstat by mutableStateOf(desat.get<Long>("aparell_obert"))
     var aparellObert: Long?
@@ -164,8 +160,6 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
 
     /** La línia de la pinça 2 (maqueta 12): els seus aparells, les seves referències i qui l'explica (null sense aparells). */
     var referenciesLinia by mutableStateOf<Map<Long, Referencia>>(emptyMap())
-        private set
-    var explicadorLinia by mutableStateOf<Explicador?>(null)
         private set
     var aparellsLinia by mutableStateOf<List<Aparell>>(emptyList())
         private set
@@ -361,7 +355,7 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
                 repo.serie24h(), repo.avui(), repo.fonsW(), repo.resum(p, d), repo.resumMes(), repo.aparells(),
                 repo.infoPreu(), repo.consellLinia(),
                 repo.referencies(), repo.preguntesPendents(), repo.aparellsAEntrenar(),
-                repo.referenciesLinia(), repo.explicadorLinia(), repo.repetitsPendents(),
+                repo.referenciesLinia(), repo.repetitsPendents(),
                 repo.obertes(), repo.senseNom(),
                 resumDeLaSetmana(),
                 repo.aparellsLinia(),
@@ -374,11 +368,9 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         infoPreu = dades.preu
         consellLinia = dades.consell
         referencies = dades.referencies
-        explicador = Explicador(dades.referencies.values.toList())
         preguntes = dades.preguntes
         aparellsAEntrenar = dades.aEntrenar
         referenciesLinia = dades.referenciesLinia
-        explicadorLinia = dades.explicadorLinia
         repetits = dades.repetits
         obertes = dades.obertes
         senseNom = dades.senseNom
@@ -426,7 +418,7 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         val aparells: List<Aparell>, val preu: InfoPreu, val consell: ConsellLinia?,
         val referencies: Map<Long, Referencia>, val preguntes: List<Pregunta>,
         val aEntrenar: List<Aparell>,
-        val referenciesLinia: Map<Long, Referencia>, val explicadorLinia: Explicador?, val repetits: List<Repetit>,
+        val referenciesLinia: Map<Long, Referencia>, val repetits: List<Repetit>,
         val obertes: Obertes, val senseNom: SenseNom, val resumSetmana: ResumSetmana?, val aparellsLinia: List<Aparell>,
     )
 
@@ -456,14 +448,6 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
 
     fun triaPic(p: Pic) {
         picTriat = p.ts
-    }
-
-    /** L'usuari diu quin aparell era un tros d'un pic: se'n desa la mostra i es torna a analitzar. */
-    fun respon(tros: Tros, aparellId: Long) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.respon(aparellId, tros) }
-            refrescaAra()
-        }
     }
 
     fun desaAparells(llista: List<Aparell>) {

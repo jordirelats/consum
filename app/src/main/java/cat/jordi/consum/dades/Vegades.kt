@@ -162,10 +162,10 @@ enum class TipusEnces {
     PETITS,
 }
 
-/** Una cosa encesa ara en un canal: quants W, de quin aparell, des de quan i quants kWh porta (si és una vegada). */
+/** Una cosa encesa ara en un canal: quants W, de quin aparell, des de quan i quants kWh porta (si és una vegada, [vegada]). */
 data class EncesAra(
     val tipus: TipusEnces, val canal: Int, val w: Double, val aparellId: Long? = null, val desDe: Long? = null,
-    val kwh: Double? = null, val com: Com? = null,
+    val kwh: Double? = null, val com: Com? = null, val vegada: Vegada? = null,
 )
 
 /**
@@ -173,17 +173,19 @@ data class EncesAra(
  * ([obertes]), de més a menys potència, mentre l'excés d'ara ([exces]: W per sobre del fons, o de la línia) encara les hi
  * cap almenys a la meitat (si no, s'han apagat després). El que queda: si passa de 250 W, una cosa que s'acaba d'encendre
  * (si per la potència només hi encaixa un dels [candidats], és ell); si no, la nevera ([neveraW], només a la resta de la
- * casa) i els petits consums. Dona el mateix nom que el rànquing: les vegades són les mateixes.
+ * casa) i els petits consums. Dona el mateix nom que el rànquing: les vegades són les mateixes. Sense [perPotencia] (els
+ * moments punta, que ja han passat), cap nom per la potència sola: el d'una vegada és el del rànquing.
  */
 fun encesDelCanal(
     ara: Long, canal: Int, exces: Double, obertes: List<Vegada>, candidats: List<Aparell>, refs: Map<Long, Referencia>,
-    neveraW: Double? = null,
+    neveraW: Double? = null, perPotencia: Boolean = true,
 ): List<EncesAra> {
     val llista = mutableListOf<EncesAra>()
     var queda = max(exces, 0.0)
     // El que s'acaba d'encendre encara no té durada ni forma: qui s'hi assembla per la potència
     val nomesPotencia = refs.mapValues { (_, r) -> r.copy(duradaMin = null, variacio = null, arrencada = null) }
-    fun perPotencia(w: Double) = assigna(Vegada(0, canal, ara, ara, 1, w, 0.0, 0.0, 1.0), candidats, nomesPotencia, emptyList()).first
+    fun sembla(w: Double) =
+        if (perPotencia) assigna(Vegada(0, canal, ara, ara, 1, w, 0.0, 0.0, 1.0), candidats, nomesPotencia, emptyList()).first else null
     for (v in obertes.filter { it.canal == canal }.sortedByDescending { it.w }) {
         if (queda < 0.5 * v.w) continue
         val w = min(v.w, queda)
@@ -192,16 +194,26 @@ fun encesDelCanal(
         val kwh = v.kwh + v.w * max(0L, ara - (v.fi + 60)) / 3_600_000.0
         // Una vegada sense nom de pocs minuts encara pot ser d'un aparell que dura més: per la potència, si encara hi cap la
         // seva durada. Després, el que diu el rànquing (el cotxe no és el rentaplats perquè fa la mateixa potència)
-        val sembla = if (v.aparellId == null && v.minuts <= 5) perPotencia(v.w)?.takeIf { id ->
+        val semblant = if (v.aparellId == null && v.minuts <= 5) sembla(v.w)?.takeIf { id ->
             val d = refs[id]?.duradaMin
             d == null || v.minuts <= d * 3 + 1
         } else null
-        val tipus = if (v.aparellId != null || sembla != null) TipusEnces.APARELL else TipusEnces.SENSE_IDENTIFICAR
-        llista += EncesAra(tipus, canal, w, v.aparellId ?: sembla, v.ts, kwh, v.com)
+        val tipus = if (v.aparellId != null || semblant != null) TipusEnces.APARELL else TipusEnces.SENSE_IDENTIFICAR
+        llista += EncesAra(tipus, canal, w, v.aparellId ?: semblant, v.ts, kwh, v.com, v)
+    }
+    if (!perPotencia && queda >= Episodis.MINIM && llista.isNotEmpty()) {
+        // En un moment punta, les vegades que hi passaven anaven per sobre de la seva potència de sempre (la placa polsa): el
+        // que sobra és seu, de les que polsen si n'hi ha; si no, de totes, segons la potència. Si s'hagués encès una cosa nova
+        // en aquell minut, també seria una vegada
+        val polsen = llista.filter { it.vegada?.forma == Forma.POLSA }.ifEmpty { llista }
+        val suma = polsen.sumOf { it.w }.coerceAtLeast(1.0)
+        val extra = queda
+        llista.replaceAll { e -> if (e in polsen) e.copy(w = e.w + extra * e.w / suma) else e }
+        queda = 0.0
     }
     if (queda >= Episodis.MINIM) {
         // Encara no és una vegada: només se'n sap la potència
-        val a = perPotencia(queda)
+        val a = sembla(queda)
         llista += if (a != null) EncesAra(TipusEnces.APARELL, canal, queda, a) else EncesAra(TipusEnces.NOU, canal, queda)
         queda = 0.0
     }

@@ -871,9 +871,6 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             .mapNotNull { (id, m) -> Referencia.de(id, m, ambInterval = id in sols) }.associateBy { it.aparellId }
     }
 
-    /** Qui explica la línia: null si no s'hi ha dit cap aparell. */
-    fun explicadorLinia(): Explicador? = if (aparellsLinia().isEmpty()) null else Explicador(referenciesLinia().values.toList())
-
     /**
      * Aprèn sola els aparells de la línia (maqueta 12): cada episodi acabat de la línia, de 10 minuts o més, és una mostra
      * de l'aparell de la línia que s'hi assembla clarament ([triaLinia]). Ningú més no hi gasta, i per això no cal
@@ -1192,71 +1189,60 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     }
 
     /**
-     * Què hi havia encès en un pic: la línia de la segona pinça, el fons i els trossos d'[AnalisiPics], cadascun amb
-     * els aparells après que l'expliquen (si en queda poc per explicar) o, si no, com a desconegut per preguntar-ne.
+     * Què hi havia encès en un pic (maqueta 16), amb el mateix criteri que el rànquing: les vegades que passaven per aquell
+     * minut, cadascuna amb el seu aparell, o de cap (i llavors se'n pot dir què era); el fons, la nevera i els petits consums;
+     * i la línia de la pinça 2, amb els seus aparells. Sense noms per la potència sola: si una vegada no en té al rànquing,
+     * aquí tampoc.
      */
     fun analitzaPics(pics: List<Pic>): List<AnalisiPic> {
         if (pics.isEmpty()) return emptyList()
         // El que és comú a tots els pics es llegeix un sol cop
         val fons = fonsW() ?: 0.0
-        val refs = referencies()
-        val aparells = aparells()
-        val aEntrenar = aparellsAEntrenar()
-        val linia = explicadorLinia()
-        val refsLinia = referenciesLinia()
-        return pics.map { analitzaPic(it, fons, refs, aparells.associateBy { a -> a.id }, aEntrenar, linia, refsLinia) }
-    }
-
-    private fun analitzaPic(
-        pic: Pic, fons: Double, refs: Map<Long, Referencia>, tots: Map<Long, Aparell>, aEntrenar: List<Aparell>,
-        explicadorLinia: Explicador?, refsLinia: Map<Long, Referencia>,
-    ): AnalisiPic {
-        val linia = config.teLinia
-        val serie = bd.serie(pic.ts - AnalisiPics.FINESTRA_S, pic.ts + 1)
-        // Amb minuts aproximats (des de fora, trams plans de mitjanes) no es poden veure salts: tot queda sense identificar
-        val trossos = if (serie.any { it.aprox }) emptyList()
-        else AnalisiPics.trossos(serie.map { it.ts to max(it.wTotal - (if (linia) it.wLinia else 0.0), 0.0) }, fons)
-        val elements = mutableListOf<ElementPic>()
-        val alPic = serie.lastOrNull()
-        val wLinia = if (linia) alPic?.wLinia ?: 0.0 else 0.0
-        if (wLinia > 0) {
-            // Els aparells de la línia que l'expliquen (maqueta 12); el que quedi, la línia
-            val e = explicadorLinia?.explica(wLinia)
-            e?.aparells?.forEach { (id, w) -> tots[id]?.let { a -> elements += AparellPic(a, w, null, refsLinia[id]?.apresa == true) } }
-            val resta = e?.residu ?: wLinia
-            if (resta > 0) elements += LiniaPic(resta)
-        }
-        if (fons > 0) elements += SempreEncesPic(minOf(fons, pic.w - wLinia))
-        // Un aparell només pot ser en un tros: primer els estables i el que ja hi era, que són més segurs
-        val usats = mutableSetOf<Long>()
-        for (tros in trossos.sortedBy { it.tipus == TipusTros.VARIABLE }) {
-            // El que puja i baixa es compara amb la seva potència típica, i els aparells que l'expliquen s'emporten tot el tros
-            val variable = tros.tipus == TipusTros.VARIABLE
-            val objectiu = if (variable) tros.mostra else tros.w
-            // Primer els aparells de la forma que toca (maqueta 12): el que puja i baixa, els que polsen; el que és estable, els
-            // que no. Si no l'expliquen, tots.
-            val lliures = refs.values.filter { it.aparellId !in usats }
-            val explicat = { e: Explicacio -> e.aparells.isNotEmpty() && e.residu <= 0.25 * objectiu }
-            val e = Explicador(lliures.filter { (it.forma == Forma.POLSA) == variable }).explica(objectiu).takeIf(explicat)
-                ?: Explicador(lliures).explica(objectiu)
-            if (explicat(e)) {
-                usats += e.aparells.map { it.first }
-                val escala = if (variable) tros.w / e.aparells.sumOf { it.second } else 1.0
-                e.aparells.forEach { (id, w) ->
-                    tots[id]?.let { a -> elements += AparellPic(a, w * escala, tros.desDe.takeIf { tros.tipus != TipusTros.JA_HI_ERA }, refs[id]?.apresa == true) }
+        val tots = aparells()
+        val perId = tots.associateBy { it.id }
+        val casa = aparellsAEntrenar()
+        val linia = aparellsLinia()
+        val refs = referencies() + referenciesLinia()
+        val nevera = neveraAutomatica(tots)
+        val neveraW = config.neveraW.takeIf { it > 0 && nevera != null }
+        val iniciLinia = iniciLinia()
+        return pics.map { pic ->
+            val minut = bd.serie(pic.ts, pic.ts + 60).firstOrNull()
+            val wLinia = if (config.teLinia) (minut?.wLinia ?: 0.0).coerceAtLeast(0.0) else 0.0
+            val resta = max(pic.w - wLinia, 0.0)
+            // Les vegades que passaven pel minut del pic
+            val vegades = bd.vegades(pic.ts, pic.ts + 60).filter { it.ts <= pic.ts }
+            val elements = mutableListOf<ElementPic>()
+            val sempre = min(fons, resta)
+            if (sempre > 0) elements += SempreEncesPic(sempre)
+            fun afegeix(e: EncesAra, aLaLinia: Boolean) {
+                val a = e.aparellId?.let(perId::get)
+                val v = e.vegada
+                elements += when {
+                    e.tipus == TipusEnces.APARELL && a != null -> AparellPic(a, e.w, e.desDe, e.com, linia = aLaLinia)
+                    e.tipus == TipusEnces.NEVERA && nevera != null -> AparellPic(nevera, e.w, null, null, compressor = true)
+                    e.tipus == TipusEnces.PETITS -> if (aLaLinia) LiniaPic(e.w, altres = true) else PetitsPic(e.w)
+                    v != null -> {
+                        val candidats = when {
+                            v.canal == 1 -> linia
+                            abansDeLaLinia(v, iniciLinia) -> casa + linia
+                            else -> casa
+                        }
+                        DesconegutPic(v, e.w, endevina(v.w, candidats, refs, candidats.size, v.minuts.toDouble(), v.forma))
+                    }
+                    else -> SenseIdentificarPic(e.w)
                 }
-            } else {
-                elements += DesconegutPic(tros, endevina(tros.mostra, aEntrenar.filter { it.id !in usats }, refs, forma = if (variable) Forma.POLSA else null))
             }
+            if (wLinia > 0) {
+                if (linia.isEmpty()) elements += LiniaPic(wLinia)
+                else encesDelCanal(pic.ts, 1, wLinia, vegades, linia, refs, perPotencia = false).forEach { afegeix(it, aLaLinia = true) }
+            }
+            encesDelCanal(pic.ts, 0, resta - sempre, vegades, casa, refs, neveraW, perPotencia = false).forEach { afegeix(it, aLaLinia = false) }
+            // La gràfica: des d'una mica abans de la primera vegada (com a molt 90 minuts abans del pic) fins a mitja hora després
+            val primer = vegades.minOfOrNull { it.ts } ?: pic.ts
+            val inici = max(minOf(primer, pic.ts - 30 * 60) - 15 * 60, pic.ts - 105 * 60L)
+            AnalisiPic(pic, elements.sortedByDescending { it.w }, vegades, bd.serie(inici, pic.ts + 30 * 60))
         }
-        // El que queda (el que els aparells no expliquen del tot): sense identificar
-        val resta = pic.w - elements.sumOf { it.w }
-        if (resta > 50) elements += SenseIdentificarPic(resta)
-        // La gràfica: des d'una mica abans del primer tros que s'encén (com a molt 90 minuts abans del pic) fins a mitja hora després
-        val primer = trossos.filter { it.tipus != TipusTros.JA_HI_ERA }.minOfOrNull { it.desDe } ?: pic.ts
-        val inici = minOf(primer, pic.ts - 30 * 60) - 15 * 60
-        val finestra = bd.serie(maxOf(inici, pic.ts - 90 * 60L - 15 * 60), pic.ts + 30 * 60)
-        return AnalisiPic(pic, elements.sortedByDescending { it.w }, trossos, finestra)
     }
 
     /**
@@ -1297,16 +1283,5 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             bd.desaEtiqueta(Etiqueta(0, t.ts, t.fi + 59, aparellId))
         }
         haCanviat()
-    }
-
-    /** L'usuari diu quin aparell era un tros d'un pic: és una mostra de l'aparell, com si l'hagués ensenyat en directe. */
-    @Synchronized
-    fun respon(aparellId: Long, tros: Tros) {
-        // Dos tocs seguits (o el mateix pic a la llista i obert) no fan dues mostres
-        if (!bd.teMostra(aparellId, tros.desDe, "pic")) {
-            bd.desaMostra(aparellId, tros.desDe, tros.mostra, null, "pic")
-            bd.desaEtiqueta(Etiqueta(0, tros.desDe, tros.desDe, aparellId))
-            haCanviat()
-        }
     }
 }

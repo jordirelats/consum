@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Power
 import androidx.compose.material.icons.outlined.QuestionMark
 import androidx.compose.material.icons.outlined.ShowChart
@@ -51,7 +52,8 @@ import cat.jordi.consum.dades.NivellPotencia
 import cat.jordi.consum.dades.Periode
 import cat.jordi.consum.dades.SempreEncesPic
 import cat.jordi.consum.dades.SenseIdentificarPic
-import cat.jordi.consum.dades.TipusTros
+import cat.jordi.consum.dades.Com
+import cat.jordi.consum.dades.PetitsPic
 import cat.jordi.consum.dades.nivellPotencia
 import java.time.Instant
 import java.time.ZoneId
@@ -136,8 +138,9 @@ private fun TargetaPic(vm: ConsumViewModel, a: AnalisiPic, titol: String) {
         )
         a.pic.wMax?.takeIf { it > a.pic.w * 1.1 }?.let { Nota(stringResource(R.string.pics_instantani, num(it))) }
         Spacer(Modifier.height(6.dp))
-        val marques = a.trossos.filter { it.tipus != TipusTros.JA_HI_ERA }.sortedBy { it.desDe }
-            .map { it.desDe to "${horaMinut(it.desDe)} · +${num(it.w / 1000, 1)} kW" }
+        // Quan es va encendre cada cosa que hi havia en el pic (les que ja hi eren abans de la gràfica, no)
+        val marques = a.vegades.filter { v -> a.finestra.firstOrNull()?.let { v.ts >= it.ts } ?: false }.sortedBy { it.ts }
+            .map { it.ts to "${horaMinut(it.ts)} · +${num(it.w / 1000, 1)} kW" }
         GraficaPotencia(a.finestra, vm.config.teLinia, limit, marques, a.pic.ts)
     }
     Targeta {
@@ -158,18 +161,26 @@ private fun TargetaPic(vm: ConsumViewModel, a: AnalisiPic, titol: String) {
 private fun ElementDelPic(vm: ConsumViewModel, e: ElementPic, total: Double) {
     when (e) {
         is AparellPic -> FilaPic(
-            icona(e.aparell.categoria), Primari, e.aparell.nom,
-            listOfNotNull(
+            icona(e.aparell.categoria), if (e.linia) Linia else Primari, e.aparell.nom,
+            if (e.compressor) stringResource(R.string.pics_compressor)
+            else listOfNotNull(
+                stringResource(R.string.pinca2_xip).takeIf { e.linia },
                 e.desDe?.let { stringResource(R.string.pics_des_de, horaMinut(it)) },
-                stringResource(if (e.apres) R.string.pics_apres else R.string.pics_aprenent),
+                when (e.com) {
+                    Com.ENSENYAT -> stringResource(R.string.fitxa_ensenyat)
+                    Com.RECONEGUT -> stringResource(R.string.fitxa_reconegut)
+                    null -> null
+                },
             ).joinToString(" · "),
             e.w, total,
         )
         is SempreEncesPic -> FilaPic(Icons.Outlined.Power, Sempre, stringResource(R.string.historial_sempre_ences), stringResource(R.string.pics_sempre_ences), e.w, total)
-        is LiniaPic -> FilaPic(Icons.Outlined.Bolt, Linia, vm.config.nomLinia, stringResource(R.string.pics_linia), e.w, total)
-        is SenseIdentificarPic -> FilaPic(Icons.Outlined.QuestionMark, Desconegut, stringResource(R.string.historial_sense_identificar), "", e.w, total)
+        is LiniaPic -> if (e.altres) FilaPic(Icons.Outlined.Bolt, Linia, stringResource(R.string.ranquing_linia_altres, vm.config.nomLinia), stringResource(R.string.ranquing_linia_altres_text), e.w, total)
+        else FilaPic(Icons.Outlined.Bolt, Linia, vm.config.nomLinia, stringResource(R.string.pics_linia), e.w, total)
+        is PetitsPic -> FilaPic(Icons.Outlined.LightMode, Sempre, stringResource(R.string.ranquing_petits), stringResource(R.string.ranquing_petits_text), e.w, total)
+        is SenseIdentificarPic -> FilaPic(Icons.Outlined.QuestionMark, Desconegut, stringResource(R.string.historial_sense_identificar), stringResource(R.string.pics_acabava), e.w, total)
         is DesconegutPic -> {
-            var tots by remember(e) { mutableStateOf(false) }
+            var tots by remember(e.vegada.ts) { mutableStateOf(false) }
             Column(
                 Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(10.dp)).background(DesconegutFluix)
                     .border(1.dp, Desconegut.copy(alpha = 0.4f), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
@@ -178,21 +189,17 @@ private fun ElementDelPic(vm: ConsumViewModel, e: ElementPic, total: Double) {
                     Text("+${num(e.w / 1000, 1)} kW", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = DesconegutText)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        when (e.tros.tipus) {
-                            TipusTros.ESTABLE -> stringResource(R.string.pics_estable, horaMinut(e.tros.desDe))
-                            TipusTros.VARIABLE -> stringResource(R.string.pics_variable, horaMinut(e.tros.desDe))
-                            TipusTros.JA_HI_ERA -> stringResource(R.string.pics_ja_hi_era, horaMinut(e.tros.desDe))
-                        },
+                        stringResource(R.string.pics_vegada, horaMinut(e.vegada.ts), durada(e.vegada.minuts)),
                         fontSize = 12.sp, color = Suau,
                     )
                 }
                 // Sense cap aparell no es pot dir què era: la nota surt un sol cop, a sota
-                if (vm.aparellsAEntrenar.isNotEmpty()) {
+                if (e.suggerits.isNotEmpty()) {
                     Text(stringResource(R.string.pics_que_era), Modifier.padding(top = 2.dp), fontSize = 12.5.sp, color = Suau)
-                    val opcions = if (tots) vm.aparellsAEntrenar else e.suggerits
+                    val opcions = if (tots) e.suggerits else e.suggerits.take(3)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        opcions.forEach { ap -> AssistChip(onClick = { vm.respon(e.tros, ap.id) }, label = { Text(ap.nom) }) }
-                        if (!tots) AssistChip(onClick = { tots = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
+                        opcions.forEach { ap -> AssistChip(onClick = { vm.responVegada(e.vegada, ap.id) }, label = { Text(ap.nom) }) }
+                        if (!tots && e.suggerits.size > 3) AssistChip(onClick = { tots = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
                     }
                 }
             }

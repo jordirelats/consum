@@ -125,6 +125,16 @@ class VegadesTest {
         assertEquals(1L, encesDelCanal(ara, 0, 2175.0, listOf(jove), sensBullidor, refs).single().aparellId)
         val llarga = jove.copy(ts = ara - 3720, minuts = 60)
         assertEquals(TipusEnces.SENSE_IDENTIFICAR, encesDelCanal(ara, 0, 2175.0, listOf(llarga), sensBullidor, refs).single().tipus)
+        // En un moment punta (ja passat) no s'endevina res per la potència: el que no té nom al rànquing, tampoc en té aquí
+        assertEquals(TipusEnces.SENSE_IDENTIFICAR, encesDelCanal(ara, 0, 2175.0, listOf(jove), sensBullidor, refs, perPotencia = false).single().tipus)
+        assertEquals(TipusEnces.NOU, encesDelCanal(ara, 0, 960.0, emptyList(), tots, refs, perPotencia = false).single().tipus)
+        // I el que passa per sobre de les vegades en el minut del pic és de la que polsa (la placa), no una cosa nova
+        val cotxe = Vegada(5, 0, ara - 3600, ara - 60, 60, 2800.0, 2.8, 0.0, 1.0, 9, Com.ENSENYAT)
+        val cuina = Vegada(6, 0, ara - 360, ara - 60, 6, 1700.0, 0.17, 0.9, 1.0)
+        val pic = encesDelCanal(ara, 0, 2800.0 + 1700.0 + 1300.0, listOf(cotxe, cuina), tots, refs, perPotencia = false)
+        assertEquals(2800.0, pic.single { it.aparellId == 9L }.w, 0.1)
+        assertEquals(3000.0, pic.single { it.tipus == TipusEnces.SENSE_IDENTIFICAR }.w, 0.1)
+        assertEquals(2, pic.size)
         // Amb el bullidor, per la potència sola no se sap quin dels dos és
         assertEquals(TipusEnces.SENSE_IDENTIFICAR, encesDelCanal(ara, 0, 2175.0, listOf(jove), tots, refs).single().tipus)
         // S'acaba d'encendre una cosa de 960 W: per la potència només pot ser l'estufa

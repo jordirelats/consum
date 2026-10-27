@@ -733,15 +733,11 @@
     </plurals>
     <string name="pics_la_resta">La resta</string>
     <string name="pics_des_de">des de les %1$s</string>
-    <string name="pics_apres">après</string>
-    <string name="pics_aprenent">aprenent</string>
     <string name="pics_sempre_ences">router, aparells en espera…</string>
     <string name="pics_linia">segona pinça, mesurat</string>
-    <!-- Un salt de potència desconegut que es manté -->
-    <string name="pics_estable">des de les %1$s, sense parar</string>
-    <!-- Un salt de potència desconegut que puja i baixa -->
-    <string name="pics_variable">des de les %1$s, puja i baixa</string>
-    <string name="pics_ja_hi_era">ja era encès a les %1$s</string>
+    <string name="pics_compressor">el compressor, trobat sol</string>
+    <string name="pics_acabava">s\'acabava d\'encendre</string>
+    <string name="pics_vegada">des de les %1$s · %2$s</string>
     <string name="pics_que_era">Què era?</string>
     <string name="pics_aprendra">El que li diguis queda après: la propera vegada ja sortirà amb el nom.</string>
     <!-- %1$s són els aparells encesos: «Cotxe 2,7 kW, Placa 1,9 kW» -->

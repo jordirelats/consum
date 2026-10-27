@@ -562,13 +562,11 @@
     </plurals>
     <string name="pics_la_resta">De rest</string>
     <string name="pics_des_de">sinds %1$s</string>
-    <string name="pics_apres">aangeleerd</string>
-    <string name="pics_aprenent">wordt nog aangeleerd</string>
     <string name="pics_sempre_ences">router, apparaten op stand-by…</string>
     <string name="pics_linia">tweede meetklem, gemeten</string>
-    <string name="pics_estable">sinds %1$s, zonder te stoppen</string>
-    <string name="pics_variable">sinds %1$s, wisselend</string>
-    <string name="pics_ja_hi_era">stond om %1$s al aan</string>
+    <string name="pics_compressor">de compressor, zelf gevonden</string>
+    <string name="pics_acabava">was net aangezet</string>
+    <string name="pics_vegada">sinds %1$s · %2$s</string>
     <string name="pics_que_era">Wat was het?</string>
     <string name="pics_aprendra">Wat je hier kiest, onthoudt de app: de volgende keer staat de naam erbij.</string>
     <string name="avis_potencia_ences">Nu: %1$s. Zet je nog iets aan, dan kan de hoofdzekering eruit springen.</string>
