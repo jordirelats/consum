@@ -57,6 +57,7 @@ import cat.jordi.consum.ui.PantallaAparells
 import cat.jordi.consum.ui.PantallaAra
 import cat.jordi.consum.ui.PantallaConnecta
 import cat.jordi.consum.ui.PantallaEntrena
+import cat.jordi.consum.ui.PantallaFitxa
 import cat.jordi.consum.ui.PantallaHistorial
 import cat.jordi.consum.ui.PantallaPassat
 import cat.jordi.consum.ui.Sepia
@@ -154,6 +155,7 @@ private fun Arrel(vm: ConsumViewModel) {
         Pantalla.QUESTIONARI -> stringResource(R.string.principal_revisem_casa)
         Pantalla.PREU -> stringResource(R.string.principal_preu_llum)
         Pantalla.PASSAT -> stringResource(R.string.principal_estona_passada)
+        Pantalla.APARELL -> vm.aparells.firstOrNull { it.id == vm.aparellObert }?.nom ?: ""
         Pantalla.PRINCIPAL -> stringResource(if (vm.pestanya == Pestanya.ARA) R.string.principal_casa else vm.pestanya.nomId)
     }
     // Un període anterior de l'Historial té la pàgina d'un altre color (maqueta 10)
@@ -231,6 +233,7 @@ private fun Arrel(vm: ConsumViewModel) {
                 Pantalla.QUESTIONARI -> PantallaQuestionari(vm)
                 Pantalla.PREU -> PantallaPreu(vm)
                 Pantalla.PASSAT -> PantallaPassat(vm)
+                Pantalla.APARELL -> PantallaFitxa(vm)
                 Pantalla.PRINCIPAL -> when (vm.pestanya) {
                     Pestanya.ARA -> PantallaAra(vm)
                     Pestanya.APARELLS -> PantallaAparells(vm)

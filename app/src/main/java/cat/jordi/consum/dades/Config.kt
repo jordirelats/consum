@@ -96,6 +96,16 @@ class Config(context: Context) {
         get() = p.getLong("nevera_mirada", 0)
         set(v) = p.edit().putLong("nevera_mirada", v).apply()
 
+    /** Quina part del temps funciona el compressor de la nevera (de 0 a 1), mirat a les nits (maqueta 13). */
+    var neveraCicle: Double
+        get() = p.getFloat("nevera_cicle", 0f).toDouble()
+        set(v) = p.edit().putFloat("nevera_cicle", v.toFloat()).apply()
+
+    /** Fins a quin minut s'han buscat les vegades (maqueta 13, s; 0: encara cap). */
+    var vegadesFins: Long
+        get() = p.getLong("vegades_fins", 0)
+        set(v) = p.edit().putLong("vegades_fins", v).apply()
+
     /** Quan s'han buscat per últim cop els episodis de la línia i el que es repeteix (maqueta 12, s). */
     var liniaMirada: Long
         get() = p.getLong("linia_mirada", 0)

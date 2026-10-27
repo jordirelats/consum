@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.R
+import cat.jordi.consum.dades.Funcionament
 import cat.jordi.consum.Vigilancia
 import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.dades.Pais
@@ -187,6 +189,22 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                     placeholder = { Text(stringResource(R.string.connecta_pinca_2_exemple)) }, singleLine = true,
                     supportingText = { Text(stringResource(R.string.connecta_pinca_2_ajuda)) },
                 )
+                // Quins aparells hi ha a la línia (maqueta 13): es tria aquí, un cop
+                // Ni els sempre encesos ni un que es digui com la línia (és la línia mateixa)
+                val candidats = vm.aparells.filter { it.funciona != Funcionament.SEMPRE && !it.nom.equals(nomLinia.trim(), ignoreCase = true) }
+                if (nomLinia.isNotBlank() && config.teLinia && candidats.isNotEmpty()) {
+                    Text(stringResource(R.string.connecta_linia_aparells), Modifier.padding(top = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    candidats.forEach { a ->
+                        Row(
+                            Modifier.fillMaxWidth().toggleable(a.linia, role = Role.Checkbox) { vm.posaALinia(a, it) }.padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(a.linia, null)
+                            Text(a.nom, fontSize = 14.sp)
+                        }
+                    }
+                    Nota(stringResource(R.string.connecta_linia_aparells_nota))
+                }
             }
 
             Targeta {
@@ -260,6 +278,8 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                     config.host = host.trim()
                     info?.let { config.model = it.model }
                     config.idDispositiu = netejaId(idNuvol)
+                    // Amb la pinça 2 nova (o sense), les vegades es tornen a buscar de cap a peus (maqueta 13)
+                    if (config.nomLinia.isBlank() != nomLinia.isBlank()) vm.tornaABuscarVegades()
                     config.nomLinia = nomLinia
                     config.servidorNuvol = servidor
                     config.clauNuvol = clau

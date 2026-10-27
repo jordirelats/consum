@@ -93,33 +93,18 @@ fun PantallaHistorial(vm: ConsumViewModel) {
         }
         // De l'any no se'n busquen: caldria llegir-ne tots els minuts
         if (vm.periode != Periode.ANY) MomentsPunta(vm)
-        Targeta {
-            fun pct(x: Double) = if (r.total > 0) "${num(x / r.total * 100)} %" else "—"
-            if (vm.config.teLinia) {
-                FilaConsum(
-                    Icons.Outlined.Bolt, LiniaFluix, Linia, vm.config.nomLinia, "${pct(r.linia)} · ${euros(r.euros.linia)}",
-                    "${num(r.linia, 2)} kWh", 3,
-                )
+        // Qui ha gastat més, cada aparell un cop, i la resta a part (maqueta 13)
+        r.ranquing?.let { rq ->
+            BarraConsum(rq)
+            Targeta {
+                TitolTargeta(stringResource(R.string.ranquing_titol))
+                LlistaRanquing(rq) { vm.obreAparell(it) }
             }
-            FilaConsum(
-                Icons.Outlined.Power, SempreFluix, Sempre, stringResource(R.string.historial_sempre_ences),
-                r.fonsW?.let { stringResource(R.string.historial_fons, num(it), pct(r.sempre), euros(r.euros.sempre)) }
-                    ?: stringResource(R.string.historial_cal_un_dia),
-                "${num(r.sempre, 2)} kWh", 3,
-            )
-            FilaConsum(
-                Icons.Outlined.QuestionMark, DesconegutFluix, Desconegut, stringResource(R.string.historial_sense_identificar),
-                "${pct(r.desconegut)} · ${euros(r.euros.desconegut)}", "${num(r.desconegut, 2)} kWh", 1,
-            )
-            FilaConsum(
-                Icons.Outlined.Euro, SempreFluix, Sempre, stringResource(R.string.historial_costos_fixos),
-                stringResource(R.string.historial_no_depenen_us), euros(r.euros.fixos),
-            )
+            Targeta {
+                TitolTargeta(stringResource(R.string.ranquing_resta_titol))
+                RestaConsum(rq, r.fonsW, vm.config.nomLinia, r.euros.fixos)
+            }
         }
-        Nota(
-            stringResource(R.string.historial_nota_aparells),
-            Modifier.padding(horizontal = 4.dp),
-        )
     }
 }
 

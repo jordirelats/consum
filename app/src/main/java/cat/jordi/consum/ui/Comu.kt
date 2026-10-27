@@ -70,6 +70,7 @@ val DesconegutText = Color(0xFFB45309)
 val Linia = Color(0xFF2563EB)
 val LiniaFluix = Color(0xFFDBEAFE)
 val Ok = Color(0xFF15803D)
+val OkFluix = Color(0xFFDCFCE7)
 /** El que ve del núvol de Shelly i encara és aproximat. */
 val Nuvol = Color(0xFF7C3AED)
 val NuvolFluix = Color(0xFFEDE9FE)
@@ -195,6 +196,7 @@ fun Punts(n: Int) {
 fun FilaConsum(
     icona: ImageVector, fons: Color, color: Color, titol: String, subtitol: String, valor: String,
     punts: Int? = null, subtitolColor: Color = Suau, modifier: Modifier = Modifier, liniesSubtitol: Int = 1,
+    subValor: String? = null,
 ) {
     Row(modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
         Bombolla(icona, fons, color)
@@ -205,6 +207,7 @@ fun FilaConsum(
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(valor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            if (subValor != null) Text(subValor, fontSize = 12.sp, color = Suau)
             if (punts != null) {
                 Spacer(Modifier.size(4.dp))
                 Punts(punts)

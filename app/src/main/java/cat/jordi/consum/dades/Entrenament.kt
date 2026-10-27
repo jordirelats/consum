@@ -43,7 +43,9 @@ data class Referencia(
         /** [ambInterval]: l'aparell s'engega sol, i se'n fa servir l'interval de les preguntes respostes. */
         fun de(aparellId: Long, mostres: List<Mostra>, ambInterval: Boolean = false): Referencia? {
             if (mostres.isEmpty()) return null
-            val durades = mostres.mapNotNull { it.durada }
+            // En directe, la durada és des que es va marcar «L'he encès» fins a «L'he apagat», no el que dura cada vegada
+            // (una rentadora: 90 minuts, amb escalfaments de 15): no compta per a la firma
+            val durades = mostres.filter { it.font != "directe" }.mapNotNull { it.durada }
             val amb = if (ambInterval) mostres.filter { it.wMin != null && it.wMax != null } else emptyList()
             return Referencia(
                 aparellId, mediana(mostres.map { it.dp }), mostres.size,
@@ -133,42 +135,6 @@ class Explicador(referencies: List<Referencia>) {
             tria.membres.map { it.aparellId to it.min + if (ample > 0) (it.max - it.min) / ample * (explicat - tria.min) else 0.0 }
         }
         return Explicacio(parts, max(exces - tria.max, 0.0))
-    }
-}
-
-/**
- * La durada de la firma (maqueta 12), aplicada al repartiment minut a minut: un aparell que cada vegada funciona uns pocs
- * minuts no pot ser una estona seguida molt més llarga (més de 3 vegades la seva durada, i de 5 minuts); i si el seu cicle
- * és curt (15 minuts o menys), tampoc una de molt més curta (menys de la meitat, sense el primer i l'últim minut, que són
- * a mitges i sovint no s'expliquen): un minut solt d'un altre aparell. Aquells
- * minuts no són seus, i passen al residu. Sense això, un interval après (una estufa de 0,9–1,1 kW que s'engega 3 minuts)
- * es quedava qualsevol minut d'aquesta potència. [minuts]: (inici del minut, explicació), en ordre.
- */
-fun ajustaDurades(minuts: List<Pair<Long, Explicacio>>, refs: Map<Long, Referencia>): List<Explicacio> {
-    val treure = Array(minuts.size) { mutableSetOf<Long>() }
-    for (r in refs.values) {
-        val durada = r.duradaMin ?: continue
-        val limit = max(5.0, 3 * durada)
-        val minim = if (durada <= 15) max(0.0, durada - 2) / 2 else 0.0
-        var inici = -1
-        fun tanca(fi: Int) {
-            if (inici >= 0 && (fi - inici > limit || fi - inici < minim)) for (i in inici until fi) treure[i] += r.aparellId
-            inici = -1
-        }
-        for (i in minuts.indices) {
-            val hi = minuts[i].second.aparells.any { it.first == r.aparellId }
-            val seguit = i > 0 && minuts[i].first - minuts[i - 1].first == 60L
-            if (!hi || !seguit) tanca(i)
-            if (hi && inici < 0) inici = i
-        }
-        tanca(minuts.size)
-    }
-    return minuts.mapIndexed { i, (_, e) ->
-        if (treure[i].isEmpty()) e
-        else {
-            val (fora, queden) = e.aparells.partition { it.first in treure[i] }
-            Explicacio(queden, e.residu + fora.sumOf { it.second })
-        }
     }
 }
 

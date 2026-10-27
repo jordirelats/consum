@@ -118,20 +118,6 @@ class EpisodisTest {
     }
 
     @Test
-    fun unAparellCurtNoEsQuedaUnaEstonaLlarga() {
-        // L'estufa funciona 3 minuts cada vegada: 3 minuts seguits són seus, 20 no
-        val refs = mapOf(1L to Referencia(1, 1000.0, 5, 3.0, 900.0, 1100.0))
-        val e = Explicacio(listOf(1L to 1000.0), 0.0)
-        val curt = (0 until 3).map { t0 + it * 60L to e }
-        val llarg = (0 until 20).map { t0 + 3600 + it * 60L to e }
-        val r = ajustaDurades(curt + llarg, refs)
-        assertTrue(r.take(3).all { it.aparells.isNotEmpty() && it.residu == 0.0 })
-        assertTrue(r.drop(3).all { it.aparells.isEmpty() && it.residu == 1000.0 })
-        // Sense durada coneguda, no es toca res
-        assertEquals(curt.map { it.second } + llarg.map { it.second }, ajustaDurades(curt + llarg, mapOf(1L to Referencia(1, 1000.0, 5, null))))
-    }
-
-    @Test
     fun lIntervalNoComencaAZero() {
         // Un minut per sota de la base dins de l'episodi no fa que l'interval comenci a 0
         val e = Episodi(t0, t0 + 14 * 60L, 15, 490.0, 0.1, 0.0, 0.7, List(13) { 490.0 } + listOf(0.0, 0.0))

@@ -18,7 +18,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:locale="ca">
     <string name="app_name" translatable="false">Consum</string>
 
-    <!-- La llengua -->
     <!-- El codi de la llengua d'aquesta traducció (BCP 47). Decideix com s'escriuen els números i els dies: posa-hi el teu, per exemple en-GB o es-ES. -->
     <string name="codi_idioma">ca-ES</string>
     <!-- Com s'escriu un import en euros: %1$s és el número ja escrit (12,50). -->
@@ -71,7 +70,6 @@
     <string name="pais_nl">Països Baixos</string>
     <string name="pais_altre">Un altre</string>
 
-    <!-- Les franges horàries del preu -->
     <!-- Espanya, tarifa 2.0TD: les hores cares (punta) -->
     <string name="franja_punta">Punta</string>
     <!-- Espanya, tarifa 2.0TD: les hores de preu mitjà (llano) -->
@@ -99,7 +97,6 @@
     <string name="periode_setmana">Setmana</string>
     <string name="periode_mes">Mes</string>
 
-    <!-- Comú a diverses pantalles -->
     <!-- %1$s i %2$s són imports en euros -->
     <string name="comu_consum_mes_fixos">%1$s de consum + %2$s de fixos</string>
     <!-- Als Països Baixos els fixos poden ser negatius -->
@@ -129,7 +126,6 @@
     <string name="error_github">GitHub ha respost %1$d</string>
     <string name="error_baixada">No s\'ha pogut baixar (HTTP %1$d)</string>
 
-    <!-- La notificació de consum inesperat -->
     <!-- El nom del canal de notificacions, a la configuració d'Android -->
     <string name="avis_canal">Consum inesperat</string>
     <string name="avis_canal_descripcio">Quan el consum es dispara i l\'app no sap què és</string>
@@ -157,7 +153,6 @@
     <!-- Descripció del botó de sincronitzar (per a TalkBack) -->
     <string name="principal_recull_dades">Recull les dades del Shelly</string>
 
-    <!-- Pantalla Ara -->
     <!-- La pastilla de dalt: d'on arriba la lectura -->
     <string name="ara_origen_local">A casa · directe, cada segon</string>
     <string name="ara_origen_nuvol">Des de fora · núvol de Shelly</string>
@@ -220,24 +215,17 @@
     <!-- Les hores de l'eix de baix de la gràfica (6 h, 12 h...) -->
     <string name="grafiques_hora">%1$d:00</string>
 
-    <!-- Pantalla Historial -->
     <!-- El consum que no s'apaga mai (fons) -->
     <string name="historial_sempre_ences">Sempre encès</string>
     <!-- %1$s són els watts de fons, %2$s el percentatge del total (25 %) i %3$s el que ha costat -->
-    <string name="historial_fons">%1$s W de fons · %2$s · %3$s</string>
     <string name="historial_cal_un_dia">cal un dia de dades</string>
     <string name="historial_sense_identificar">Sense identificar</string>
     <string name="historial_costos_fixos">Costos fixos</string>
     <string name="historial_no_depenen_us">no depenen de l\'ús</string>
-    <string name="historial_nota_aparells">El consum de cada aparell que l\'app ja coneix és a la pestanya Aparells.</string>
     <string name="historial_aproximat">Una part és aproximada: s\'ha calculat des de fora, amb el comptador del núvol de Shelly.</string>
 
     <!-- Pantalla Aparells -->
     <string name="aparells_aquest_mes">Aquest mes, fins ara</string>
-    <!-- La llegenda dels punts: com de segur és cada número -->
-    <string name="aparells_llegenda_mesurat">mesurat o après</string>
-    <string name="aparells_llegenda_etiqueta">etiqueta</string>
-    <string name="aparells_llegenda_tipic">típic o sense identificar</string>
     <!-- %1$s són els watts que no s'apaguen mai i %2$s el que costen en un any -->
     <string name="aparells_consell_fons">Sempre encès: %1$s W dia i nit són %2$s € l\'any. Mira quins aparells es queden en espera.</string>
     <!-- %1$s és el nom de la línia de la segona pinça, %2$d el percentatge en hores cares i %3$s l'estalvi en euros -->
@@ -247,53 +235,24 @@
         <item quantity="other">%1$d aparells tenen un valor típic. Escaneja\'n l\'etiqueta perquè el número sigui més segur.</item>
     </plurals>
     <string name="aparells_que_pots_fer">Què pots fer</string>
-    <string name="aparells_mesurat_mes">Mesurat aquest mes</string>
-    <!-- La línia que mesura la segona pinça del Shelly -->
-    <string name="aparells_linia_subtitol">%1$s kWh · segona pinça</string>
     <!-- El consum que no s'apaga mai (fons) -->
     <string name="aparells_sempre_ences">Sempre encès</string>
-    <!-- %1$s són els kWh repartits a l'aparell aquest mes i %2$s els que diu l'etiqueta per a un mes -->
-    <string name="aparells_aparell_apres">%1$s kWh · après · l\'etiqueta diu %2$s kWh/mes</string>
-    <string name="aparells_aparell_aprenent">%1$s kWh · aprenent · l\'etiqueta diu %2$s kWh/mes</string>
-    <string name="aparells_sense_identificar">Sense identificar</string>
-    <string name="aparells_residu">%1$s kWh · entrena per separar-ho</string>
-    <string name="aparells_costos_fixos">Costos fixos</string>
     <!-- %1$s diu què hi ha als costos fixos (potència, comptador i bo social...) -->
-    <string name="aparells_fixos_subtitol">%1$s · no depenen de l\'ús</string>
     <string name="aparells_cap_aparell">Encara no hi ha cap aparell</string>
     <string name="aparells_comenca_questionari">Comença pel qüestionari: anirem estança per estança perquè no te\'n deixis cap.</string>
     <!-- El botó que obre el qüestionari -->
     <string name="aparells_revisem_casa">Revisem la casa</string>
-    <string name="aparells_segons_etiqueta">Els teus aparells, segons l\'etiqueta</string>
-    <!-- %1$s és el preu mitjà del kWh i %2$s el que sumen al mes els aparells encara no entrenats -->
-    <string name="aparells_nota_etiqueta">Encara no entrenats: és el que haurien de gastar, no el que gasten, a %1$s €/kWh de mitjana. Sumen %2$s al mes.</string>
-    <!-- L'aparell que es diu com la línia de la segona pinça: es mesura directament -->
-    <string name="aparells_mesurat_pinca2">mesurat a la pinça 2 · l\'etiqueta diu %1$s kWh/any</string>
-    <!-- %1$s són els kWh l'any i %2$s d'on surt el valor (Etiqueta, Placa, Valor típic...) -->
-    <string name="aparells_kwh_any_font">%1$s kWh/any · %2$s</string>
     <!-- %1$s és un import en euros -->
-    <string name="aparells_euros_mes">%1$s/mes</string>
     <string name="aparells_torna_questionari">Torna a fer el qüestionari</string>
     <!-- La fitxa d'un aparell: %1$s és la classe de l'etiqueta (A, B...) -->
     <string name="aparells_classe">Classe energètica %1$s</string>
     <string name="aparells_kwh_euros_any">%1$s kWh l\'any ≈ %2$s € l\'any</string>
     <!-- El consum en espera (stand-by) -->
     <string name="aparells_en_espera">En espera: %1$s W</string>
-    <!-- %1$s són els watts de la referència i %2$d les mostres que l'usuari ha ensenyat -->
-    <plurals name="aparells_referencia">
-        <item quantity="one">Referència apresa: %1$s W, d\'%2$d mostra</item>
-        <item quantity="other">Referència apresa: %1$s W, de %2$d mostres</item>
-    </plurals>
     <!-- El mateix, i %3$s són els minuts que sol estar encès -->
-    <plurals name="aparells_referencia_durada">
-        <item quantity="one">Referència apresa: %1$s W, d\'%2$d mostra · sol estar encès %3$s min</item>
-        <item quantity="other">Referència apresa: %1$s W, de %2$d mostres · sol estar encès %3$s min</item>
-    </plurals>
     <string name="aparells_torna_entrenar">Torna a entrenar-lo</string>
     <string name="aparells_es_tipic">És un valor típic: escaneja l\'etiqueta per afinar-lo.</string>
-    <string name="aparells_dacord">D\'acord</string>
     <string name="aparells_esborra">Esborra\'l</string>
-    <!-- Quan el mòbil no té cap app de càmera (o de fitxers) que pugui obrir -->
     <!-- El que llegeix el lector de pantalla en arribar a les gràfiques -->
     <string name="grafiques_desc_potencia">Gràfica de la potència: el màxim, %1$s kW a les %2$s; l\'última, %3$s kW.</string>
     <string name="grafiques_desc_barres">Gràfica del consum: el més alt, %1$s kWh (%2$s).</string>
@@ -335,7 +294,6 @@
     <string name="entrena_un_altre">Un altre…</string>
     <string name="entrena_no_ho_se">No ho sé</string>
 
-    <!-- Pantalla Afegir -->
     <!-- Les tres pestanyes de dalt: com s'afegeix l'aparell -->
     <string name="afegir_via_qr">Etiqueta</string>
     <!-- La placa de característiques de l'aparell -->
@@ -393,7 +351,6 @@
     <string name="afegir_hores_ajuda">Comptant només quan escalfa o fa força. Per exemple, un bullidor uns 7 minuts: 0,1.</string>
     <string name="afegir_kwh_any_aprox">≈ %1$s kWh l\'any</string>
 
-    <!-- Pantalla Qüestionari -->
     <!-- Les estances del qüestionari, una per pas -->
     <string name="questionari_estanca_calefaccio">Calefacció i aigua calenta</string>
     <string name="questionari_estanca_cuina">Cuina</string>
@@ -447,7 +404,6 @@
     <string name="questionari_seguent">Següent: %1$s</string>
     <string name="questionari_fet">Fet</string>
 
-    <!-- Pantalla Preu: escanejar el contracte o la factura -->
     <!-- Els preus del contracte dels Països Baixos: es diuen com al contracte, en neerlandès -->
     <string name="escaneig_camp_nl_normaal">Leveringstarief · Normaal</string>
     <string name="escaneig_camp_nl_dal">Leveringstarief · Dal</string>
@@ -561,7 +517,6 @@
     <string name="connecta_comenca">Comença</string>
     <string name="connecta_prova_primer">Prova primer el Shelly a casa, o el núvol.</string>
 
-    <!-- Pantalla del preu de la llum -->
     <!-- El resum de la tarifa a la Configuració; %1$s és la potència contractada en kW -->
     <string name="preu_resum_es_fix">Espanya · preu fix · %1$s kW</string>
     <string name="preu_resum_es_franges">Espanya · 3 franges · %1$s kW</string>
@@ -662,7 +617,6 @@
     <string name="vm_entrena_desat_encen_apres">%1$s: +%2$s W. Desat; ja en té %3$d mostres.</string>
     <string name="vm_entrena_desat_apaga_apres">%1$s: −%2$s W. Desat; ja en té %3$d mostres.</string>
 
-    <!-- La potència contractada (0.13) -->
     <!-- El nom del canal de notificacions -->
     <string name="avis_canal_potencia">Prop de la potència contractada</string>
     <string name="avis_canal_potencia_descripcio" formatted="false">Quan la casa passa del 90 % de la potència contractada</string>
@@ -712,7 +666,6 @@
     <string name="connecta_cada_15_text">Sense icona fixa, però l\'avís pot arribar quan ja ha saltat.</string>
     <string name="connecta_cal_permis">Per avisar-te, l\'app necessita el permís de notificacions.</string>
 
-    <!-- Pantalla Afegir, pestanya Marca i model -->
     <!-- El nom de la pestanya, al costat de «QR etiqueta» i «Placa» -->
     <string name="marca_via">Model</string>
     <string name="marca_marca">Marca</string>
@@ -859,16 +812,7 @@
     <string name="entrena_nota_sense_entrenar">Els aparells que estan sempre encesos o que s\'engeguen sols no cal entrenar-los.</string>
 
     <!-- Aparells: el que està sempre encès i el que s\'engega sol -->
-    <string name="aparells_titol_sempre">Sempre encès · %1$s W</string>
-    <string name="aparells_sempre_subtitol">dia i nit · %1$s al mes</string>
     <string name="aparells_altres_espera">Altres en espera</string>
-    <string name="aparells_altres_espera_text">carregadors, teles apagades…</string>
-    <string name="aparells_titol_sols">S\'engeguen sols</string>
-    <string name="aparells_sols_subtitol">no cal entrenar-los ni t\'avisarà per ells</string>
-    <string name="aparells_sol_trobat">el compressor, trobat sol a les dades</string>
-    <string name="aparells_sol_interval">après d\'una resposta</string>
-    <string name="aparells_sol_apres">après</string>
-    <string name="aparells_sol_no_encara">encara no l\'he reconegut</string>
     <string name="aparells_com_funciona">Com funciona</string>
 
     <!-- Afegir un aparell sense etiqueta, placa ni model -->
@@ -1015,20 +959,80 @@
     <!-- Per a la lectura de pantalla: la ratlla de la setmana amb un punt per a cada cop -->
     <string name="repetit_tira">Els %1$d cops de l\'última setmana</string>
     <string name="repetit_que_es">Què és?</string>
-    <!-- La línia de la segona pinça i els aparells que hi ha connectats; %1$s és el nom de la línia -->
-    <string name="aparells_a_la_linia">A la línia «%1$s»</string>
-    <string name="linia_titol">%1$s · pinça 2</string>
-    <string name="linia_que_hi_ha">Què hi ha connectat en aquesta línia?</string>
-    <string name="linia_mes">Més…</string>
-    <string name="linia_nota">Aquests aparells es mesuren aquí. L\'app n\'aprèn la firma sola i ja no els busca a la resta de la casa.</string>
-    <string name="linia_encara_no">Encara no l\'ha vist funcionar</string>
-    <!-- %1$d: quantes vegades l'ha vist; %2$s: la potència (W) -->
-    <plurals name="linia_apres">
-        <item quantity="one">%2$s W · après d\'%1$d cop</item>
-        <item quantity="other">%2$s W · après de %1$d cops</item>
-    </plurals>
-    <string name="linia_altres">Altres de la línia</string>
-    <string name="linia_altres_text">el que no és cap d\'aquests aparells</string>
     <!-- A «Què hi ha encès ara»: %1$s W i el nom de la línia -->
     <string name="ara_a_la_linia">%1$s W · a la línia «%2$s»</string>
+
+    <!-- Maqueta 13: les estadístiques sense barrejar res. El rànquing d'aparells d'un període -->
+    <string name="ranquing_titol">Qui ha gastat més</string>
+    <string name="ranquing_resta_titol">La resta</string>
+    <plurals name="ranquing_cops">
+        <item quantity="one">%d cop</item>
+        <item quantity="other">%d cops</item>
+    </plurals>
+    <plurals name="ranquing_ensenyats">
+        <item quantity="one">%d ensenyat per tu</item>
+        <item quantity="other">%d ensenyats per tu</item>
+    </plurals>
+    <!-- La nevera: %1$s són els W del compressor -->
+    <string name="ranquing_compressor">el compressor, %1$s W, trobat sol</string>
+    <string name="ranquing_linia_mesurada">mesurat a la pinça 2</string>
+    <!-- La marca dels aparells que són a la línia de la segona pinça (curta) -->
+    <string name="pinca2_xip">pinça 2</string>
+    <string name="ranquing_sempre">Sempre encès</string>
+    <string name="ranquing_sempre_text">%1$s W dia i nit: router, aparells en espera…</string>
+    <string name="ranquing_petits">Petits consums</string>
+    <string name="ranquing_petits_text">menys de 250 W: llums, tele, carregadors…</string>
+    <string name="ranquing_sense_id">Sense identificar</string>
+    <string name="ranquing_sense_id_text">vegades que l\'app no sap de qui són · a Entrena</string>
+    <!-- %1$s és el nom de la línia de la pinça 2 -->
+    <string name="ranquing_linia_altres">%1$s, altres</string>
+    <string name="ranquing_linia_altres_text">a la pinça 2, cap dels seus aparells</string>
+    <string name="ranquing_sense_detall">Sense detall</string>
+    <string name="ranquing_sense_detall_text">de fora de casa o del núvol: no se sap de qui és</string>
+    <!-- La llegenda de la barra de tot el consum; %1$s és un percentatge -->
+    <string name="ranquing_llegenda_aparells">aparells %1$s %%</string>
+    <string name="ranquing_llegenda_sempre">sempre encès %1$s %%</string>
+    <string name="ranquing_llegenda_petits">petits %1$s %%</string>
+    <string name="ranquing_llegenda_sense">sense identificar %1$s %%</string>
+    <string name="ranquing_cap">Encara no hi ha cap vegada d\'un aparell conegut. Ensenya\'ls a Entrena.</string>
+    <!-- La llista d'aparells -->
+    <string name="aparells_teus">Els teus aparells</string>
+    <string name="aparells_teus_nota">Cada un, un cop, amb el que ha gastat de debò aquest mes.</string>
+    <string name="estat_trobat_sol">trobat sol</string>
+    <string name="estat_apres_pinca">après de la pinça 2</string>
+    <string name="estat_ensenyat">ensenyat</string>
+    <string name="estat_apres">après</string>
+    <string name="estat_aprenent">aprenent</string>
+    <string name="aparells_sense_mesurar">Encara sense mesurar</string>
+    <string name="aparells_sense_mesurar_nota">El que haurien de gastar segons l\'etiqueta, a part: no és el que gasten.</string>
+    <string name="aparells_sense_mesurar_fila">encara no · l\'etiqueta: %1$s kWh/mes</string>
+    <string name="aparells_sempre_encesos">Sempre encesos</string>
+    <string name="aparells_sempre_encesos_nota">Van dins del que la casa gasta sempre.</string>
+    <!-- La fitxa d'un aparell -->
+    <string name="fitxa_aquest_mes">aquest mes</string>
+    <plurals name="fitxa_cops_mes">
+        <item quantity="one">aquest mes · %d cop</item>
+        <item quantity="other">aquest mes · %d cops</item>
+    </plurals>
+    <!-- La nevera: %1$s W del compressor, %2$s el percentatge del temps que funciona -->
+    <string name="fitxa_compressor">El compressor, %1$s W, funciona el %2$s %% del temps (trobat sol a les dades).</string>
+    <!-- %1$s: la potència, la durada i com és -->
+    <string name="fitxa_cada_vegada">Cada vegada: %1$s</string>
+    <string name="fitxa_on_connectat">On està connectat?</string>
+    <string name="fitxa_resta_casa">A la resta de la casa</string>
+    <string name="fitxa_resta_casa_text">L\'app el reconeix per la seva firma.</string>
+    <!-- %1$s és el nom de la línia de la pinça 2 -->
+    <string name="fitxa_pinca2">A la pinça 2 (%1$s)</string>
+    <string name="fitxa_pinca2_text">Es mesura allà: l\'app l\'aprèn sola d\'aquella línia.</string>
+    <string name="fitxa_ultimes">Les últimes vegades</string>
+    <string name="fitxa_cap_vegada">Encara no l\'ha vist funcionar.</string>
+    <string name="fitxa_nota">El que li ensenyes és seu. El que l\'app hi reconeix, ho pots treure si no era ell.</string>
+    <string name="fitxa_ensenyat">ensenyat per tu</string>
+    <string name="fitxa_reconegut">reconegut</string>
+    <string name="fitxa_no_era">No era ell</string>
+    <!-- %1$d minuts i %2$s kW -->
+    <string name="fitxa_vegada_detall">%1$d min · %2$s kW</string>
+    <!-- La configuració de la pinça 2 -->
+    <string name="connecta_linia_aparells">Quins aparells hi ha connectats?</string>
+    <string name="connecta_linia_aparells_nota">Es tria aquí, un cop. A la llista d\'aparells, aquests porten la marca «pinça 2». La pinça només ajuda a reconèixer-los millor: el seu consum surt a l\'aparell, no a part.</string>
 </resources>

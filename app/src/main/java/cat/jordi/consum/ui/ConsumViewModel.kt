@@ -26,8 +26,9 @@ import cat.jordi.consum.dades.Periode
 import cat.jordi.consum.dades.Pic
 import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Punt
+import cat.jordi.consum.dades.Fitxa
 import cat.jordi.consum.dades.Referencia
-import cat.jordi.consum.dades.Repartiment
+import cat.jordi.consum.dades.Vegada
 import cat.jordi.consum.dades.Repetit
 import cat.jordi.consum.dades.Resum
 import cat.jordi.consum.dades.Tarifa
@@ -48,7 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-enum class Pantalla { CONNECTA, PRINCIPAL, AFEGIR, QUESTIONARI, PREU, PASSAT }
+enum class Pantalla { CONNECTA, PRINCIPAL, AFEGIR, QUESTIONARI, PREU, PASSAT, APARELL }
 
 enum class Pestanya(@StringRes val nomId: Int) {
     ARA(R.string.pestanya_ara), APARELLS(R.string.pestanya_aparells), ENTRENA(R.string.pestanya_entrena), HISTORIAL(R.string.pestanya_historial)
@@ -137,7 +138,15 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         private set
     var explicador by mutableStateOf(Explicador(emptyList()))
         private set
-    var repartiment by mutableStateOf<Repartiment?>(null)
+    /** La fitxa d'un aparell (maqueta 13): quin és (desat, per si es gira la pantalla) i què ha gastat. */
+    private var aparellObertEstat by mutableStateOf(desat.get<Long>("aparell_obert"))
+    var aparellObert: Long?
+        get() = aparellObertEstat
+        private set(v) {
+            aparellObertEstat = v
+            desat["aparell_obert"] = v
+        }
+    var fitxa by mutableStateOf<Fitxa?>(null)
         private set
     var preguntes by mutableStateOf<List<Pregunta>>(emptyList())
         private set
@@ -294,11 +303,13 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         val p = periode
         val d = diaHistorial
         val dades = withContext(Dispatchers.IO) {
+            // Si s'ha ensenyat, respost o canviat alguna cosa, de qui és cada vegada (maqueta 13)
+            repo.reassignaVegades()
             Dades(
                 repo.analitzaPics(repo.pics(p, dia = d)),
                 repo.serie24h(), repo.avui(), repo.fonsW(), repo.resum(p, d), repo.resumMes(), repo.aparells(),
                 repo.infoPreu(), repo.consellLinia(),
-                repo.referencies(), repo.repartimentMes(), repo.preguntesPendents(), repo.aparellsAEntrenar(),
+                repo.referencies(), repo.preguntesPendents(), repo.aparellsAEntrenar(),
                 repo.referenciesLinia(), repo.explicadorLinia(), repo.repetitsPendents(),
             )
         }
@@ -310,7 +321,6 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         consellLinia = dades.consell
         referencies = dades.referencies
         explicador = Explicador(dades.referencies.values.toList())
-        repartiment = dades.repartiment
         preguntes = dades.preguntes
         aparellsAEntrenar = dades.aEntrenar
         referenciesLinia = dades.referenciesLinia
@@ -323,13 +333,40 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
             resum = dades.resum
             pics = dades.pics
         }
+        if (pantalla == Pantalla.APARELL) aparellObert?.let { id ->
+            val f = withContext(Dispatchers.IO) { repo.fitxa(id) }
+            if (aparellObert == id) fitxa = f
+        }
+    }
+
+    /** Obre la fitxa d'un aparell. */
+    fun obreAparell(a: Aparell) {
+        aparellObert = a.id
+        fitxa = null
+        pantalla = Pantalla.APARELL
+        viewModelScope.launch {
+            val f = withContext(Dispatchers.IO) { repo.fitxa(a.id) }
+            // Si mentrestant se n'ha obert un altre, aquesta ja no és la seva
+            if (aparellObert == a.id) fitxa = f
+        }
+    }
+
+    /** S'ha posat o tret la pinça 2: les vegades es tornaran a buscar de cap a peus. */
+    fun tornaABuscarVegades() = repo.tornaABuscarVegades()
+
+    /** «No era ell»: aquesta vegada no era d'aquest aparell. */
+    fun noEraEll(v: Vegada) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.noEraEll(v) }
+            refrescaAra()
+        }
     }
 
     private class Dades(
         val pics: List<AnalisiPic>,
         val serie: List<Punt>, val avui: Avui, val fons: Double?, val resum: Resum, val mes: Resum,
         val aparells: List<Aparell>, val preu: InfoPreu, val consell: ConsellLinia?,
-        val referencies: Map<Long, Referencia>, val repartiment: Repartiment, val preguntes: List<Pregunta>,
+        val referencies: Map<Long, Referencia>, val preguntes: List<Pregunta>,
         val aEntrenar: List<Aparell>,
         val referenciesLinia: Map<Long, Referencia>, val explicadorLinia: Explicador?, val repetits: List<Repetit>,
     )
@@ -508,6 +545,7 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     }
 
     fun esborraAparell(id: Long) {
+        if (pantalla == Pantalla.APARELL) pantalla = Pantalla.PRINCIPAL
         viewModelScope.launch {
             withContext(Dispatchers.IO) { repo.esborraAparell(id) }
             refrescaAra()

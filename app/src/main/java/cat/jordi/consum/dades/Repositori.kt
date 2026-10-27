@@ -17,6 +17,7 @@ import java.time.ZoneId
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import kotlin.math.max
+import kotlin.math.min
 
 enum class Periode(@StringRes val nomId: Int) {
     DIA(R.string.periode_dia), SETMANA(R.string.periode_setmana), MES(R.string.periode_mes), ANY(R.string.periode_any)
@@ -49,6 +50,8 @@ data class Resum(
     val anteriorKwh: Double? = null,
     /** El primer dia amb dades de l'app; si el període és anterior, no en té cap. */
     val primerDiaDades: LocalDate? = null,
+    /** Tot el consum del període, per aparells i la resta a part (maqueta 13). */
+    val ranquing: Ranquing? = null,
 ) {
     val ambDades get() = primerDiaDades != null && (fiDia == null || fiDia.isAfter(primerDiaDades))
 
@@ -74,14 +77,8 @@ data class InfoPreu(
     val properes: List<HoraPreu>,
 )
 
-/**
- * El consum del mes repartit entre els aparells après; el residu és el que encara no s'explica. Els aparells de la línia
- * de la pinça 2 (maqueta 12) s'hi reparteixen la línia, i el que no expliquen és [liniaAltresKwh].
- */
-data class Repartiment(
-    val kwh: Map<Long, Double>, val euros: Map<Long, Double>, val residuKwh: Double, val residuEuros: Double,
-    val liniaAltresKwh: Double = 0.0, val liniaAltresEuros: Double = 0.0,
-)
+/** La fitxa d'un aparell (maqueta 13): el que ha gastat aquest mes, quantes vegades, i les últimes. */
+data class Fitxa(val aparellId: Long, val kwhMes: Double, val copsMes: Int, val ultimes: List<Vegada>)
 
 /** Què costaria la línia de la segona pinça si gastés a les hores barates. */
 data class ConsellLinia(val estalviMes: Double, val percentCar: Int)
@@ -157,6 +154,9 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             completaIntervals()
             aprenLinia()
             actualitzaRepetits()
+            // Les vegades noves, i de qui són totes (maqueta 13)
+            actualitzaVegades()
+            reassignaVegades()
             n
         }
     }
@@ -267,14 +267,19 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val primerDades = bd.primerTs()?.let { Instant.ofEpochSecond(it).atZone(zona).toLocalDate() }
         val diesFixos = if (primerDades == null) 0.0
         else maxOf(0L, ChronoUnit.DAYS.between(maxOf(primer, primerDades), minOf(fi, avui.plusDays(1)))).toDouble()
-        val euros = Preus(desDe, finsA).euros(llista, diesFixos)
+        val preus = Preus(desDe, finsA)
+        val euros = preus.euros(llista, diesFixos)
         // El període d'abans, si l'app ja en tenia totes les dades
         val anterior = mou(periode, primer, -1)
         val anteriorKwh = if (primerDades != null && !anterior.isBefore(primerDades)) bd.kwhEntre(iniciDia(anterior), desDe) else null
+        val sempre = llista.sumOf { it.sempre }
+        val linia = llista.sumOf { it.linia }
+        val desconegut = llista.sumOf { it.desconegut }
         return Resum(
-            barres, barres.sumOf { it.hora.sempre }, barres.sumOf { it.hora.linia }, barres.sumOf { it.hora.desconegut },
+            barres, sempre, linia, desconegut,
             fons.takeIf { it > 0 }?.times(60), euros, finsA > desDe && bd.teAproximats(desDe, finsA),
             primer, fi, !avui.isBefore(primer) && avui.isBefore(fi), anteriorKwh, primerDades,
+            if (finsA > desDe) ranquing(desDe, finsA, fons, sempre, linia, desconegut, euros, preus) else null,
         )
     }
 
@@ -284,10 +289,93 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val avui = LocalDate.now(zona)
         val desDe = iniciDia(avui.withDayOfMonth(1))
         val hores = perHores(desDe, ara() + 60, fons)
+        val preus = Preus(desDe, ara())
+        val euros = preus.euros(hores, avui.dayOfMonth.toDouble())
+        val sempre = hores.sumOf { it.sempre }
+        val linia = hores.sumOf { it.linia }
+        val desconegut = hores.sumOf { it.desconegut }
         return Resum(
-            emptyList(), hores.sumOf { it.sempre }, hores.sumOf { it.linia }, hores.sumOf { it.desconegut },
-            fons.takeIf { it > 0 }?.times(60), Preus(desDe, ara()).euros(hores, avui.dayOfMonth.toDouble()),
+            emptyList(), sempre, linia, desconegut, fons.takeIf { it > 0 }?.times(60), euros,
+            ranquing = ranquing(desDe, ara() + 60, fons, sempre, linia, desconegut, euros, preus),
         )
+    }
+
+    /**
+     * Tot el consum d'un període sense barrejar res (maqueta 13): cada aparell amb les seves vegades (les de la resta de la
+     * casa i les de la línia de la pinça 2) i la nevera amb el seu compressor; i a part, el que la casa gasta sempre, els
+     * petits consums (per sota de 250 W), les vegades sense identificar, la resta de la línia i el que no té el detall de
+     * cada minut. La suma de tot és el total. Si a la línia no s'hi ha dit cap aparell, la línia surt com un més.
+     */
+    private fun ranquing(
+        desDe: Long, finsA: Long, fonsWh: Double, sempre: Double, linia: Double, desconegut: Double, euros: Euros, p: Preus,
+    ): Ranquing {
+        val tots = bd.aparells()
+        val perId = tots.associateBy { it.id }
+        class Acc(var kwh: Double = 0.0, var euros: Double = 0.0, var cops: Int = 0, var ensenyats: Int = 0)
+        val acc = mutableMapOf<Long, Acc>()
+        var senseId = 0.0
+        var senseIdEuros = 0.0
+        var ep0 = 0.0
+        var liniaAssignada = 0.0
+        for (v in bd.vegades(desDe, finsA)) {
+            // Una vegada que passa de mitjanit (el cotxe, de les 19:54 a les 3:00) es reparteix entre els dos dies
+            val kwh = v.kwh * part(v, desDe, finsA)
+            if (v.canal == 0) ep0 += kwh
+            val a = v.aparellId?.let(perId::get)
+            if (a == null) {
+                if (v.canal == 0) {
+                    senseId += kwh
+                    senseIdEuros += kwh * p.de(v.ts)
+                }
+                continue
+            }
+            if (v.canal == 1) liniaAssignada += kwh
+            val x = acc.getOrPut(a.id) { Acc() }
+            x.kwh += kwh
+            x.euros += kwh * p.de(v.ts)
+            if (v.ts >= desDe) x.cops++
+            if (v.com == Com.ENSENYAT && v.ts >= desDe) x.ensenyats++
+        }
+        // El que no té el detall de cada minut: de la resta de la casa i de la línia
+        val liniaAprox = bd.liniaAproximada(desDe, finsA)
+        val senseDetall = bd.senseDetall(desDe, finsA, fonsWh) + liniaAprox
+        val preuResta = if (desconegut > 0.01) euros.desconegut / desconegut else p.de(desDe)
+        val files = acc.map { (id, x) ->
+            val a = perId.getValue(id)
+            FilaRanquing(a, a.nom, x.kwh, x.euros, x.cops, x.ensenyats, aLaLinia(a))
+        }.toMutableList()
+        // La nevera: el compressor trobat sol, la part del temps que funciona
+        var nevera = 0.0
+        neveraAutomatica(tots)?.let { a ->
+            val w = config.neveraW
+            nevera = (w * config.neveraCicle.coerceAtLeast(0.0) * bd.minutsExactes(desDe, finsA) / 60_000)
+                .coerceAtMost(max(desconegut - ep0 - (senseDetall - liniaAprox), 0.0))
+            if (nevera > 0) files += FilaRanquing(a, a.nom, nevera, nevera * preuResta, 0, 0, false, compressorW = w)
+        }
+        val ambAparells = aparellsLinia().isNotEmpty()
+        if (!ambAparells && linia > 0) {
+            // La línia sense aparells surt sencera, com un més; si hi ha un aparell amb el seu nom (d'abans de la 0.25), és ell.
+            // Sense nom (s'ha tret la pinça 2 però hi ha dades d'abans), la pantalla hi posa «pinça 2»
+            val ella = tots.firstOrNull { esLinia(it) }
+            files += FilaRanquing(ella, ella?.nom ?: config.nomLinia, linia, euros.linia, 0, 0, true)
+        }
+        val liniaAltres = if (ambAparells) max(linia - liniaAssignada - liniaAprox, 0.0) else 0.0
+        val preuLinia = if (linia > 0.01) euros.linia / linia else preuResta
+        val petits = max(desconegut - ep0 - nevera - (senseDetall - liniaAprox), 0.0)
+        val detall = if (ambAparells) senseDetall else senseDetall - liniaAprox
+        return Ranquing(
+            files.sortedByDescending { it.kwh }, sempre + linia + desconegut, sempre, euros.sempre, petits, petits * preuResta,
+            senseId, senseIdEuros, liniaAltres, liniaAltres * preuLinia, detall, detall * preuResta,
+        )
+    }
+
+    /** La nevera o el congelador que s'engega sol i no té mostres: el compressor trobat a les dades li fa de referència. */
+    private fun neveraAutomatica(aparells: List<Aparell>): Aparell? {
+        if (config.neveraW <= 0) return null
+        val ambMostres = bd.aparellsAmbMostres()
+        return listOf(Categoria.NEVERA, Categoria.CONGELADOR).firstNotNullOfOrNull { cat ->
+            aparells.firstOrNull { it.categoria == cat && it.funciona == Funcionament.SOL && it.id !in ambMostres && !aLaLinia(it) }
+        }
     }
 
     fun infoPreu(): InfoPreu {
@@ -329,8 +417,133 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     }
 
     fun aparells() = bd.aparells()
-    fun desaAparell(a: Aparell) = bd.desaAparell(a)
-    fun esborraAparell(id: Long) = bd.esborraAparell(id)
+    fun desaAparell(a: Aparell) {
+        bd.desaAparell(a)
+        haCanviat()
+    }
+
+    fun esborraAparell(id: Long) {
+        bd.esborraAparell(id)
+        bd.esborraEtiquetes(id)
+        haCanviat()
+    }
+
+    // ---------- Les vegades (maqueta 13) ----------
+
+    /**
+     * Les vegades tenen el seu bloqueig: buscar-les o repartir-les pot trigar, i el de tot el repositori aturaria les
+     * lectures en directe i els avisos.
+     */
+    private val bloqueigVegades = Any()
+
+    /** Hi ha hagut un canvi (una mostra, una etiqueta, un aparell): les vegades s'han de tornar a repartir. */
+    @Volatile
+    private var calReassignar = true
+
+    /** La pinça 2 ha canviat: les vegades s'han de tornar a buscar de cap a peus. */
+    @Volatile
+    private var calRebuscar = false
+
+    private fun haCanviat() {
+        calReassignar = true
+    }
+
+    /** Després de posar o treure la pinça 2: la propera vegada, totes les vegades de nou. */
+    fun tornaABuscarVegades() {
+        calRebuscar = true
+        calReassignar = true
+    }
+
+    /**
+     * Busca les vegades (episodis de 2 minuts o més) als minuts exactes que encara no s'han mirat: de la resta de la casa i de
+     * la línia de la pinça 2. El primer cop (o si no n'hi ha cap de desada, o ha canviat la pinça 2), totes les dades. Després,
+     * des de la vegada que encara durava a l'última mirada (o havia acabat feia menys de mitja hora): es torna a buscar sencera,
+     * perquè la base dels minuts d'enmig ja seria la seva i hi trobaria el que tenia a sobre com una vegada nova. Per trossos
+     * d'una setmana, amb les 2 hores d'abans per a la base i 24 hores de més per acabar les del final; el tros següent comença
+     * quan s'acaben les que hi passen.
+     */
+    fun actualitzaVegades() {
+        synchronized(bloqueigVegades) { buscaVegades() }
+    }
+
+    private fun buscaVegades() {
+        val darrer = bd.darrerTs(0) ?: return
+        val rebuscar = calRebuscar
+        calRebuscar = false
+        val fins = if (rebuscar || !bd.hiHaVegades()) 0L else config.vegadesFins
+        val desDe = if (fins == 0L) bd.primerExacte() ?: return
+        else minOf(bd.vegadaOberta(fins - 30 * 60) ?: fins, fins - 30 * 60)
+        val canals = if (config.teLinia) listOf(0 to false, 1 to true) else listOf(0 to false)
+        val noves = mutableListOf<Vegada>()
+        var s = desDe
+        while (s <= darrer) {
+            val e = minOf(s + 7 * 86400, darrer + 60)
+            var seguent = e
+            for ((canal, linia) in canals) {
+                val trobades = Episodis.troba(bd.minutsW(linia, s - 2 * 3600, e + 24 * 3600), llargada = 2).filter { it.ts in s until e }
+                trobades.forEach { noves += Vegada.de(canal, it) }
+                trobades.filter { it.fi >= e }.maxOfOrNull { it.fi + 60 }?.let { seguent = maxOf(seguent, it) }
+            }
+            s = seguent
+        }
+        bd.substitueixVegades(desDe, assignaTotes(noves))
+        config.vegadesFins = darrer
+        calReassignar = true
+    }
+
+    /** De qui és cada vegada, amb el que l'app sap ara ([assigna]). */
+    private fun assignaTotes(vegades: List<Vegada>): List<Vegada> {
+        if (vegades.isEmpty()) return vegades
+        val index = IndexEtiquetes(bd.etiquetes())
+        val aparells = bd.aparells()
+        // Els sempre encesos van dins del fons: el que se n'hagués dit no compta
+        val exclosos = aparells.filter { it.funciona == Funcionament.SEMPRE }.map { it.id }.toSet()
+        val casa = aparellsAEntrenar()
+        val refsCasa = referencies()
+        val linia = aparellsLinia()
+        val refsLinia = referenciesLinia()
+        return vegades.map { v ->
+            val e = index.de(v)
+            val (a, com) = if (v.canal == 0) assigna(v, casa, refsCasa, e, exclosos) else assigna(v, linia, refsLinia, e, exclosos)
+            v.copy(aparellId = a, com = com)
+        }
+    }
+
+    /**
+     * Torna a mirar de qui és cada vegada, si hi ha hagut algun canvi des de l'última vegada: després que l'usuari
+     * ensenyi, respongui o canviï un aparell, i quan l'app aprèn alguna cosa nova. Si no, no fa res.
+     */
+    fun reassignaVegades() {
+        synchronized(bloqueigVegades) {
+            if (!calReassignar) return
+            calReassignar = false
+            val totes = bd.vegades(0, Long.MAX_VALUE)
+            val noves = assignaTotes(totes)
+            bd.reassigna(totes.zip(noves).filter { (a, b) -> a.aparellId != b.aparellId || a.com != b.com }.map { (_, b) -> Triple(b.id, b.aparellId, b.com) })
+        }
+    }
+
+    /** «No era ell»: aquesta vegada no era d'aquest aparell, i l'app no l'hi tornarà a donar. */
+    fun noEraEll(v: Vegada) {
+        val a = v.aparellId ?: return
+        bd.desaEtiqueta(Etiqueta(v.canal, v.ts, v.fi + 59, a, no = true))
+        haCanviat()
+        reassignaVegades()
+    }
+
+    /** El que ha gastat un aparell aquest mes i les seves últimes vegades, per a la fitxa. */
+    fun fitxa(aparellId: Long): Fitxa {
+        val desDe = iniciDia(LocalDate.now(zona).withDayOfMonth(1))
+        val finsA = ara() + 60
+        val mes = bd.vegades(desDe, finsA, aparellId)
+        return Fitxa(aparellId, mes.sumOf { it.kwh * part(it, desDe, finsA) }, mes.count { it.ts >= desDe }, bd.ultimesVegades(aparellId, 8))
+    }
+
+    /** Quina part d'una vegada cau dins d'un període (les que passen de mitjanit, o del dia 1, es reparteixen). */
+    private fun part(v: Vegada, desDe: Long, finsA: Long): Double {
+        val fi = v.fi + 60
+        return (min(fi, finsA) - max(v.ts, desDe)).coerceAtLeast(0).toDouble() / (fi - v.ts)
+    }
 
     // ---------- Entrenament ----------
 
@@ -358,6 +571,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     fun posaALinia(a: Aparell, si: Boolean) {
         bd.desaAparell(a.copy(linia = si))
         if (!si) bd.esborraMostres(a.id, "linia")
+        haCanviat()
     }
 
     /** Les referències dels aparells de la línia, apreses de la línia. */
@@ -388,13 +602,16 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val darrer = minuts.lastOrNull()?.ts ?: return
         val sols = aparells.filter { it.funciona == Funcionament.SOL }.map { it.id }.toSet()
         var refs = referenciesLinia()
+        var noves = 0
         for (ep in Episodis.troba(minuts)) {
             // Només els que ja han acabat, els llargs i un sol cop cadascun
             if (ep.fi > darrer - 5 * 60 || ep.minuts < 10 || bd.hiHaMostra(ep.ts, "linia")) continue
             val a = triaLinia(ep, aparells, refs) ?: continue
             bd.desaMostra(a.id, ep.ts, ep.w, ep.durada, "linia", if (a.id in sols) ep.interval else null, ep.variacio, ep.arrencada)
             refs = referenciesLinia()
+            noves++
         }
+        if (noves > 0) haCanviat()
     }
 
     /**
@@ -440,7 +657,10 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         for ((ts, w, minuts) in r.cops.takeLast(12)) {
             if (!bd.teMostra(aparellId, ts, "repetit")) bd.desaMostra(aparellId, ts, w, minuts * 60L, "repetit", interval, r.variacio, r.arrencada)
         }
+        // Cada cop és d'aquest aparell (maqueta 13)
+        for ((ts, _, minuts) in r.cops) bd.desaEtiqueta(Etiqueta(0, ts, ts + minuts * 60L - 1, aparellId))
         bd.responRepetit(id, EstatPregunta.RESPOSTA, aparellId)
+        haCanviat()
         return true
     }
 
@@ -540,11 +760,13 @@ class Repositori(val config: Config, private val bd: BaseDades) {
 
     /** Busca el compressor de la nevera a les dades de l'última setmana, com a molt un cop al dia. */
     fun actualitzaNevera() {
-        if (ara() - config.neveraMirada < 20 * 3600) return
+        // Un cop al dia; i de seguida si encara no se sap quina part del temps funciona (des de la 0.26)
+        if (ara() - config.neveraMirada < 20 * 3600 && !(config.neveraW > 0 && config.neveraCicle == 0.0)) return
         val linia = config.teLinia
         val punts = bd.serie(ara() - 7 * 86400, ara() + 60).filterNot { it.aprox }
             .map { it.ts to (it.wTotal - if (linia) it.wLinia else 0.0) }
         config.neveraW = potenciaCompressor(punts, zona) ?: 0.0
+        config.neveraCicle = if (config.neveraW > 0) cicleCompressor(punts, zona) ?: -1.0 else 0.0
         config.neveraMirada = ara()
     }
 
@@ -564,15 +786,33 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             val serie = bd.serie(m.ts, m.ts + 3 * 3600)
             if (serie.isEmpty() || serie.any { it.aprox }) continue
             val exces = serie.map { it.wTotal - (if (linia) it.wLinia else 0.0) - fons }
-            intervalEpisodi(exces, m.dp)?.let { (lo, hi) -> bd.desaInterval(m.id, lo, hi) }
+            intervalEpisodi(exces, m.dp)?.let { (lo, hi) ->
+                bd.desaInterval(m.id, lo, hi)
+                haCanviat()
+            }
         }
     }
 
     fun explicador() = Explicador(referencies().values.toList())
 
-    fun desaMostra(aparellId: Long, dp: Double, durada: Long?) = bd.desaMostra(aparellId, ara(), dp, durada, "directe")
+    /**
+     * Una mostra ensenyada en directe. En apagar-lo ([durada]: des que es va encendre), aquella estona és d'aquest aparell
+     * (maqueta 13).
+     */
+    @Synchronized
+    fun desaMostra(aparellId: Long, dp: Double, durada: Long?) {
+        bd.desaMostra(aparellId, ara(), dp, durada, "directe")
+        if (durada != null) bd.desaEtiqueta(Etiqueta(0, ara() - durada, ara() - durada, aparellId))
+        haCanviat()
+    }
 
-    fun tornaAEntrenar(aparellId: Long) = bd.esborraMostres(aparellId)
+    /** Torna a començar: fora les mostres i el que l'usuari n'havia dit. */
+    @Synchronized
+    fun tornaAEntrenar(aparellId: Long) {
+        bd.esborraMostres(aparellId)
+        bd.esborraEtiquetes(aparellId)
+        haCanviat()
+    }
 
     fun preguntesPendents() = bd.preguntes(EstatPregunta.PENDENT)
 
@@ -592,6 +832,9 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             bd.desaMostra(aparellId, p.ts, p.dp, null, "pregunta")
             bd.respon(preguntaId, EstatPregunta.RESPOSTA, aparellId)
             completaIntervals()
+            // La vegada de la pregunta és d'aquest aparell (maqueta 13)
+            bd.desaEtiqueta(Etiqueta(0, p.ts, p.ts, aparellId))
+            haCanviat()
         } else {
             bd.respon(preguntaId, EstatPregunta.IGNORADA, null)
         }
@@ -756,14 +999,21 @@ class Repositori(val config: Config, private val bd: BaseDades) {
                 if (!bd.teMostra(aparellId, t.ts, "passat")) bd.desaMostra(aparellId, t.ts, puja, durada, "passat")
                 if (!bd.teMostra(aparellId, t.fi, "passat")) bd.desaMostra(aparellId, t.fi, baixa, durada, "passat")
             }
+            // Aquesta estona és d'aquest aparell: el seu consum hi va (maqueta 13)
+            bd.desaEtiqueta(Etiqueta(0, t.ts, t.fi + 59, aparellId))
         }
+        haCanviat()
     }
 
     /** L'usuari diu quin aparell era un tros d'un pic: és una mostra de l'aparell, com si l'hagués ensenyat en directe. */
     @Synchronized
     fun respon(aparellId: Long, tros: Tros) {
         // Dos tocs seguits (o el mateix pic a la llista i obert) no fan dues mostres
-        if (!bd.teMostra(aparellId, tros.desDe, "pic")) bd.desaMostra(aparellId, tros.desDe, tros.mostra, null, "pic")
+        if (!bd.teMostra(aparellId, tros.desDe, "pic")) {
+            bd.desaMostra(aparellId, tros.desDe, tros.mostra, null, "pic")
+            bd.desaEtiqueta(Etiqueta(0, tros.desDe, tros.desDe, aparellId))
+            haCanviat()
+        }
     }
 
     /** Els aparells que expliquen ara el consum (com a molt 3), per dir-ho a l'avís de potència: nom i W. */
@@ -780,60 +1030,5 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             if (resta >= AnalisiPics.LLINDAR) llista += config.nomLinia to resta
         }
         return llista.sortedByDescending { it.second }.take(3)
-    }
-
-    /**
-     * Reparteix el consum sense identificar del mes entre els aparells après, minut a minut, al preu de cada hora; i la
-     * línia de la pinça 2 entre els seus aparells. Amb la durada de la firma ([ajustaDurades]): un aparell no es queda una
-     * estona molt més llarga del que dura.
-     */
-    fun repartimentMes(): Repartiment {
-        val desDe = iniciDia(LocalDate.now(zona).withDayOfMonth(1))
-        val refs = referencies()
-        val explicador = Explicador(refs.values.toList())
-        val refsLinia = referenciesLinia()
-        val linia = if (aparellsLinia().isEmpty()) null else Explicador(refsLinia.values.toList())
-        val fons = fonsWh() * 60
-        val p = Preus(desDe, ara())
-        val serie = bd.serie(desDe, ara() + 60)
-        val kwh = mutableMapOf<Long, Double>()
-        val euros = mutableMapOf<Long, Double>()
-        fun suma(punt: Punt, e: Explicacio): Double {
-            val preu = p.de(punt.ts)
-            for ((id, w) in e.aparells) {
-                kwh[id] = (kwh[id] ?: 0.0) + w / 60_000
-                euros[id] = (euros[id] ?: 0.0) + w / 60_000 * preu
-            }
-            return preu
-        }
-        var residuKwh = 0.0
-        var residuEuros = 0.0
-        // La resta de la casa, el que passa del fons; un minut aproximat és la mitjana d'una estona: no es pot dir quins
-        // aparells hi havia, i va sencer al residu
-        val resta = serie.filter { it.wTotal - it.wLinia - fons > 0 }
-        val explicacions = ajustaDurades(
-            resta.map { pt ->
-                val exces = max(pt.wTotal - pt.wLinia, 0.0) - fons
-                pt.ts to if (pt.aprox) Explicacio(emptyList(), exces) else explicador.explica(exces)
-            }, refs,
-        )
-        resta.zip(explicacions).forEach { (pt, e) ->
-            val preu = suma(pt, e)
-            residuKwh += e.residu / 60_000
-            residuEuros += e.residu / 60_000 * preu
-        }
-        // La línia, entre els seus aparells (maqueta 12)
-        var liniaKwh = 0.0
-        var liniaEuros = 0.0
-        if (linia != null) {
-            val ambLinia = serie.filter { it.wLinia > 0 }
-            val e = ajustaDurades(ambLinia.map { pt -> pt.ts to if (pt.aprox) Explicacio(emptyList(), pt.wLinia) else linia.explica(pt.wLinia) }, refsLinia)
-            ambLinia.zip(e).forEach { (pt, el) ->
-                val preu = suma(pt, el)
-                liniaKwh += el.residu / 60_000
-                liniaEuros += el.residu / 60_000 * preu
-            }
-        }
-        return Repartiment(kwh, euros, residuKwh, residuEuros, liniaKwh, liniaEuros)
     }
 }

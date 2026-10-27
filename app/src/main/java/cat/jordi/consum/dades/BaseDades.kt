@@ -29,7 +29,7 @@ data class Hora(val ts: Long, val sempre: Double, val linia: Double, val descone
  * (aprox = 2, maqueta 11) omplen les absències llargues i el d'abans de l'app; els exactes, que es baixen
  * del Shelly a casa, els substitueixen.
  */
-class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 7) {
+class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 8) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -45,6 +45,25 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         creaPreus(db)
         creaEntrenament(db)
         creaRepetits(db)
+        creaVegades(db)
+    }
+
+    /**
+     * Les vegades (versió 8, maqueta 13): cada episodi de la resta de la casa (canal 0) i de la línia (canal 1), amb l'aparell
+     * de qui és; i les etiquetes, el que l'usuari ha dit de cada estona. Les vegades es poden tornar a calcular; les etiquetes,
+     * no.
+     */
+    private fun creaVegades(db: SQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE vegades (id INTEGER PRIMARY KEY AUTOINCREMENT, canal INTEGER NOT NULL, ts INTEGER NOT NULL,
+               fi INTEGER NOT NULL, minuts INTEGER NOT NULL, w REAL NOT NULL, kwh REAL NOT NULL, variacio REAL NOT NULL,
+               arrencada REAL NOT NULL, aparell INTEGER, com TEXT)"""
+        )
+        db.execSQL("CREATE INDEX vegades_ts ON vegades (ts)")
+        db.execSQL(
+            """CREATE TABLE etiquetes (id INTEGER PRIMARY KEY AUTOINCREMENT, canal INTEGER NOT NULL, des_de INTEGER NOT NULL,
+               fins_a INTEGER NOT NULL, aparell INTEGER NOT NULL, no INTEGER NOT NULL DEFAULT 0)"""
+        )
     }
 
     /** El que es repeteix sempre igual (versió 7, maqueta 12), per preguntar-ne un cop. */
@@ -97,6 +116,18 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
                 db.execSQL("ALTER TABLE mostres ADD COLUMN arrencada REAL")
             }
             creaRepetits(db)
+        }
+        if (oldVersion < 8) {
+            creaVegades(db)
+            // El que ja s'havia ensenyat o respost abans de la 0.26 passa a ser etiquetes: el seu consum és d'aquell aparell.
+            // Una estona passada, un moment punta i una pregunta, l'instant de la mostra (és dins de la vegada); el que es
+            // repeteix, tota la durada; en directe, quan es va encendre
+            db.execSQL(
+                """INSERT INTO etiquetes (canal, des_de, fins_a, aparell, no)
+                   SELECT 0, CASE WHEN font = 'directe' THEN ts - durada ELSE ts END,
+                          CASE WHEN font = 'directe' THEN ts - durada WHEN font = 'repetit' AND durada IS NOT NULL THEN ts + durada - 1 ELSE ts END, aparell, 0
+                   FROM mostres WHERE font IN ('passat', 'pic', 'pregunta', 'repetit') OR (font = 'directe' AND durada IS NOT NULL)"""
+            )
         }
     }
 
@@ -466,4 +497,133 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
     fun responRepetit(id: Long, estat: EstatPregunta, aparellId: Long?) {
         writableDatabase.update("repetits", ContentValues().apply { put("estat", estat.name); put("aparell", aparellId) }, "id = ?", arrayOf(id.toString()))
     }
+
+    // ---------- Les vegades i les etiquetes (maqueta 13) ----------
+
+    /** Fora les vegades des de [desDe] i a dins les noves (ja amb l'aparell de qui són). */
+    fun substitueixVegades(desDe: Long, noves: List<Vegada>) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("vegades", "ts >= ?", arrayOf(desDe.toString()))
+            val sql = db.compileStatement(
+                "INSERT INTO vegades (canal, ts, fi, minuts, w, kwh, variacio, arrencada, aparell, com) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            )
+            for (v in noves) {
+                sql.bindLong(1, v.canal.toLong()); sql.bindLong(2, v.ts); sql.bindLong(3, v.fi); sql.bindLong(4, v.minuts.toLong())
+                sql.bindDouble(5, v.w); sql.bindDouble(6, v.kwh); sql.bindDouble(7, v.variacio); sql.bindDouble(8, v.arrencada)
+                if (v.aparellId != null) sql.bindLong(9, v.aparellId) else sql.bindNull(9)
+                if (v.com != null) sql.bindString(10, v.com.name) else sql.bindNull(10)
+                sql.executeInsert()
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Les vegades que toquen l'estona entre dos instants, també les que hi comencen abans o s'hi acaben després ([aparellId]:
+     * només les d'aquest aparell), de la més antiga a la més nova.
+     */
+    fun vegades(desDe: Long, finsA: Long, aparellId: Long? = null): List<Vegada> =
+        readableDatabase.rawQuery(
+            "SELECT id, canal, ts, fi, minuts, w, kwh, variacio, arrencada, aparell, com FROM vegades WHERE fi + 60 > CAST(? AS INTEGER) AND ts < CAST(? AS INTEGER)" +
+                (if (aparellId != null) " AND aparell = ?" else "") + " ORDER BY ts",
+            listOfNotNull(desDe.toString(), finsA.toString(), aparellId?.toString()).toTypedArray(),
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) add(
+                    Vegada(
+                        c.getLong(0), c.getInt(1), c.getLong(2), c.getLong(3), c.getInt(4), c.getDouble(5), c.getDouble(6),
+                        c.getDouble(7), c.getDouble(8), if (c.isNull(9)) null else c.getLong(9), if (c.isNull(10)) null else Com.valueOf(c.getString(10)),
+                    )
+                )
+            }
+        }
+
+    /** Els aparells que tenen alguna mostra. */
+    fun aparellsAmbMostres(): Set<Long> =
+        readableDatabase.rawQuery("SELECT DISTINCT aparell FROM mostres", null).use { c -> buildSet { while (c.moveToNext()) add(c.getLong(0)) } }
+
+    /** L'energia de la línia (kWh) als minuts aproximats (des de fora, o del núvol per hores) d'entre dos instants. */
+    fun liniaAproximada(desDe: Long, finsA: Long): Double =
+        readableDatabase.rawQuery(
+            "SELECT IFNULL(SUM(wh), 0) FROM minuts WHERE canal = 1 AND aprox <> 0 AND ts >= ? AND ts < ?", arrayOf(desDe.toString(), finsA.toString()),
+        ).use { if (it.moveToFirst()) it.getDouble(0) / 1000 else 0.0 }
+
+    fun hiHaVegades(): Boolean = readableDatabase.rawQuery("SELECT 1 FROM vegades LIMIT 1", null).use { it.moveToFirst() }
+
+    /** Les últimes [n] vegades d'un aparell, de la més nova a la més antiga. */
+    fun ultimesVegades(aparellId: Long, n: Int): List<Vegada> =
+        readableDatabase.rawQuery(
+            "SELECT id, canal, ts, fi, minuts, w, kwh, variacio, arrencada, aparell, com FROM vegades WHERE aparell = ? ORDER BY ts DESC LIMIT $n",
+            arrayOf(aparellId.toString()),
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) add(
+                    Vegada(
+                        c.getLong(0), c.getInt(1), c.getLong(2), c.getLong(3), c.getInt(4), c.getDouble(5), c.getDouble(6),
+                        c.getDouble(7), c.getDouble(8), c.getLong(9), if (c.isNull(10)) null else Com.valueOf(c.getString(10)),
+                    )
+                )
+            }
+        }
+
+    /** L'última vegada que comença abans de [ts] i encara durava (per tornar a mirar una vegada que no s'havia acabat). */
+    fun vegadaOberta(desDe: Long): Long? =
+        readableDatabase.rawQuery("SELECT MIN(ts) FROM vegades WHERE fi >= ?", arrayOf(desDe.toString())).use {
+            if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null
+        }
+
+    /** Canvia de qui són unes vegades: (id, aparell, com). */
+    fun reassigna(canvis: List<Triple<Long, Long?, Com?>>) {
+        if (canvis.isEmpty()) return
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val sql = db.compileStatement("UPDATE vegades SET aparell = ?, com = ? WHERE id = ?")
+            for ((id, aparell, com) in canvis) {
+                if (aparell != null) sql.bindLong(1, aparell) else sql.bindNull(1)
+                if (com != null) sql.bindString(2, com.name) else sql.bindNull(2)
+                sql.bindLong(3, id)
+                sql.executeUpdateDelete()
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun desaEtiqueta(e: Etiqueta) {
+        writableDatabase.insert("etiquetes", null, ContentValues().apply {
+            put("canal", e.canal); put("des_de", e.desDe); put("fins_a", e.finsA); put("aparell", e.aparellId); put("no", if (e.no) 1 else 0)
+        })
+    }
+
+    fun etiquetes(): List<Etiqueta> =
+        readableDatabase.rawQuery("SELECT canal, des_de, fins_a, aparell, no FROM etiquetes", null).use { c ->
+            buildList { while (c.moveToNext()) add(Etiqueta(c.getInt(0), c.getLong(1), c.getLong(2), c.getLong(3), c.getInt(4) != 0)) }
+        }
+
+    /** Fora el que l'usuari havia dit d'un aparell (en esborrar-lo o tornar-lo a entrenar). */
+    fun esborraEtiquetes(aparellId: Long) {
+        writableDatabase.delete("etiquetes", "aparell = ?", arrayOf(aparellId.toString()))
+    }
+
+    /** Quants minuts exactes de tota la casa hi ha entre dos instants. */
+    fun minutsExactes(desDe: Long, finsA: Long): Long =
+        readableDatabase.rawQuery("SELECT COUNT(*) FROM minuts WHERE canal = 0 AND aprox = 0 AND ts >= ? AND ts < ?", arrayOf(desDe.toString(), finsA.toString())).use {
+            if (it.moveToFirst()) it.getLong(0) else 0
+        }
+
+    /**
+     * El que passa del fons als minuts aproximats (des de fora, o del núvol per hores) d'entre dos instants (kWh): sense el
+     * detall de cada minut, no se sap de qui és. El fons, en Wh per minut, es converteix a número (vegeu [perHores]).
+     */
+    fun senseDetall(desDe: Long, finsA: Long, fonsWh: Double): Double =
+        readableDatabase.rawQuery(
+            "SELECT IFNULL(SUM(MAX(m0.wh - IFNULL(m1.wh, 0) - CAST(? AS REAL), 0)), 0) $restaSql AND m0.aprox <> 0",
+            arrayOf(fonsWh.toString(), desDe.toString(), finsA.toString()),
+        ).use { if (it.moveToFirst()) it.getDouble(0) / 1000 else 0.0 }
 }

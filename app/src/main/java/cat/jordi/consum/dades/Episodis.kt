@@ -113,15 +113,15 @@ data class Repetit(
 
 /**
  * Els episodis d'una sèrie de minuts (maqueta 12; prototip: recerca/deteccio/episodis_setmana.py). La base de cada minut és
- * el 20 % més baix de les dues hores d'abans, i un episodi són 3 minuts o més que la passen 250 W o més. Un minut per sota
- * no el talla; dos, o un forat de dades de més de 3 minuts, sí.
+ * el 20 % més baix de les dues hores d'abans, i un episodi són [llargada] minuts o més (3, o 2 per repartir el consum:
+ * l'estufa de Guíxols fa molts cicles de 2 minuts) que la passen 250 W o més. Un minut per sota no el talla; dos, o un forat
+ * de dades de més de 3 minuts, sí.
  */
 object Episodis {
     const val MINIM = 250.0
-    private const val LLARGADA = 3
     private const val FINESTRA = 120
 
-    fun troba(minuts: List<MinutW>): List<Episodi> {
+    fun troba(minuts: List<MinutW>, llargada: Int = 3): List<Episodi> {
         if (minuts.size < 5) return emptyList()
         val ws = minuts.map { it.w }
         val bases = DoubleArray(minuts.size)
@@ -134,7 +134,7 @@ object Episodis {
         var base = 0.0
         var forat = 0
         fun tanca() {
-            if (tram.size >= LLARGADA) grups += tram.toList() to base
+            if (tram.size >= llargada) grups += tram.toList() to base
             tram = mutableListOf()
             forat = 0
         }
@@ -156,8 +156,8 @@ object Episodis {
 
     private fun descriu(m: List<MinutW>, a: Int, b: Int, base: Double): Episodi? {
         val dins = m.subList(a, b + 1)
-        // Els minuts de dins: el primer i l'últim són a mitges (s'engega o s'apaga a mig minut)
-        val interiors = if (b - a >= 2) m.subList(a + 1, b) else dins
+        // Els minuts de dins: el primer i l'últim són a mitges (s'engega o s'apaga a mig minut). D'un de 2 minuts, el més alt
+        val interiors = if (b - a >= 2) m.subList(a + 1, b) else listOf(dins.maxBy { it.w })
         val w = mediana(interiors.map { it.w }) - base
         if (w <= 0) return null
         val abans = m.subList(max(0, a - 10), a)

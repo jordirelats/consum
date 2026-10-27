@@ -92,3 +92,29 @@ fun potenciaCompressor(punts: List<Pair<Long, Double>>, zona: ZoneId): Double? {
     if (s[s.size * 9 / 10] > 1.4 * s[s.size / 10]) return null
     return mediana(s)
 }
+
+/**
+ * Quina part del temps funciona el compressor de la nevera (de 0 a 1), mirat a les nits (de 0 a 6 h), quan gairebé només
+ * funciona ell: els minuts dels seus cicles (com a [potenciaCompressor]) sobre tots els minuts de nit. Amb això, el que
+ * gasta la nevera en un període és la seva potència per aquesta part del temps (maqueta 13). Null si no se'n troben cicles.
+ */
+fun cicleCompressor(punts: List<Pair<Long, Double>>, zona: ZoneId): Double? {
+    val ws = punts.map { it.second }
+    var nit = 0
+    var enMarxa = 0
+    val tram = mutableListOf<Double>()
+    for ((i, p) in punts.withIndex()) {
+        val esNit = Instant.ofEpochSecond(p.first).atZone(zona).hour < 6
+        if (esNit) nit++
+        val base = ws.subList(maxOf(0, i - 30), minOf(ws.size, i + 30)).min()
+        val seguit = i > 0 && p.first - punts[i - 1].first <= 60
+        if (esNit && seguit && p.second - base in 30.0..150.0) {
+            tram += p.second - base
+        } else {
+            if (tram.size in 8..60) enMarxa += tram.size
+            tram.clear()
+        }
+    }
+    if (nit < 6 * 60 || enMarxa == 0) return null
+    return enMarxa.toDouble() / nit
+}
