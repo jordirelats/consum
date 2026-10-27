@@ -129,3 +129,25 @@ object Eprel {
 
     private fun fmt(x: Double) = NumberFormat.getNumberInstance(Idioma.locale).apply { maximumFractionDigits = 3 }.format(x)
 }
+
+/**
+ * Les maneres de buscar un model a l'EPREL (maqueta 14), de més a menys exactes: tal com s'ha escrit (sense «E-Nr.»,
+ * «Mod.» o «Type» al davant); sense el que la placa hi afegeix al final («3VS6364IA/01» → «3VS6364IA»); i escurçant-lo
+ * d'una lletra en una, fins a 5 lletres i com a molt 4 cops. L'EPREL busca els models que contenen el que s'escriu i els
+ * espais no hi compten (comprovat el 27/10: «3VS 6364 IA» i «GMJ96» troben; «3VS6364IA/01» no troba res; «3VS636» troba
+ * els 5 Balay de la família). [exactes]: quantes de les primeres no estan escurçades.
+ */
+data class VariantsModel(val models: List<String>, val exactes: Int)
+
+fun variantsModel(escrit: String): VariantsModel {
+    val net = escrit.trim().replace(Regex("""\s+"""), " ")
+        // Amb un punt, dos punts o un espai darrere: «MODENA123» és un model
+        .replace(Regex("""^(E-?\s?NR|MOD(EL|ELO|ÈLE)?|TYP(E)?|PNC|REF)[.:\s]+""", RegexOption.IGNORE_CASE), "")
+    if (net.isBlank()) return VariantsModel(emptyList(), 0)
+    val sensePlaca = net.substringBefore('/').substringBefore('\\').trim()
+    val exactes = listOf(escrit.trim(), net, sensePlaca).filter { it.length >= 3 }.distinct()
+    val base = (if (sensePlaca.length >= 3) sensePlaca else net).replace(" ", "")
+    val curts = (1..4).map { base.dropLast(it) }.filter { it.length >= 5 }
+    val totes = (exactes + curts).distinctBy { it.replace(" ", "").uppercase() }
+    return VariantsModel(totes, totes.count { it in exactes })
+}

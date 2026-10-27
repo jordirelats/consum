@@ -38,7 +38,7 @@ import kotlin.coroutines.resume
  */
 object CercaEprel {
     const val WEB = "https://eprel.ec.europa.eu/screen/product/"
-    const val MAX_RESULTATS = 5
+    const val MAX_RESULTATS = 8
 
     /**
      * Si la pàgina ja és la del grup i ja té el camp del model i la primera llista de productes, acabada de carregar.
@@ -163,14 +163,19 @@ private class NavegadorEprel(context: Context) {
     suspend fun objecte(codi: String): JSONObject? = js(codi)?.let { runCatching { JSONObject(it) }.getOrNull() }
 }
 
+/** El que ha trobat la cerca: amb quin model (de les variants) i els números de registre; [exacte]: no l'ha hagut d'escurçar. */
+data class TrobatEprel(val model: String, val numeros: List<String>, val exacte: Boolean)
+
 /**
- * Busca el [model] a l'EPREL, grup per grup (si al primer no hi és, prova el següent), i acaba amb els números
- * de registre trobats (com a molt [CercaEprel.MAX_RESULTATS]); amb cap, si no l'ha trobat; o amb un error si la
- * web no ha carregat. El WebView és d'1 dp i no es veu. Cada cerca n'ha de fer un de nou.
+ * Busca a l'EPREL, grup per grup, els [models] (les variants de [variantsModel]: les [exactes] primer, i després les
+ * escurçades). En cada grup prova les variants en ordre, a la mateixa pàgina, i s'atura a la primera que en troba. Si
+ * una d'exacta en troba, acaba; si només en troba una d'escurçada, se la guarda i prova les exactes als altres grups.
+ * Acaba amb el que ha trobat (com a molt [CercaEprel.MAX_RESULTATS] números de registre), amb null si no ha trobat res,
+ * o amb un error si la web no ha carregat. El WebView és d'1 dp i no es veu. Cada cerca n'ha de fer un de nou.
  * La primera vegada, amb una connexió lenta, la web pot trigar més de 20 s (amb un 3G simulat, en va trigar més).
  */
 @Composable
-fun CercaEprelWeb(grups: List<String>, model: String, enAcabar: (Result<List<String>>) -> Unit) {
+fun CercaEprelWeb(grups: List<String>, models: List<String>, exactes: Int, enAcabar: (Result<TrobatEprel?>) -> Unit) {
     val context = LocalContext.current
     val navegador = remember { NavegadorEprel(context) }
     val acaba by rememberUpdatedState(enAcabar)
@@ -184,6 +189,7 @@ fun CercaEprelWeb(grups: List<String>, model: String, enAcabar: (Result<List<Str
 
     LaunchedEffect(navegador) {
         var carregada = false
+        var escurcat: TrobatEprel? = null
         for (grup in grups) {
             navegador.fallada = false
             navegador.web.loadUrl(CercaEprel.WEB + grup)
@@ -199,24 +205,35 @@ fun CercaEprelWeb(grups: List<String>, model: String, enAcabar: (Result<List<Str
                 }
             }
             // Si no carrega, no es prova el grup següent: la segona vegada la web ja és a la memòria cau i va més de pressa
-            if (!camp || withTimeoutOrNull(5_000) { navegador.js(CercaEprel.jsCerca(model)) } != "\"ok\"") break
-            carregada = true
-            var numeros = emptyList<String>()
-            withTimeoutOrNull(ESPERA_RESULTATS_MS) {
-                while (true) {
-                    delay(500)
-                    val o = navegador.objecte(CercaEprel.JS_RESULTATS) ?: continue
-                    val a = o.optJSONArray("numeros") ?: continue
-                    numeros = (0 until a.length()).map { a.getString(it) }.take(CercaEprel.MAX_RESULTATS)
-                    if (numeros.isNotEmpty() || o.optBoolean("buit")) break
+            if (!camp) break
+            for ((i, model) in models.withIndex()) {
+                // Amb una d'escurçada ja trobada, en els altres grups només es proven les exactes
+                if (escurcat != null && i >= exactes) break
+                if (withTimeoutOrNull(5_000) { navegador.js(CercaEprel.jsCerca(model)) } != "\"ok\"") break
+                carregada = true
+                var numeros = emptyList<String>()
+                val respost = withTimeoutOrNull(ESPERA_RESULTATS_MS) {
+                    while (true) {
+                        delay(500)
+                        val o = navegador.objecte(CercaEprel.JS_RESULTATS) ?: continue
+                        val a = o.optJSONArray("numeros") ?: continue
+                        numeros = (0 until a.length()).map { a.getString(it) }.take(CercaEprel.MAX_RESULTATS)
+                        if (numeros.isNotEmpty() || o.optBoolean("buit")) break
+                    }
+                    true
                 }
-            }
-            if (numeros.isNotEmpty()) {
-                acaba(Result.success(numeros))
-                return@LaunchedEffect
+                // Si la web no ha respost, no es proven més variants en aquest grup: cadascuna esperaria el mateix
+                if (respost == null) break
+                if (numeros.isEmpty()) continue
+                if (i < exactes) {
+                    acaba(Result.success(TrobatEprel(model, numeros, true)))
+                    return@LaunchedEffect
+                }
+                if (escurcat == null) escurcat = TrobatEprel(model, numeros, false)
+                break
             }
         }
-        acaba(if (carregada) Result.success(emptyList()) else Result.failure(ErrorUsuari(R.string.cerca_no_carrega)))
+        acaba(if (carregada || escurcat != null) Result.success(escurcat) else Result.failure(ErrorUsuari(R.string.cerca_no_carrega)))
     }
 }
 

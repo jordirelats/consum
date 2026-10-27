@@ -30,6 +30,27 @@ object Placa {
 
     private fun numero(s: String) = s.replace(',', '.').toDoubleOrNull()
 
+    /**
+     * Els models que hi pot haver al text de la placa (maqueta 14), per buscar-los a l'EPREL: paraules de 6 a 20 lletres i
+     * xifres, amb almenys dues lletres i dues xifres, que no siguin una tensió, una potència, una freqüència o uns amperes
+     * («220-240V», «2400W», «50HZ»). Primer les que porten al davant «E-Nr», «Mod», «Model», «Type» o «PNC». Com a molt 3.
+     */
+    fun models(textOcr: String): List<String> {
+        val text = textOcr.uppercase()
+        // Una tensió, una potència o una freqüència: xifres (o un interval) i la unitat. «FTXM25A» sí que és un model
+        val unitat = Regex("""^[\d.,\-/~]+(V|W|KW|VA|HZ)$""")
+        val paraula = Regex("""[A-Z0-9][A-Z0-9/.\-]{5,19}""")
+        val etiqueta = Regex("""(E-?\s?NR|MOD(EL)?|TYP(E)?|PNC)\.?\s*:?\s*$""")
+        val trobades = paraula.findAll(text).mapNotNull { m ->
+            val p = m.value.trimEnd('.', '-', '/')
+            val lletres = p.count { it.isLetter() }
+            val xifres = p.count { it.isDigit() }
+            if (lletres < 2 || xifres < 2 || unitat.containsMatchIn(p)) null
+            else p to etiqueta.containsMatchIn(text.substring(maxOf(0, m.range.first - 8), m.range.first))
+        }.toList()
+        return trobades.sortedByDescending { it.second }.map { it.first }.distinct().take(3)
+    }
+
     /** Treu la potència del text llegit. Si no n'hi ha, la calcula amb els amperes i la tensió (o 230 V). */
     fun potencia(textOcr: String): LecturaPlaca {
         // Les confusions típiques de l'OCR: «VV» per «W», i la «O» enganxada a xifres per un zero

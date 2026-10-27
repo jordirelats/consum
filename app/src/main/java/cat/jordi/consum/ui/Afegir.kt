@@ -95,7 +95,9 @@ import cat.jordi.consum.dades.Funcionament
 import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.dades.LecturaPlaca
 import cat.jordi.consum.dades.Placa
+import cat.jordi.consum.dades.VariantsModel
 import cat.jordi.consum.dades.missatge
+import cat.jordi.consum.dades.variantsModel
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.Dispatchers
@@ -237,7 +239,7 @@ private fun ColumnScope.AmbQr(acaba: (Aparell) -> Unit) {
 }
 
 /** Una cerca a l'EPREL en marxa: els grups on es busca, per ordre, i el model. */
-private data class CercaMarca(val grups: List<String>, val model: String)
+private data class CercaMarca(val grups: List<String>, val variants: VariantsModel)
 
 /**
  * Per marca i model: es busca el model a la web de l'EPREL (`CercaEprelWeb`), si el tipus d'aparell té etiqueta.
@@ -256,6 +258,8 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
     var feina by remember { mutableStateOf<Job?>(null) }
     var llegint by remember { mutableStateOf(false) }
     var fitxes by remember { mutableStateOf<List<FitxaEprel>>(emptyList()) }
+    // Amb quina variant del model s'ha trobat, i si s'ha hagut d'escurçar (maqueta 14)
+    var trobat by remember { mutableStateOf<TrobatEprel?>(null) }
     var noTrobat by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var nomTrobat by remember { mutableStateOf("") }
@@ -269,25 +273,28 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
     val grups = c?.let(Eprel::grups).orEmpty()
 
     fun busca() {
-        if (c == null || grups.isEmpty() || model.isBlank() || buscant) return
+        val v = variantsModel(model)
+        if (c == null || grups.isEmpty() || v.models.isEmpty() || buscant) return
         teclat?.hide()
         fitxes = emptyList()
+        trobat = null
         noTrobat = false
         error = null
-        cerca = CercaMarca(grups, model.trim())
+        cerca = CercaMarca(grups, v)
     }
 
-    fun trobats(r: Result<List<String>>, tipus: Categoria) {
+    fun trobats(r: Result<TrobatEprel?>, tipus: Categoria) {
         cerca = null
         r.onFailure { error = it.missatge(context) ?: context.getString(R.string.cerca_no_carrega) }
-        r.onSuccess { numeros ->
-            if (numeros.isEmpty()) {
+        r.onSuccess { t ->
+            if (t == null) {
                 noTrobat = true
             } else {
+                trobat = t
                 llegint = true
                 feina = abast.launch {
                     try {
-                        val llegides = withContext(Dispatchers.IO) { numeros.map { n -> runCatching { Eprel.fitxa(n) } } }
+                        val llegides = withContext(Dispatchers.IO) { t.numeros.map { n -> runCatching { Eprel.fitxa(n) } } }
                         // Els de la marca escrita, primer
                         fitxes = llegides.mapNotNull { it.getOrNull() }
                             .sortedByDescending { marca.isNotBlank() && it.marca.contains(marca.trim(), ignoreCase = true) }
@@ -332,6 +339,7 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
                 model = it
                 // El que s'havia trobat era d'un altre model
                 fitxes = emptyList()
+                trobat = null
                 noTrobat = false
                 error = null
             },
@@ -345,7 +353,7 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
             Text(stringResource(R.string.marca_on_trobo))
         }
         if (grups.isNotEmpty()) {
-            Button(onClick = { busca() }, Modifier.fillMaxWidth(), enabled = model.isNotBlank() && !buscant) {
+            Button(onClick = { busca() }, Modifier.fillMaxWidth(), enabled = variantsModel(model).models.isNotEmpty() && !buscant) {
                 Icon(Icons.Outlined.Search, null)
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.marca_busca_eprel))
@@ -354,55 +362,39 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
     }
     if (buscant && c != null) {
         Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-            cerca?.let { cr -> key(cr) { CercaEprelWeb(cr.grups, cr.model) { trobats(it, c) } } }
+            cerca?.let { cr -> key(cr) { CercaEprelWeb(cr.grups, cr.variants.models, cr.variants.exactes) { trobats(it, c) } } }
             CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
             Text("  " + stringResource(R.string.cerca_buscant), fontSize = 14.sp, color = Suau)
         }
     }
-    if (c != null && fitxes.isNotEmpty()) {
+    val t = trobat
+    if (c != null && t != null && fitxes.isNotEmpty()) {
         Targeta {
-            TitolTargeta(stringResource(R.string.marca_trobat))
-            OutlinedTextField(nomTrobat, { nomTrobat = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_nom_app)) }, singleLine = true)
+            // Si no s'ha hagut d'escurçar: l'ha trobat (potser sense el «/01»); si no, són els que s'hi assemblen
+            TitolTargeta(stringResource(if (t.exacte) R.string.marca_trobat else R.string.marca_potser))
+            if (t.exacte && !mateixModel(t.model, model)) Text(stringResource(R.string.marca_variant, t.model), fontSize = 13.sp, color = DesconegutText)
+            if (!t.exacte) Nota(stringResource(R.string.marca_potser_nota, t.model))
+            OutlinedTextField(nomTrobat, { nomTrobat = it }, Modifier.fillMaxWidth().padding(top = 6.dp), label = { Text(stringResource(R.string.afegir_nom_app)) }, singleLine = true)
             fitxes.forEach { f ->
-                HorizontalDivider(Modifier.padding(vertical = 10.dp), color = Separador)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("${f.marca} · ${f.model}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text(stringResource(c.nomId), fontSize = 12.sp, color = Suau)
-                    }
-                    if (f.classe.isNotBlank()) {
-                        Spacer(Modifier.width(8.dp))
-                        Classe(f.classe)
-                    }
-                }
-                Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.marca_consum_etiqueta), Modifier.weight(1f), fontSize = 14.sp)
-                    Text(
-                        if (f.kwhAny != null) stringResource(R.string.afegir_kwh_any, num(f.kwhAny)) else stringResource(R.string.afegir_sense_consum_anual),
-                        fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                Nota(f.explicacio.text())
-                // El tipus és el que s'ha triat: una nevera i un congelador, per exemple, són al mateix grup de l'EPREL
-                Button(
-                    onClick = { acaba(f.copy(categoria = c).comAparell(nomTrobat.ifBlank { context.getString(c.nomId) })) },
-                    Modifier.fillMaxWidth().padding(top = 8.dp),
-                ) { Text(stringResource(R.string.afegir_afegeix_lo)) }
+                FilaFitxa(f, c) { acaba(f.copy(categoria = c).comAparell(nomTrobat.ifBlank { context.getString(c.nomId) })) }
             }
             Nota(stringResource(R.string.marca_nota_eprel), Modifier.padding(top = 8.dp))
         }
     }
-    val noSurt = grups.isEmpty() || noTrobat || error != null
+    // Si només n'hi ha de semblants, també s'ha de poder afegir pel tipus («Cap d'aquests?»)
+    val aproximat = t != null && !t.exacte && fitxes.isNotEmpty()
+    val noSurt = grups.isEmpty() || noTrobat || error != null || aproximat
     // Qui no en sap el model també l'ha de poder afegir, amb el valor típic
     val senseModel = !noSurt && model.isBlank() && fitxes.isEmpty() && !buscant
     if (c != null && (noSurt || senseModel)) {
         Targeta {
-            TitolTargeta(stringResource(if (noSurt) R.string.marca_no_surt else R.string.marca_sense_model))
+            TitolTargeta(stringResource(if (aproximat) R.string.marca_cap_daquests else if (noSurt) R.string.marca_no_surt else R.string.marca_sense_model))
             if (noSurt) {
                 val e = error
                 when {
                     e != null -> Text(e, color = DesconegutText, fontSize = 14.sp)
                     noTrobat -> Nota(stringResource(R.string.cerca_no_trobat))
+                    aproximat -> Nota(stringResource(R.string.marca_cap_daquests_nota))
                     else -> Nota(stringResource(R.string.marca_tipus_sense_etiqueta))
                 }
                 OpcionsNoSurt(text, aPlaca)
@@ -436,6 +428,35 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
             ) { Text(stringResource(R.string.afegir_afegeix_lo)) }
         }
     }
+}
+
+/** Si dues maneres d'escriure un model són la mateixa (sense espais, ni majúscules). */
+private fun mateixModel(a: String, b: String) = a.replace(" ", "").equals(b.trim().replace(" ", ""), ignoreCase = true)
+
+/** Un aparell trobat a l'EPREL: la marca i el model, la classe, el consum de l'etiqueta i «Afegeix-lo». */
+@Composable
+private fun FilaFitxa(f: FitxaEprel, c: Categoria, afegeix: () -> Unit) {
+    HorizontalDivider(Modifier.padding(vertical = 10.dp), color = Separador)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("${f.marca} · ${f.model}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(c.nomId), fontSize = 12.sp, color = Suau)
+        }
+        if (f.classe.isNotBlank()) {
+            Spacer(Modifier.width(8.dp))
+            Classe(f.classe)
+        }
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.marca_consum_etiqueta), Modifier.weight(1f), fontSize = 14.sp)
+        Text(
+            if (f.kwhAny != null) stringResource(R.string.afegir_kwh_any, num(f.kwhAny)) else stringResource(R.string.afegir_sense_consum_anual),
+            fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+        )
+    }
+    Nota(f.explicacio.text())
+    // El tipus és el que s'ha triat: una nevera i un congelador, per exemple, són al mateix grup de l'EPREL
+    Button(onClick = afegeix, Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.afegir_afegeix_lo)) }
 }
 
 /** La classe de l'etiqueta amb el seu color. L'EPREL escriu les classes A+ com «AP», «APP»… */
@@ -613,6 +634,27 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
     // Mentre l'usuari no les toqui, les hores surten del consum típic del tipus d'aparell i de la potència
     var horesTocades by rememberSaveable { mutableStateOf(false) }
     var veureText by remember { mutableStateOf(false) }
+    // El model llegit a la placa, buscat sol a l'EPREL (maqueta 14)
+    var cercaPlaca by remember { mutableStateOf<CercaMarca?>(null) }
+    var trobatPlaca by remember { mutableStateOf<TrobatEprel?>(null) }
+    var fitxesPlaca by remember { mutableStateOf<List<FitxaEprel>>(emptyList()) }
+    var placaNoTrobat by remember { mutableStateOf(false) }
+    val modelsPlaca = remember(lectura) { lectura?.let { Placa.models(it.text) }.orEmpty() }
+
+    // Amb el tipus triat i un model llegit, es busca a l'EPREL: primer cada model tal com és (o sense el «/01»), i després
+    // el primer, escurçat
+    LaunchedEffect(categoria, lectura) {
+        cercaPlaca = null
+        trobatPlaca = null
+        fitxesPlaca = emptyList()
+        placaNoTrobat = false
+        val c = categoria ?: return@LaunchedEffect
+        val grupsC = Eprel.grups(c)
+        if (grupsC.isEmpty() || modelsPlaca.isEmpty()) return@LaunchedEffect
+        val vs = modelsPlaca.map(::variantsModel)
+        val exactes = vs.flatMap { it.models.take(it.exactes) }.distinct()
+        cercaPlaca = CercaMarca(grupsC, VariantsModel(exactes + vs.first().models.drop(vs.first().exactes), exactes.size))
+    }
 
     fun calculaHores() {
         val c = categoria ?: return
@@ -718,6 +760,42 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
             }
         }
         categoria?.let { c ->
+            if (modelsPlaca.isNotEmpty() && Eprel.grups(c).isNotEmpty()) Targeta {
+                TitolTargeta(stringResource(R.string.placa_model_titol))
+                Text(stringResource(R.string.placa_model_llegit, trobatPlaca?.model ?: modelsPlaca.first()), fontSize = 14.sp)
+                cercaPlaca?.let { cr ->
+                    Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        key(cr) {
+                            CercaEprelWeb(cr.grups, cr.variants.models, cr.variants.exactes) { r ->
+                                cercaPlaca = null
+                                r.onFailure { placaNoTrobat = true }
+                                r.onSuccess { t ->
+                                    if (t == null) placaNoTrobat = true
+                                    else abast.launch {
+                                        val llegides = withContext(Dispatchers.IO) { t.numeros.map { n -> runCatching { Eprel.fitxa(n) } } }
+                                        // Si mentrestant s'ha canviat el tipus (o la foto), ja no és d'aquesta cerca
+                                        if (categoria != c || cercaPlaca != null) return@launch
+                                        fitxesPlaca = llegides.mapNotNull { it.getOrNull() }
+                                        trobatPlaca = t
+                                        if (fitxesPlaca.isEmpty()) placaNoTrobat = true
+                                    }
+                                }
+                            }
+                        }
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Text("  " + stringResource(R.string.cerca_buscant), fontSize = 14.sp, color = Suau)
+                    }
+                }
+                val tp = trobatPlaca
+                if (tp != null && fitxesPlaca.isNotEmpty()) {
+                    Text(stringResource(if (tp.exacte) R.string.marca_trobat else R.string.marca_potser), Modifier.padding(top = 6.dp), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    fitxesPlaca.forEach { f ->
+                        // Amb la potència de la placa, si s'ha llegit
+                        FilaFitxa(f, c) { acaba(f.copy(categoria = c).comAparell(nom.ifBlank { context.getString(c.nomId) }).copy(potenciaW = llegeixNum(w))) }
+                    }
+                }
+                if (placaNoTrobat) Nota(stringResource(R.string.placa_model_no_surt), Modifier.padding(top = 6.dp))
+            }
             Targeta {
                 OutlinedTextField(nom, { nom = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_nom)) }, singleLine = true)
                 OutlinedTextField(

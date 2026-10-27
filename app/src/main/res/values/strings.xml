@@ -694,7 +694,7 @@
 
     <!-- La cerca a la web de l'EPREL -->
     <string name="cerca_buscant">Buscant-lo a l\'EPREL. Pot trigar uns segons…</string>
-    <string name="cerca_no_trobat">No l\'he trobat a l\'EPREL. Mira que el model sigui el de la placa, o prova\'n només el principi.</string>
+    <string name="cerca_no_trobat">No l\'he trobat a l\'EPREL, ni escurçant el model. Mira que sigui el de la placa, o afegeix-lo pel tipus: el que gasta de debò, l\'app ho mesura.</string>
     <string name="cerca_no_carrega">No s\'ha pogut obrir la web de l\'EPREL. Mira la connexió i torna-ho a provar: la segona vegada va més de pressa.</string>
 
     <!-- Ajuda «On trobo el model?» -->
@@ -746,8 +746,8 @@
     <string name="pics_aprendra">El que li diguis queda après: la propera vegada ja sortirà amb el nom.</string>
     <!-- %1$s són els aparells encesos: «Cotxe 2,7 kW, Placa 1,9 kW» -->
     <string name="avis_potencia_ences">Ara: %1$s. Si encens res més, pot saltar el comptador.</string>
-    <string name="marca_sense_model">No en saps el model?</string>
-    <string name="marca_sense_model_nota">Afegeix-lo amb el consum típic. Quan en sàpigues el model, el pots buscar aquí i es posarà al seu lloc.</string>
+    <string name="marca_sense_model">No en saps el model? Cap problema</string>
+    <string name="marca_sense_model_nota">Afegeix-lo pel tipus, amb el consum típic. El que diu l\'etiqueta només és un punt de partida: el que gasta de debò, l\'app ho mesura quan li ensenyes una estona en què funcionava o respons «Què era?».</string>
 
     <!-- El cercador de tipus d'aparell (0.15). Els cerca_tipus_<tipus> són altres paraules per trobar-lo, separades per comes: no cal traduir-les una per una, posa-hi les que es diguin en la teva llengua -->
     <string name="cerca_tipus">Busca el tipus d\'aparell</string>
@@ -1035,4 +1035,16 @@
     <!-- La configuració de la pinça 2 -->
     <string name="connecta_linia_aparells">Quins aparells hi ha connectats?</string>
     <string name="connecta_linia_aparells_nota">Es tria aquí, un cop. A la llista d\'aparells, aquests porten la marca «pinça 2». La pinça només ajuda a reconèixer-los millor: el seu consum surt a l\'aparell, no a part.</string>
+
+    <!-- Maqueta 14: trobar l'aparell sense saber-ne el model exacte -->
+    <!-- %1$s: el model amb què l'ha trobat (per exemple, sense el «/01» de la placa) -->
+    <string name="marca_variant">Tal com l\'has escrit no hi és. Amb «%1$s», sí:</string>
+    <string name="marca_potser">Potser és un d\'aquests?</string>
+    <!-- %1$s: el principi del model amb què s'han trobat -->
+    <string name="marca_potser_nota">Tal com l\'has escrit no hi és. Aquests comencen per «%1$s». Els de la marca que has escrit, primer.</string>
+    <string name="marca_cap_daquests">Cap d\'aquests?</string>
+    <string name="marca_cap_daquests_nota">Afegeix-lo pel tipus. El que gasta de debò, l\'app ho mesura.</string>
+    <string name="placa_model_titol">El model de la placa</string>
+    <string name="placa_model_llegit">He llegit el model «%1$s».</string>
+    <string name="placa_model_no_surt">No surt a l\'EPREL: afegeix-lo amb la potència de la placa, a sota.</string>
 </resources>

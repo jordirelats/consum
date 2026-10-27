@@ -527,7 +527,7 @@
 
     <!-- La cerca a la web de l'EPREL -->
     <string name="cerca_buscant">Zoeken in EPREL. Dit kan een paar seconden duren…</string>
-    <string name="cerca_no_trobat">Niet gevonden in EPREL. Controleer of het modelnummer klopt met het typeplaatje, of probeer alleen het begin.</string>
+    <string name="cerca_no_trobat">Niet gevonden in EPREL, ook niet met een korter model. Kijk of het het model van het typeplaatje is, of voeg het toe met alleen het type: wat het echt verbruikt, meet de app.</string>
     <string name="cerca_no_carrega">De EPREL-website kon niet worden geopend. Controleer je verbinding en probeer het opnieuw: de tweede keer gaat het sneller.</string>
 
     <!-- Ajuda «On trobo el model?» -->
@@ -572,8 +572,8 @@
     <string name="pics_que_era">Wat was het?</string>
     <string name="pics_aprendra">Wat je hier kiest, onthoudt de app: de volgende keer staat de naam erbij.</string>
     <string name="avis_potencia_ences">Nu: %1$s. Zet je nog iets aan, dan kan de hoofdzekering eruit springen.</string>
-    <string name="marca_sense_model">Weet je het modelnummer niet?</string>
-    <string name="marca_sense_model_nota">Voeg het toe met het gemiddelde verbruik. Weet je later het modelnummer, zoek het dan hier op: het wordt dan vervangen.</string>
+    <string name="marca_sense_model">Weet je het model niet? Geen probleem</string>
+    <string name="marca_sense_model_nota">Voeg het toe met alleen het type en het gangbare verbruik. Wat op het label staat, is maar een begin: wat het echt verbruikt, meet de app als je het een moment aanleert waarop het aan stond of «Wat was het?» beantwoordt.</string>
 
 
     <string name="cerca_tipus">Zoek het soort apparaat</string>
@@ -820,4 +820,14 @@
     <string name="fitxa_vegada_detall">%1$d min · %2$s kW</string>
     <string name="connecta_linia_aparells">Welke apparaten zitten erop?</string>
     <string name="connecta_linia_aparells_nota">Kies je hier, één keer. In de lijst met apparaten hebben ze het merkje «meetklem 2». De meetklem helpt alleen om ze beter te herkennen: hun verbruik staat bij het apparaat, niet apart.</string>
+
+    <!-- Maqueta 14: het apparaat vinden zonder het precieze model te weten -->
+    <string name="marca_variant">Zoals je het schreef staat het er niet in. Met «%1$s» wel:</string>
+    <string name="marca_potser">Is het misschien een van deze?</string>
+    <string name="marca_potser_nota">Zoals je het schreef staat het er niet in. Deze beginnen met «%1$s». Die van het merk dat je schreef, eerst.</string>
+    <string name="marca_cap_daquests">Geen van deze?</string>
+    <string name="marca_cap_daquests_nota">Voeg het toe met alleen het type. Wat het echt verbruikt, meet de app.</string>
+    <string name="placa_model_titol">Het model op het typeplaatje</string>
+    <string name="placa_model_llegit">Ik heb het model «%1$s» gelezen.</string>
+    <string name="placa_model_no_surt">Staat niet in EPREL: voeg het hieronder toe met het vermogen van het plaatje.</string>
 </resources>
