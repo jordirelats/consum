@@ -480,18 +480,20 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
             }
         }
 
-    fun desaAparell(a: Aparell) {
+    /** Desa un aparell; torna el seu id (el nou, si se n'ha creat un). */
+    fun desaAparell(a: Aparell): Long {
         val v = ContentValues().apply {
             put("nom", a.nom); put("categoria", a.categoria.name); put("font", a.font.name)
             put("kwh_any", a.kwhAny); put("espera_w", a.esperaW); put("marca", a.marca)
             put("model", a.model); put("classe", a.classe); put("eprel", a.eprel); put("potencia_w", a.potenciaW)
             put("funciona", a.funciona.name); put("linia", if (a.linia) 1 else 0)
         }
-        if (a.id == 0L) {
+        return if (a.id == 0L) {
             v.put("creat", System.currentTimeMillis() / 1000)
             writableDatabase.insert("aparells", null, v)
         } else {
             writableDatabase.update("aparells", v, "id = ?", arrayOf(a.id.toString()))
+            a.id
         }
     }
 
@@ -726,16 +728,29 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         }
     }
 
-    fun desaEtiqueta(e: Etiqueta) {
+    /** Desa el que l'usuari ha dit d'una estona; torna l'id, per poder-ho desfer (maqueta 17). */
+    fun desaEtiqueta(e: Etiqueta): Long =
         writableDatabase.insert("etiquetes", null, ContentValues().apply {
             put("canal", e.canal); put("des_de", e.desDe); put("fins_a", e.finsA); put("aparell", e.aparellId); put("no", if (e.no) 1 else 0)
         })
-    }
 
     fun etiquetes(): List<Etiqueta> =
-        readableDatabase.rawQuery("SELECT canal, des_de, fins_a, aparell, no FROM etiquetes", null).use { c ->
-            buildList { while (c.moveToNext()) add(Etiqueta(c.getInt(0), c.getLong(1), c.getLong(2), c.getLong(3), c.getInt(4) != 0)) }
+        readableDatabase.rawQuery("SELECT canal, des_de, fins_a, aparell, no, id FROM etiquetes", null).use { c ->
+            buildList { while (c.moveToNext()) add(Etiqueta(c.getInt(0), c.getLong(1), c.getLong(2), c.getLong(3), c.getInt(4) != 0, c.getLong(5))) }
         }
+
+    /** Fora unes etiquetes i unes mostres concretes (en desfer una resposta, o treure'n una de la fitxa). */
+    fun esborra(etiquetes: List<Long>, mostres: List<Long>) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            etiquetes.forEach { db.delete("etiquetes", "id = ?", arrayOf(it.toString())) }
+            mostres.forEach { db.delete("mostres", "id = ?", arrayOf(it.toString())) }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
 
     /** Fora el que l'usuari havia dit d'un aparell (en esborrar-lo o tornar-lo a entrenar). */
     fun esborraEtiquetes(aparellId: Long) {

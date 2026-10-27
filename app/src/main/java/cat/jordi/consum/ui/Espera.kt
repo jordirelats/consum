@@ -161,12 +161,18 @@ private fun FilaBaixada(vm: ConsumViewModel, b: Baixada) {
         if (!b.respost) {
             val ordenats = perEspera(vm.aparells, b.w)
             FlowRow(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                (if (totes) ordenats else ordenats.take(4)).forEach { a ->
+                ordenats.take(4).forEach { a ->
                     SuggestionChip(onClick = { vm.responBaixada(b, a.id) }, label = { Text(a.nom) })
                 }
-                if (!totes && ordenats.size > 4) SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
+                SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.tria_tots)) })
                 SuggestionChip(onClick = { vm.responBaixada(b, null) }, label = { Text(stringResource(R.string.entrena_no_ho_se)) })
             }
+        }
+        if (totes) {
+            TriaAparell(
+                "$hora · −${num(b.w)} W", perEspera(vm.aparells, b.w).take(4), vm.aparells, vm.config.teLinia,
+                tria = { vm.responBaixada(b, it.id) }, nou = { vm.responBaixada(b, null, it) }, tanca = { totes = false },
+            )
         }
     }
 }

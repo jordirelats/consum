@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- El giny gran (4 × 2, maqueta 16): els watts d'ara, el consum d'avui i el que més gasta -->
+<!--
+  El giny gran (maqueta 17, proposta B): els watts d'ara i el d'avui, la gràfica de les 3 últimes hores i el que més gasta.
+  Si és baix, la gràfica i la fila de baix s'amaguen (Giny.kt): no es talla mai el text.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/giny"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/giny_fons"
-    android:gravity="center_vertical"
     android:orientation="vertical"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="12dp">
+    android:paddingHorizontal="14dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -27,10 +30,19 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:text="@string/giny_titol"
+            android:text="@string/giny_casa"
             android:textColor="@color/giny_text"
             android:textSize="13sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/punt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:text="●"
+            android:textColor="@color/giny_ok"
+            android:textSize="9sp" />
 
         <TextView
             android:id="@+id/hora"
@@ -43,7 +55,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:baselineAligned="true"
+        android:layout_marginTop="2dp"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <TextView
@@ -51,44 +64,81 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-light"
+            android:includeFontPadding="false"
+            android:maxLines="1"
             android:text="—"
             android:textColor="@color/giny_text"
-            android:textSize="38sp" />
+            android:textSize="34sp" />
 
         <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="4dp"
+            android:text="W"
+            android:textColor="@color/giny_suau"
+            android:textSize="16sp" />
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=" W"
-            android:textColor="@color/giny_suau"
-            android:textSize="18sp" />
+            android:gravity="end"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/avui"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:textColor="@color/giny_text"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/euros"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:textColor="@color/giny_suau"
+                android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
 
-    <ProgressBar
-        android:id="@+id/barra"
-        style="?android:attr/progressBarStyleHorizontal"
+    <ImageView
+        android:id="@+id/grafica"
         android:layout_width="match_parent"
-        android:layout_height="6dp"
-        android:layout_marginBottom="4dp"
-        android:max="100"
-        android:progressTint="@color/giny_primari"
+        android:layout_height="0dp"
+        android:layout_marginTop="6dp"
+        android:layout_weight="1"
+        android:scaleType="fitXY"
         android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/avui"
+    <LinearLayout
+        android:id="@+id/fila_mes"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:maxLines="1"
-        android:textColor="@color/giny_suau"
-        android:textSize="13sp" />
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
 
-    <TextView
-        android:id="@+id/mes"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:textColor="@color/giny_text"
-        android:textSize="13sp"
-        android:visibility="gone" />
+        <TextView
+            android:id="@+id/mes"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/giny_text"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/mes_w"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="8dp"
+            android:textColor="@color/giny_text"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 </LinearLayout>

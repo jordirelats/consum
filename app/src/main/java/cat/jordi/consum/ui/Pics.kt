@@ -193,15 +193,20 @@ private fun ElementDelPic(vm: ConsumViewModel, e: ElementPic, total: Double) {
                         fontSize = 12.sp, color = Suau,
                     )
                 }
-                // Sense cap aparell no es pot dir què era: la nota surt un sol cop, a sota
-                if (e.suggerits.isNotEmpty()) {
-                    Text(stringResource(R.string.pics_que_era), Modifier.padding(top = 2.dp), fontSize = 12.5.sp, color = Suau)
-                    val opcions = if (tots) e.suggerits else e.suggerits.take(3)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        opcions.forEach { ap -> AssistChip(onClick = { vm.responVegada(e.vegada, ap.id) }, label = { Text(ap.nom) }) }
-                        if (!tots && e.suggerits.size > 3) AssistChip(onClick = { tots = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
-                    }
+                Text(stringResource(R.string.pics_que_era), Modifier.padding(top = 2.dp), fontSize = 12.5.sp, color = Suau)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    e.suggerits.take(3).forEach { ap -> AssistChip(onClick = { vm.responVegada(e.vegada, ap.id) }, label = { Text(ap.nom) }) }
+                    AssistChip(onClick = { tots = true }, label = { Text(stringResource(R.string.tria_tots)) })
                 }
+            }
+            if (tots) {
+                TriaAparell(
+                    stringResource(R.string.pics_vegada, horaMinut(e.vegada.ts), durada(e.vegada.minuts)), e.suggerits.take(3), e.suggerits, vm.config.teLinia,
+                    tria = { vm.responVegada(e.vegada, it.id) }, tanca = { tots = false },
+                    // Un aparell nou d'una vegada de la pinça 2 és de la pinça 2
+                    nou = { vm.responVegada(e.vegada, null, it.copy(linia = e.vegada.canal == 1)) },
+                    senseLinia = e.vegada.canal == 0 && vm.config.teLinia && e.suggerits.none { it.linia } && vm.aparellsLinia.isNotEmpty(),
+                )
             }
         }
     }

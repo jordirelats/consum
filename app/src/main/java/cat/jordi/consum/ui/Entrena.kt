@@ -188,13 +188,20 @@ private fun TargetaPregunta(vm: ConsumViewModel, p: Pregunta) {
         Text(stringResource(R.string.entrena_pregunta_text, hora(p.ts), num(p.dp)), Modifier.padding(top = 6.dp), fontSize = 14.sp)
         val punts = vm.serie.filter { it.ts in (p.ts - 15 * 60)..(p.ts + 60 * 60) }
         if (punts.size > 5) MiniGrafica(punts, p.ts)
-        val ordenats = endevina(p.dp, vm.aparellsAEntrenar, vm.referencies, vm.aparellsAEntrenar.size)
+        val ordenats = endevina(p.dp, vm.aparellsAEntrenar, vm.referencies, 4)
         FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            (if (totes) ordenats else ordenats.take(5)).forEach { a ->
+            ordenats.forEach { a ->
                 SuggestionChip(onClick = { vm.respon(p, a.id, sol) }, label = { Text(a.nom) })
             }
-            if (!totes && ordenats.size > 5) SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
+            SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.tria_tots)) })
             SuggestionChip(onClick = { vm.respon(p, null) }, label = { Text(stringResource(R.string.entrena_no_ho_se)) })
+        }
+        if (totes) {
+            TriaAparell(
+                stringResource(R.string.entrena_pregunta_text, hora(p.ts), num(p.dp)), ordenats, vm.aparellsAEntrenar, vm.config.teLinia,
+                tria = { vm.respon(p, it.id, sol) }, nou = { vm.respon(p, null, sol, it) }, tanca = { totes = false },
+                senseLinia = vm.aparellsLinia.isNotEmpty(),
+            )
         }
         Row(
             Modifier.fillMaxWidth().padding(top = 4.dp).toggleable(sol, role = Role.Switch) { sol = it },
@@ -264,15 +271,21 @@ private fun TargetaRepetit(vm: ConsumViewModel, r: Repetit) {
         }
         TiraSetmana(r.cops.map { it.first }, Desconegut, stringResource(R.string.repetit_tira, r.cops.size))
         Text(stringResource(R.string.repetit_que_es), Modifier.padding(top = 6.dp), fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        val ordenats = endevina(r.w, vm.aparellsAEntrenar, vm.referencies, vm.aparellsAEntrenar.size, r.minuts, r.forma)
+        val ordenats = endevina(r.w, vm.aparellsAEntrenar, vm.referencies, 3, r.minuts, r.forma)
         FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            (if (totes) ordenats else ordenats.take(4)).forEach { a ->
+            ordenats.forEach { a ->
                 SuggestionChip(onClick = { vm.responRepetit(r, a.id, sol) }, label = { Text(a.nom) })
             }
-            if (!totes && ordenats.size > 4) SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
+            SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.tria_tots)) })
             SuggestionChip(onClick = { vm.responRepetit(r, null, false) }, label = { Text(stringResource(R.string.entrena_no_ho_se)) })
         }
-        if (vm.aparellsAEntrenar.isEmpty()) Nota(stringResource(R.string.entrena_primer_afegeix), Modifier.padding(top = 4.dp))
+        if (totes) {
+            TriaAparell(
+                titol, ordenats, vm.aparellsAEntrenar, vm.config.teLinia,
+                tria = { vm.responRepetit(r, it.id, sol) }, nou = { vm.responRepetit(r, null, sol, it) }, tanca = { totes = false },
+                senseLinia = vm.aparellsLinia.isNotEmpty(),
+            )
+        }
         Row(
             Modifier.fillMaxWidth().padding(top = 4.dp).toggleable(sol, role = Role.Switch) { sol = it },
             verticalAlignment = Alignment.CenterVertically,
@@ -313,7 +326,7 @@ private fun TargetaSenseNom(vm: ConsumViewModel, s: SenseNom) {
 @Composable
 private fun FilaSenseNom(vm: ConsumViewModel, x: VegadaSenseNom) {
     val v = x.vegada
-    var totes by remember { mutableStateOf(false) }
+    var triant by remember { mutableStateOf(false) }
     val zona = ZoneId.systemDefault()
     val dia = Instant.ofEpochSecond(v.ts).atZone(zona).format(DateTimeFormatter.ofPattern(stringResource(R.string.format_dia_curt), Idioma.locale))
     Column(Modifier.padding(top = 10.dp)) {
@@ -331,13 +344,20 @@ private fun FilaSenseNom(vm: ConsumViewModel, x: VegadaSenseNom) {
             }
         }
         FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            (if (totes) x.candidats else x.candidats.take(3)).forEach { a ->
+            x.candidats.take(3).forEach { a ->
                 SuggestionChip(onClick = { vm.responVegada(v, a.id) }, label = { Text(a.nom) })
             }
-            if (!totes && x.candidats.size > 3) SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
+            SuggestionChip(onClick = { triant = true }, label = { Text(stringResource(R.string.tria_tots)) })
             SuggestionChip(onClick = { vm.ignoraVegada(v) }, label = { Text(stringResource(R.string.entrena_no_ho_se)) })
         }
-        if (x.candidats.isEmpty()) Nota(stringResource(R.string.entrena_primer_afegeix))
+    }
+    if (triant) {
+        // Tots els que poden ser-ho: els de la resta de la casa (i els de la pinça 2 si és d'abans de la pinça)
+        TriaAparell(
+            stringResource(R.string.sense_nom_full, dia, hora(v.ts), num(v.w / 1000, 1)), x.candidats.take(3), x.candidats, vm.config.teLinia,
+            tria = { vm.responVegada(v, it.id) }, nou = { vm.responVegada(v, null, it) }, tanca = { triant = false },
+            senseLinia = vm.config.teLinia && x.candidats.none { it.linia } && vm.aparellsLinia.isNotEmpty(),
+        )
     }
 }
 

@@ -37,8 +37,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cat.jordi.consum.R
-import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Com
+import cat.jordi.consum.dades.Ensenyat
+import cat.jordi.consum.dades.OrigenEnsenyat
+import cat.jordi.consum.dades.mediana
 import cat.jordi.consum.dades.Font
 import cat.jordi.consum.dades.Funcionament
 import cat.jordi.consum.dades.Idioma
@@ -136,6 +138,14 @@ fun PantallaFitxa(vm: ConsumViewModel) {
             if (ultimes.isNotEmpty()) Nota(stringResource(R.string.fitxa_nota), Modifier.padding(top = 6.dp))
         }
 
+        // El que li has ensenyat (maqueta 17): cada cosa es pot treure, si va ser per error
+        val ensenyats = f?.ensenyats.orEmpty()
+        if (ensenyats.isNotEmpty()) Targeta {
+            TitolTargeta(stringResource(R.string.fitxa_ensenyat_titol))
+            ensenyats.forEach { e -> FilaEnsenyat(e) { vm.treuEnsenyat(e) } }
+            Nota(stringResource(R.string.fitxa_ensenyat_nota), Modifier.padding(top = 6.dp))
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (r != null && !r.automatica) TextButton(onClick = { perConfirmar = false }) { Text(stringResource(R.string.aparells_torna_entrenar)) }
             TextButton(onClick = { perConfirmar = true }) { Text(stringResource(R.string.aparells_esborra), color = PuntaText) }
@@ -192,13 +202,40 @@ private fun FilaVegada(v: Vegada, noEra: () -> Unit) {
         }
         Column(horizontalAlignment = Alignment.End) {
             Text("${num(v.kwh, 2)} kWh", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            // «No era ell» a totes (maqueta 17): també a les que l'usuari havia dit per error
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (v.com == Com.ENSENYAT) XipEstat(stringResource(R.string.fitxa_ensenyat))
-                else {
-                    XipEstat(stringResource(R.string.fitxa_reconegut), ok = false)
-                    Text(stringResource(R.string.fitxa_no_era), Modifier.clickable(onClick = noEra).padding(vertical = 4.dp), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Primari)
-                }
+                if (v.com == Com.ENSENYAT) XipEstat(stringResource(R.string.fitxa_ensenyat)) else XipEstat(stringResource(R.string.fitxa_reconegut), ok = false)
+                Text(stringResource(R.string.fitxa_no_era), Modifier.clickable(onClick = noEra).padding(vertical = 4.dp), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Primari)
             }
         }
+    }
+}
+
+/** Una cosa ensenyada: quan (o de quan a quan), d'on ve, i «Treu-ho». */
+@Composable
+private fun FilaEnsenyat(e: Ensenyat, treu: () -> Unit) {
+    val ws = e.mostres.map { it.dp }
+    val w = if (ws.isEmpty()) "" else num(mediana(ws))
+    // Una estona del mateix dia, de quan a quan: «dg 25 · 17:10–18:41»; si no, quan va començar
+    val zona = ZoneId.systemDefault()
+    val inici = Instant.ofEpochSecond(e.desDe).atZone(zona)
+    val fi = Instant.ofEpochSecond(e.finsA).atZone(zona)
+    val quan = if (e.finsA - e.desDe >= 60 && inici.toLocalDate() == fi.toLocalDate()) "${quan(e.desDe)}–${"%02d:%02d".format(fi.hour, fi.minute)}" else quan(e.desDe)
+    val que = when (e.origen) {
+        OrigenEnsenyat.ESTONA -> pluralStringResource(R.plurals.fitxa_ensenyat_estona, e.mostres.size, e.mostres.size, w)
+        OrigenEnsenyat.DIRECTE -> stringResource(R.string.fitxa_ensenyat_directe, w)
+        OrigenEnsenyat.VEGADA -> stringResource(R.string.fitxa_ensenyat_vegada)
+        OrigenEnsenyat.PREGUNTA -> stringResource(R.string.fitxa_ensenyat_pregunta)
+        OrigenEnsenyat.PIC -> stringResource(R.string.fitxa_ensenyat_pic)
+        // Tots els cops (de cada un n'hi ha l'etiqueta; mostres, només dels 12 últims)
+        OrigenEnsenyat.REPETIT -> maxOf(e.etiquetes.size, e.mostres.size).let { pluralStringResource(R.plurals.fitxa_ensenyat_repetit, it, it) }
+        OrigenEnsenyat.RESPOSTA -> stringResource(R.string.fitxa_ensenyat_resposta)
+    }
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(quan, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(que, fontSize = 12.sp, color = Suau)
+        }
+        Text(stringResource(R.string.fitxa_treu), Modifier.clickable(onClick = treu).padding(8.dp), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Primari)
     }
 }

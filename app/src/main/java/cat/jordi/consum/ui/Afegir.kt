@@ -570,7 +570,7 @@ private val paraules = mapOf(
 )
 
 /** Per comparar sense majúscules ni accents: «Vitroceràmica» i «vitroceramica» són iguals. */
-private fun pla(text: String): String =
+internal fun pla(text: String): String =
     Normalizer.normalize(text.lowercase(Idioma.locale), Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "").trim()
 
 /**
@@ -578,7 +578,7 @@ private fun pla(text: String): String =
  * triat, amb «Canvia» per tornar-la a obrir.
  */
 @Composable
-private fun TriaCategoria(triada: Categoria?, enTriar: (Categoria) -> Unit) {
+internal fun TriaCategoria(triada: Categoria?, enTriar: (Categoria) -> Unit) {
     var obert by rememberSaveable { mutableStateOf(triada == null) }
     var cerca by rememberSaveable { mutableStateOf("") }
     if (triada != null && !obert) {

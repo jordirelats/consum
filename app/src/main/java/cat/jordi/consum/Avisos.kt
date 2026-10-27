@@ -192,7 +192,7 @@ class RespostaReceiver : BroadcastReceiver() {
         val pendent = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                if (!repo.respon(pregunta, aparell)) {
+                if (repo.respon(pregunta, aparell) == null) {
                     // Ja s'havia respost des de l'app
                     NotificationManagerCompat.from(context).cancel(pregunta.toInt())
                     return@launch

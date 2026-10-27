@@ -25,7 +25,7 @@ enum class Com {
  * [aparellId] o, amb [no], que no ho era («No era ell»). Un instant ([desDe] = [finsA]) és quan es va encendre: val per a
  * la vegada que comença a menys de 3 minuts. Una estona val per a les vegades que cobreix almenys a la meitat.
  */
-data class Etiqueta(val canal: Int, val desDe: Long, val finsA: Long, val aparellId: Long, val no: Boolean = false)
+data class Etiqueta(val canal: Int, val desDe: Long, val finsA: Long, val aparellId: Long, val no: Boolean = false, val id: Long = 0)
 
 /** Una vegada desada: un episodi d'un canal, amb l'aparell (si se sap) i com se sap. */
 data class Vegada(
@@ -45,7 +45,7 @@ data class Vegada(
  * superposen (s), si cobreix almenys la meitat de la vegada i la vegada en fa almenys una quarta part: la placa que s'encén
  * a sobre de la càrrega del cotxe (maqueta 16) no és del cotxe encara que l'estona de la càrrega la cobreixi sencera.
  */
-private fun encavalca(v: Vegada, e: Etiqueta): Long {
+internal fun encavalca(v: Vegada, e: Etiqueta): Long {
     val fi = v.fi + 60
     if (e.desDe == e.finsA) return if (kotlin.math.abs(e.desDe - v.ts) <= 180) 1 else 0
     val comu = max(0, min(fi, e.finsA + 1) - max(v.ts, e.desDe))

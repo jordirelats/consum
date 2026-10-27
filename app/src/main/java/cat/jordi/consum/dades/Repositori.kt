@@ -16,6 +16,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -77,8 +78,29 @@ data class InfoPreu(
     val properes: List<HoraPreu>,
 )
 
-/** La fitxa d'un aparell (maqueta 13): el que ha gastat aquest mes, quantes vegades, i les últimes. */
-data class Fitxa(val aparellId: Long, val kwhMes: Double, val copsMes: Int, val ultimes: List<Vegada>)
+/**
+ * La fitxa d'un aparell (maqueta 13): el que ha gastat aquest mes, quantes vegades, les últimes, i (maqueta 17) el que
+ * l'usuari li ha ensenyat, per poder-ho treure.
+ */
+data class Fitxa(val aparellId: Long, val kwhMes: Double, val copsMes: Int, val ultimes: List<Vegada>, val ensenyats: List<Ensenyat> = emptyList())
+
+/** D'on ve una cosa ensenyada: una estona passada, en directe, una resposta (a «Què era?», a l'avís, a un pic) o el que es repeteix. */
+enum class OrigenEnsenyat { ESTONA, DIRECTE, VEGADA, PREGUNTA, PIC, REPETIT, RESPOSTA }
+
+/** Una cosa que l'usuari ha ensenyat d'un aparell (maqueta 17): les seves mostres i el que en va dir (les etiquetes). */
+data class Ensenyat(val origen: OrigenEnsenyat, val desDe: Long, val finsA: Long, val mostres: List<Mostra>, val etiquetes: List<Etiqueta>)
+
+/**
+ * El que ha canviat una resposta o un entrenament, per desfer-ho (maqueta 17): les etiquetes i les mostres noves (es
+ * treuen), les que s'han tret (es tornen a posar), la pregunta o el que es repeteix (tornen a ser pendents), com era
+ * l'aparell abans, l'aparell que s'ha creat i la vegada que s'havia deixat de preguntar.
+ */
+data class Desfer(
+    val etiquetes: List<Long> = emptyList(), val mostres: List<Long> = emptyList(),
+    val tornaEtiquetes: List<Etiqueta> = emptyList(), val tornaMostres: List<Mostra> = emptyList(),
+    val pregunta: Long? = null, val repetit: Long? = null, val aparellAbans: Aparell? = null, val aparellNou: Long? = null,
+    val ignorada: Long? = null,
+)
 
 /**
  * Les vegades que encara duraven a l'últim minut del Shelly (maqueta 15), si aquest minut és de fa poc ([fresques]: a casa,
@@ -115,7 +137,8 @@ class Repositori(val config: Config, private val bd: BaseDades) {
 
     private val zona get() = ZoneId.systemDefault()
     private val sincronitzant = Mutex()
-    private val intentsPreus = java.util.concurrent.ConcurrentHashMap<LocalDate, Long>()
+    /** Quan s'ha provat per últim cop de baixar els preus de cada dia, per país (un canvi de país no ha d'esperar). */
+    private val intentsPreus = java.util.concurrent.ConcurrentHashMap<Pair<Pais, LocalDate>, Long>()
 
     private fun ara() = System.currentTimeMillis() / 1000
 
@@ -202,22 +225,26 @@ class Repositori(val config: Config, private val bd: BaseDades) {
 
     /**
      * Amb un contracte dinàmic, baixa els preus de mercat dels dies que tenen dades i encara no tenen preu,
-     * i els de demà quan ja s'han publicat. Un dia que falla no es torna a provar fins al cap de mitja hora.
+     * i els de demà quan ja s'han publicat: primer demà i avui, i després cap enrere, perquè el preu d'ara surti de
+     * seguida (de 35 dies, la baixada triga). Amb [nomesRecents], només demà, avui i ahir. Un dia que falla no es torna a
+     * provar fins al cap de mitja hora.
      */
-    suspend fun actualitzaPreus() = withContext(Dispatchers.IO) {
+    suspend fun actualitzaPreus(nomesRecents: Boolean = false) = withContext(Dispatchers.IO) {
         val t = config.tarifa
         if (!t.dinamica) return@withContext
         val avui = LocalDate.now(zona)
-        var dia = bd.primerTs()?.let { Instant.ofEpochSecond(it).atZone(zona).toLocalDate() }
-            ?.coerceAtLeast(avui.minusDays(35)) ?: avui.minusDays(1)
-        while (!dia.isAfter(avui.plusDays(1))) {
+        val primer = if (nomesRecents) avui.minusDays(1)
+        else bd.primerTs()?.let { Instant.ofEpochSecond(it).atZone(zona).toLocalDate() }?.coerceAtLeast(avui.minusDays(35)) ?: avui.minusDays(1)
+        var dia = avui.plusDays(1)
+        while (!dia.isBefore(primer)) {
             val falten = bd.preus(t.pais, iniciDia(dia), iniciDia(dia.plusDays(1))).size < 23
-            val provat = intentsPreus[dia]?.let { ara() - it < 1800 } == true
+            val clau = t.pais to dia
+            val provat = intentsPreus[clau]?.let { ara() - it < 1800 } == true
             if (falten && !provat) {
-                intentsPreus[dia] = ara()
+                intentsPreus[clau] = ara()
                 runCatching { bd.desaPreus(t.pais, Mercat.preus(t.pais, dia)) }
             }
-            dia = dia.plusDays(1)
+            dia = dia.minusDays(1)
         }
     }
 
@@ -251,6 +278,9 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     fun fonsW(): Double? = fonsMinut()?.times(60)
 
     fun serie24h(): List<Punt> = bd.serie(ara() - 86400, ara() + 60)
+
+    /** La potència de les últimes [hores], per a la gràfica del giny (maqueta 17). */
+    fun serieDarreres(hores: Int): List<Punt> = bd.serie(ara() - hores * 3600L, ara() + 60)
 
     private fun iniciDia(data: LocalDate) = data.atStartOfDay(zona).toEpochSecond()
 
@@ -583,20 +613,141 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         }
     }
 
-    /** «No era ell»: aquesta vegada no era d'aquest aparell, i l'app no l'hi tornarà a donar. */
-    fun noEraEll(v: Vegada) {
-        val a = v.aparellId ?: return
-        bd.desaEtiqueta(Etiqueta(v.canal, v.ts, v.fi + 59, a, no = true))
-        haCanviat()
+    /**
+     * «No era ell»: aquesta vegada no era d'aquest aparell, i l'app no l'hi tornarà a donar. Si l'hi havia dit l'usuari
+     * (maqueta 17), fora també el que ho deia: les etiquetes que la fan seva segons el rànquing ([encavalca]: no una estona
+     * llarga que només la cobreix, com la de la càrrega del cotxe amb la placa a sobre) i les mostres lligades a aquelles
+     * etiquetes. Es decideix amb el que hi ha ara a la base de dades, no amb la vegada que ensenyava la pantalla.
+     */
+    fun noEraEll(v: Vegada): Desfer? {
+        val a = v.aparellId ?: return null
+        val d = synchronized(this) {
+            val etiquetes = bd.etiquetes().filter { it.aparellId == a && !it.no && encavalca(v, it) > 0 }
+            val mostres = bd.mostres().filter { m -> m.aparellId == a && m.font != "linia" && etiquetes.any { lliga(it, m) } }
+            bd.esborra(etiquetes.map { it.id }, mostres.map { it.id })
+            val no = bd.desaEtiqueta(Etiqueta(v.canal, v.ts, v.fi + 59, a, no = true))
+            haCanviat()
+            Desfer(etiquetes = listOf(no), tornaEtiquetes = etiquetes, tornaMostres = mostres)
+        }
+        // Repartir de nou pot trigar: fora del bloqueig del repositori, que aturaria les lectures en directe
+        reassignaVegades()
+        return d
+    }
+
+    /** On comença el que diu una mostra: en directe es desa en apagar-lo, i l'etiqueta és de quan es va encendre. */
+    private fun iniciMostra(m: Mostra) = if (m.font == "directe" && m.durada != null) m.ts - m.durada else m.ts
+
+    /**
+     * Si una etiqueta i una mostra són de la mateixa resposta o del mateix entrenament: comencen alhora (±2 s), o, d'una estona
+     * passada, la mostra és la de quan es va apagar (l'etiqueta acaba al final d'aquell minut).
+     */
+    private fun lliga(e: Etiqueta, m: Mostra) =
+        abs(e.desDe - iniciMostra(m)) <= 2 || (m.font == "passat" && abs(e.finsA - (m.ts + 59)) <= 2)
+
+    /**
+     * Desfà una resposta o un entrenament (maqueta 17). El que es torna a posar només si l'aparell encara hi és; de l'aparell
+     * d'abans, només el que la resposta havia canviat (com funciona, la potència, el consum de l'any i en espera): si
+     * mentrestant se n'ha canviat una altra cosa, es queda.
+     */
+    fun desfes(d: Desfer) {
+        synchronized(this) {
+            val existeixen = bd.aparells().associateBy { it.id }
+            bd.esborra(d.etiquetes, d.mostres)
+            d.tornaEtiquetes.filter { it.aparellId in existeixen }.forEach { bd.desaEtiqueta(it) }
+            d.tornaMostres.filter { it.aparellId in existeixen }.forEach { m ->
+                val interval = if (m.wMin != null && m.wMax != null) m.wMin to m.wMax else null
+                bd.desaMostra(m.aparellId, m.ts, m.dp, m.durada, m.font, interval, m.variacio, m.arrencada)
+            }
+            d.pregunta?.let { bd.respon(it, EstatPregunta.PENDENT, null) }
+            d.repetit?.let { bd.responRepetit(it, EstatPregunta.PENDENT, null) }
+            d.aparellAbans?.let { abans ->
+                existeixen[abans.id]?.let { ara ->
+                    bd.desaAparell(ara.copy(funciona = abans.funciona, potenciaW = abans.potenciaW, kwhAny = abans.kwhAny, esperaW = abans.esperaW))
+                }
+            }
+            d.aparellNou?.let {
+                bd.esborraAparell(it)
+                bd.esborraEtiquetes(it)
+            }
+            d.ignorada?.let { ts -> config.senseNomIgnorades = config.senseNomIgnorades - ts }
+            haCanviat()
+        }
         reassignaVegades()
     }
 
-    /** El que ha gastat un aparell aquest mes i les seves últimes vegades, per a la fitxa. */
+    /** Un aparell nou, des de «Tots els aparells…» (maqueta 17): torna el seu id. */
+    fun afegeixAparell(a: Aparell): Long {
+        val id = bd.desaAparell(a.copy(id = 0))
+        haCanviat()
+        return id
+    }
+
+    /**
+     * El que l'usuari ha ensenyat d'un aparell (maqueta 17), del més nou al més vell: cada estona passada (les mostres d'un
+     * mateix dia), cada «L'he encès / L'he apagat», cada resposta, i cada resposta a una cosa que es repeteix (amb totes les
+     * etiquetes dels seus cops, també dels que no tenen mostra). Cada etiqueta va amb les mostres de la mateixa resposta
+     * ([lliga]); les que no en tenen cap (d'abans de la 0.26), soles. El que l'app ha après sola (la línia), no.
+     */
+    private fun ensenyats(aparellId: Long): List<Ensenyat> {
+        val mostres = bd.mostres().filter { it.aparellId == aparellId && it.font != "linia" && it.font.isNotBlank() }
+        val etiquetes = bd.etiquetes().filter { it.aparellId == aparellId && !it.no }
+        val usades = mutableSetOf<Long>()
+        val usadesM = mutableSetOf<Long>()
+        val llista = mutableListOf<Ensenyat>()
+        // El que es repeteix: cada resposta, amb els seus cops
+        for (r in bd.repetits().filter { it.estat == EstatPregunta.RESPOSTA && it.aparellId == aparellId }) {
+            val inicis = r.cops.map { it.first }
+            val ms = mostres.filter { m -> m.font == "repetit" && m.id !in usadesM && inicis.any { abs(it - m.ts) <= 2 } }
+            val es = etiquetes.filter { e -> e.id !in usades && inicis.any { abs(it - e.desDe) <= 2 } }
+            if (ms.isEmpty() && es.isEmpty()) continue
+            usadesM += ms.map { it.id }
+            usades += es.map { it.id }
+            llista += Ensenyat(OrigenEnsenyat.REPETIT, inicis.min(), inicis.max(), ms, es)
+        }
+        val grups = mostres.filter { it.id !in usadesM }.groupBy { m ->
+            when (m.font) {
+                "passat" -> "passat " + Instant.ofEpochSecond(m.ts).atZone(zona).toLocalDate()
+                else -> "${m.font} ${m.id}"
+            }
+        }.values
+        for (ms in grups) {
+            val origen = when (ms.first().font) {
+                "passat" -> OrigenEnsenyat.ESTONA
+                "directe" -> OrigenEnsenyat.DIRECTE
+                "vegada" -> OrigenEnsenyat.VEGADA
+                "pregunta" -> OrigenEnsenyat.PREGUNTA
+                "pic" -> OrigenEnsenyat.PIC
+                "repetit" -> OrigenEnsenyat.REPETIT
+                else -> OrigenEnsenyat.RESPOSTA
+            }
+            val es = etiquetes.filter { e -> e.id !in usades && ms.any { lliga(e, it) } }
+            usades += es.map { it.id }
+            llista += Ensenyat(origen, ms.minOf { iniciMostra(it) }, ms.maxOf { it.ts }, ms, es)
+        }
+        llista += etiquetes.filter { it.id !in usades }.map { Ensenyat(OrigenEnsenyat.RESPOSTA, it.desDe, it.finsA, emptyList(), listOf(it)) }
+        return llista.sortedByDescending { it.desDe }
+    }
+
+    /** Treu d'un aparell una cosa que li havia ensenyat l'usuari (maqueta 17): ja no compta per reconèixer-lo. */
+    fun treuEnsenyat(e: Ensenyat): Desfer {
+        val d = synchronized(this) {
+            bd.esborra(e.etiquetes.map { it.id }, e.mostres.map { it.id })
+            haCanviat()
+            Desfer(tornaEtiquetes = e.etiquetes, tornaMostres = e.mostres)
+        }
+        reassignaVegades()
+        return d
+    }
+
+    /** El que ha gastat un aparell aquest mes, les seves últimes vegades i el que se li ha ensenyat, per a la fitxa. */
     fun fitxa(aparellId: Long): Fitxa {
         val desDe = iniciDia(LocalDate.now(zona).withDayOfMonth(1))
         val finsA = ara() + 60
         val mes = bd.vegades(desDe, finsA, aparellId)
-        return Fitxa(aparellId, mes.sumOf { it.kwh * part(it, desDe, finsA) }, mes.count { it.ts >= desDe }, bd.ultimesVegades(aparellId, 8))
+        return Fitxa(
+            aparellId, mes.sumOf { it.kwh * part(it, desDe, finsA) }, mes.count { it.ts >= desDe }, bd.ultimesVegades(aparellId, 8),
+            ensenyats(aparellId),
+        )
     }
 
     /** Quina part d'una vegada cau dins d'un període (les que passen de mitjanit, o del dia 1, es reparteixen). */
@@ -664,8 +815,10 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val ignorades = config.senseNomIgnorades
         val p = Preus(desDe, finsA)
         val refs = referencies() + referenciesLinia()
+        val nos = bd.etiquetes().filter { it.no }
         val grosses = sense.filter { it.ts !in ignorades && it.kwh >= 0.3 }.sortedByDescending { it.kwh }.take(quants).map { v ->
-            val candidats = candidatsDe(v)
+            // Els que l'usuari ha dit que no eren, no es proposen
+            val candidats = candidatsDe(v).filter { a -> nos.none { it.aparellId == a.id && encavalca(v, it) > 0 } }
             VegadaSenseNom(
                 v, v.kwh * p.de(v.ts), endevina(v.w, candidats, refs, candidats.size, v.minuts.toDouble(), v.forma),
                 bd.minutsW(linia = false, v.ts - 15 * 60, v.fi + 16 * 60).map { it.ts to it.w },
@@ -680,20 +833,22 @@ class Repositori(val config: Config, private val bd: BaseDades) {
      * sobre. Les vegades que s'hi assemblen seran seves quan es tornin a repartir.
      */
     @Synchronized
-    fun responVegada(v: Vegada, aparellId: Long) {
-        val a = bd.aparells().firstOrNull { it.id == aparellId } ?: return
-        if (!bd.teMostra(aparellId, v.ts, "vegada")) {
+    fun responVegada(v: Vegada, aparellId: Long): Desfer? {
+        val a = bd.aparells().firstOrNull { it.id == aparellId } ?: return null
+        val mostra = if (!bd.teMostra(aparellId, v.ts, "vegada")) {
             val interval = if (a.funciona == Funcionament.SOL) v.w * 0.8 to v.w * 1.2 else null
             bd.desaMostra(aparellId, v.ts, v.w, v.fi - v.ts + 60, "vegada", interval, v.variacio, v.arrencada)
-        }
-        bd.desaEtiqueta(Etiqueta(v.canal, v.ts, v.ts, aparellId))
+        } else null
+        val etiqueta = bd.desaEtiqueta(Etiqueta(v.canal, v.ts, v.ts, aparellId))
         haCanviat()
+        return Desfer(etiquetes = listOf(etiqueta), mostres = listOfNotNull(mostra))
     }
 
     /** «No ho sé»: aquesta vegada ja no es pregunta (se n'oblida al cap d'una setmana, quan ja no surt). */
     @Synchronized
-    fun ignoraVegada(v: Vegada) {
+    fun ignoraVegada(v: Vegada): Desfer {
         config.senseNomIgnorades = config.senseNomIgnorades.filter { it > ara() - 8 * 86400 }.toSet() + v.ts
+        return Desfer(ignorada = v.ts)
     }
 
     // ---------- El resum de la setmana i el sempre encès (maqueta 15) ----------
@@ -710,10 +865,11 @@ class Repositori(val config: Config, private val bd: BaseDades) {
      * Què s'ha apagat a la caça del sempre encès: si l'aparell està sempre encès, aquesta és la seva potència (i el que gasta
      * l'any); si no, el que gasta en espera.
      */
-    fun desaEspera(aparellId: Long, w: Double) {
-        val a = bd.aparells().firstOrNull { it.id == aparellId } ?: return
+    fun desaEspera(aparellId: Long, w: Double): Desfer? {
+        val a = bd.aparells().firstOrNull { it.id == aparellId } ?: return null
         bd.desaAparell(if (a.funciona == Funcionament.SEMPRE) a.copy(potenciaW = w, kwhAny = w * 8.76) else a.copy(esperaW = w))
         haCanviat()
+        return Desfer(aparellAbans = a)
     }
 
     // ---------- El resum per hores de les dades velles (maqueta 16) ----------
@@ -928,26 +1084,27 @@ class Repositori(val config: Config, private val bd: BaseDades) {
      * seva durada i la seva firma. Si s'engega sol, amb l'interval de potència del grup. Torna false si ja estava resposta.
      */
     @Synchronized
-    fun responRepetit(id: Long, aparellId: Long?, sol: Boolean = false): Boolean {
-        val r = bd.repetits(EstatPregunta.PENDENT).firstOrNull { it.id == id } ?: return false
+    fun responRepetit(id: Long, aparellId: Long?, sol: Boolean = false): Desfer? {
+        val r = bd.repetits(EstatPregunta.PENDENT).firstOrNull { it.id == id } ?: return null
         if (aparellId == null) {
             bd.responRepetit(id, EstatPregunta.IGNORADA, null)
-            return true
+            return Desfer(repetit = id)
         }
-        var a = bd.aparells().firstOrNull { it.id == aparellId } ?: return false
+        val abans = bd.aparells().firstOrNull { it.id == aparellId } ?: return null
+        var a = abans
         if (sol && a.funciona != Funcionament.SOL) {
             a = a.copy(funciona = Funcionament.SOL)
             bd.desaAparell(a)
         }
         val interval = if (a.funciona == Funcionament.SOL) r.wMin * 0.9 to r.wMax * 1.1 else null
-        for ((ts, w, minuts) in r.cops.takeLast(12)) {
-            if (!bd.teMostra(aparellId, ts, "repetit")) bd.desaMostra(aparellId, ts, w, minuts * 60L, "repetit", interval, r.variacio, r.arrencada)
+        val mostres = r.cops.takeLast(12).mapNotNull { (ts, w, minuts) ->
+            if (!bd.teMostra(aparellId, ts, "repetit")) bd.desaMostra(aparellId, ts, w, minuts * 60L, "repetit", interval, r.variacio, r.arrencada) else null
         }
         // Cada cop és d'aquest aparell (maqueta 13)
-        for ((ts, _, minuts) in r.cops) bd.desaEtiqueta(Etiqueta(0, ts, ts + minuts * 60L - 1, aparellId))
+        val etiquetes = r.cops.map { (ts, _, minuts) -> bd.desaEtiqueta(Etiqueta(0, ts, ts + minuts * 60L - 1, aparellId)) }
         bd.responRepetit(id, EstatPregunta.RESPOSTA, aparellId)
         haCanviat()
-        return true
+        return Desfer(etiquetes, mostres, repetit = id, aparellAbans = abans.takeIf { it != a })
     }
 
     fun referencies(): Map<Long, Referencia> {
@@ -1091,10 +1248,13 @@ class Repositori(val config: Config, private val bd: BaseDades) {
      * (maqueta 13).
      */
     @Synchronized
-    fun desaMostra(aparellId: Long, dp: Double, durada: Long?) {
-        bd.desaMostra(aparellId, ara(), dp, durada, "directe")
-        if (durada != null) bd.desaEtiqueta(Etiqueta(0, ara() - durada, ara() - durada, aparellId))
+    fun desaMostra(aparellId: Long, dp: Double, durada: Long?): Desfer {
+        // Un sol «ara»: l'etiqueta i la mostra han de quedar lligades (la mostra comença una durada abans)
+        val ara = ara()
+        val mostra = bd.desaMostra(aparellId, ara, dp, durada, "directe")
+        val etiqueta = if (durada != null) bd.desaEtiqueta(Etiqueta(0, ara - durada, ara - durada, aparellId)) else null
         haCanviat()
+        return Desfer(listOfNotNull(etiqueta), listOf(mostra))
     }
 
     /** Torna a començar: fora les mostres i el que l'usuari n'havia dit. */
@@ -1114,22 +1274,22 @@ class Repositori(val config: Config, private val bd: BaseDades) {
      * estava resposta (des de la notificació i des de l'app, o amb dos tocs): no es fa una mostra repetida.
      */
     @Synchronized
-    fun respon(preguntaId: Long, aparellId: Long?, sol: Boolean = false): Boolean {
-        val p = bd.pregunta(preguntaId)?.takeIf { it.estat == EstatPregunta.PENDENT } ?: return false
-        if (aparellId != null) {
-            // «S'engega sol»: a partir d'ara se n'aprèn l'interval i no s'avisa quan s'engegui
-            if (sol) bd.aparells().firstOrNull { it.id == aparellId && it.funciona != Funcionament.SOL }
-                ?.let { bd.desaAparell(it.copy(funciona = Funcionament.SOL)) }
-            bd.desaMostra(aparellId, p.ts, p.dp, null, "pregunta")
-            bd.respon(preguntaId, EstatPregunta.RESPOSTA, aparellId)
-            completaIntervals()
-            // La vegada de la pregunta és d'aquest aparell (maqueta 13)
-            bd.desaEtiqueta(Etiqueta(0, p.ts, p.ts, aparellId))
-            haCanviat()
-        } else {
+    fun respon(preguntaId: Long, aparellId: Long?, sol: Boolean = false): Desfer? {
+        val p = bd.pregunta(preguntaId)?.takeIf { it.estat == EstatPregunta.PENDENT } ?: return null
+        if (aparellId == null) {
             bd.respon(preguntaId, EstatPregunta.IGNORADA, null)
+            return Desfer(pregunta = preguntaId)
         }
-        return true
+        // «S'engega sol»: a partir d'ara se n'aprèn l'interval i no s'avisa quan s'engegui
+        val abans = if (sol) bd.aparells().firstOrNull { it.id == aparellId && it.funciona != Funcionament.SOL } else null
+        abans?.let { bd.desaAparell(it.copy(funciona = Funcionament.SOL)) }
+        val mostra = bd.desaMostra(aparellId, p.ts, p.dp, null, "pregunta")
+        bd.respon(preguntaId, EstatPregunta.RESPOSTA, aparellId)
+        completaIntervals()
+        // La vegada de la pregunta és d'aquest aparell (maqueta 13)
+        val etiqueta = bd.desaEtiqueta(Etiqueta(0, p.ts, p.ts, aparellId))
+        haCanviat()
+        return Desfer(listOf(etiqueta), listOf(mostra), pregunta = preguntaId, aparellAbans = abans)
     }
 
     /**
@@ -1206,6 +1366,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val nevera = neveraAutomatica(tots)
         val neveraW = config.neveraW.takeIf { it > 0 && nevera != null }
         val iniciLinia = iniciLinia()
+        val nos = bd.etiquetes().filter { it.no }
         return pics.map { pic ->
             val minut = bd.serie(pic.ts, pic.ts + 60).firstOrNull()
             val wLinia = if (config.teLinia) (minut?.wLinia ?: 0.0).coerceAtLeast(0.0) else 0.0
@@ -1227,7 +1388,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
                             v.canal == 1 -> linia
                             abansDeLaLinia(v, iniciLinia) -> casa + linia
                             else -> casa
-                        }
+                        }.filter { a -> nos.none { it.aparellId == a.id && encavalca(v, it) > 0 } }
                         DesconegutPic(v, e.w, endevina(v.w, candidats, refs, candidats.size, v.minuts.toDouble(), v.forma))
                     }
                     else -> SenseIdentificarPic(e.w)
@@ -1265,8 +1426,10 @@ class Repositori(val config: Config, private val bd: BaseDades) {
      * estona no fan mostres repetides.
      */
     @Synchronized
-    fun ensenyaEstona(aparellId: Long, trams: List<TramPassat>) {
-        val a = bd.aparells().firstOrNull { it.id == aparellId } ?: return
+    fun ensenyaEstona(aparellId: Long, trams: List<TramPassat>): Desfer? {
+        val a = bd.aparells().firstOrNull { it.id == aparellId } ?: return null
+        val mostres = mutableListOf<Long>()
+        val etiquetes = mutableListOf<Long>()
         for (t in trams) {
             val durada = t.fi - t.ts + 60
             if (a.funciona == Funcionament.SOL) {
@@ -1274,14 +1437,16 @@ class Repositori(val config: Config, private val bd: BaseDades) {
                 val id = bd.desaMostra(aparellId, t.ts, mediana(t.exces), durada, "passat")
                 val s = t.exces.sorted()
                 bd.desaInterval(id, s[s.size / 10] * 0.8, s.last() * 1.2)
+                mostres += id
             } else {
                 val (puja, baixa) = t.mostres
-                if (!bd.teMostra(aparellId, t.ts, "passat")) bd.desaMostra(aparellId, t.ts, puja, durada, "passat")
-                if (!bd.teMostra(aparellId, t.fi, "passat")) bd.desaMostra(aparellId, t.fi, baixa, durada, "passat")
+                if (!bd.teMostra(aparellId, t.ts, "passat")) mostres += bd.desaMostra(aparellId, t.ts, puja, durada, "passat")
+                if (!bd.teMostra(aparellId, t.fi, "passat")) mostres += bd.desaMostra(aparellId, t.fi, baixa, durada, "passat")
             }
             // Aquesta estona és d'aquest aparell: el seu consum hi va (maqueta 13)
-            bd.desaEtiqueta(Etiqueta(0, t.ts, t.fi + 59, aparellId))
+            etiquetes += bd.desaEtiqueta(Etiqueta(0, t.ts, t.fi + 59, aparellId))
         }
         haCanviat()
+        return Desfer(etiquetes, mostres)
     }
 }

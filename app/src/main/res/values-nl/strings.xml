@@ -183,14 +183,14 @@
     <string name="aparells_classe">Energieklasse %1$s</string>
     <string name="aparells_kwh_euros_any">%1$s kWh per jaar ≈ € %2$s per jaar</string>
     <string name="aparells_en_espera">Stand-by: %1$s W</string>
-    <string name="aparells_torna_entrenar">Opnieuw aanleren</string>
+    <string name="aparells_torna_entrenar">Alles weghalen en opnieuw beginnen</string>
     <string name="aparells_es_tipic">Dit is een gemiddelde waarde: scan het energielabel voor een nauwkeuriger getal.</string>
     <string name="aparells_esborra">Verwijderen</string>
     <string name="grafiques_desc_potencia">Grafiek van het vermogen: het hoogste %1$s kW om %2$s; het laatste %3$s kW.</string>
     <string name="grafiques_desc_barres">Grafiek van het verbruik: het hoogste %1$s kWh (%2$s).</string>
     <string name="error_sense_app">Deze telefoon heeft geen app om dit te doen.</string>
     <string name="aparells_confirma_esborra">Wil je ‘%1$s’ verwijderen? Wat de app ervan heeft aangeleerd, wordt ook verwijderd.</string>
-    <string name="aparells_confirma_entrena">Wil je ‘%1$s’ opnieuw aanleren? De metingen die er al zijn, worden verwijderd.</string>
+    <string name="aparells_confirma_entrena">Wil je alles weghalen wat je ‘%1$s’ hebt aangeleerd en opnieuw beginnen? Dit kan niet ongedaan worden.</string>
 
     <!-- Pantalla Entrena -->
     <string name="entrena_avisos_titol">Meldingen bij onverwacht verbruik</string>
@@ -811,7 +811,7 @@
     <string name="fitxa_pinca2_text">Wordt daar gemeten: de app leert het zelf van die groep.</string>
     <string name="fitxa_ultimes">De laatste keren</string>
     <string name="fitxa_cap_vegada">Nog niet aan gezien.</string>
-    <string name="fitxa_nota">Wat je het aanleert, is van hem. Wat de app herkent, kun je weghalen als hij het niet was.</string>
+    <string name="fitxa_nota">Was een keer niet van hem, tik dan op «Was hij niet»: ook bij keren die je zelf hebt aangeleerd.</string>
     <string name="fitxa_ensenyat">door jou aangeleerd</string>
     <string name="fitxa_reconegut">herkend</string>
     <string name="fitxa_no_era">Was hij niet</string>
@@ -902,13 +902,14 @@
     <string name="exporta_cap_minuts">dag;uur;W;%1$s W;benaderd</string>
 
     <!-- Maqueta 16: widget -->
-    <string name="giny_titol">Thuis · nu</string>
-    <string name="giny_avui">Vandaag %1$s kWh · %2$s</string>
+    <string name="giny_casa">Thuis</string>
+    <string name="giny_ara_hora">nu · %1$s</string>
+    <string name="giny_avui_kwh">Vandaag %1$s kWh</string>
+    <string name="giny_ara_aparell">Nu: %1$s</string>
     <string name="giny_avui_curt">vandaag %1$s kWh</string>
-    <string name="giny_mes">%1$s · %2$s</string>
     <string name="giny_gran_nom">Verbruik: nu, vandaag en het meest</string>
     <string name="giny_petit_nom">Verbruik: nu</string>
-    <string name="giny_gran_descripcio">Het vermogen nu, het verbruik van vandaag en wat het meest verbruikt</string>
+    <string name="giny_gran_descripcio">Het vermogen nu, vandaag, de grafiek van de laatste 3 uur en wat het meest verbruikt</string>
     <string name="giny_petit_descripcio">Het vermogen nu en de kWh van vandaag</string>
 
     <!-- Maqueta 16: donkere modus -->
@@ -916,4 +917,47 @@
     <string name="connecta_aspecte_mobil">Zoals telefoon</string>
     <string name="connecta_aspecte_clar">Licht</string>
     <string name="connecta_aspecte_fosc">Donker</string>
+
+    <!-- Maqueta 17 -->
+    <string name="desfer_accio">Ongedaan maken</string>
+    <string name="desfer_era">Opgeslagen: het was %1$s</string>
+    <string name="desfer_no_era">Oké: het was niet %1$s</string>
+    <string name="desfer_no_preguntis">Oké: dit wordt niet meer gevraagd</string>
+    <string name="desfer_tret">Klaar: telt niet meer voor %1$s</string>
+    <string name="desfer_nou">%1$s toegevoegd en opgeslagen</string>
+    <string name="desfer_espera">Opgeslagen: %1$s, %2$s W stand-by</string>
+    <string name="desfer_estona">Opgeslagen: de periode van %1$s</string>
+    <string name="desfer_directe">Opgeslagen: %1$s, %2$s W</string>
+    <string name="tria_tots">Alle apparaten…</string>
+    <string name="tria_que_era">Wat was het?</string>
+    <string name="tria_busca">Zoeken…</string>
+    <string name="tria_sassemblen">Lijken erop</string>
+    <string name="tria_tots_titol">Alle</string>
+    <string name="tria_cap">Geen apparaat heet zo.</string>
+    <string name="tria_sense_linia">Wat op meetklem 2 zit staat er niet bij: deze keer is van de rest van het huis. Staat een apparaat verkeerd, pas het dan aan op zijn kaart.</string>
+    <string name="tria_nou">Voeg een nieuw toe</string>
+    <string name="tria_nou_text">het type en de naam; de app leert het verbruik van deze keer</string>
+    <string name="tria_nou_titol">Een nieuw apparaat</string>
+    <string name="tria_tipus">Welk type is het?</string>
+    <string name="tria_nom_pregunta">Hoe noem je het?</string>
+    <string name="tria_nom">Naam</string>
+    <string name="tria_nou_nota">Deze keer wordt van hem, en de app leert zijn handtekening.</string>
+    <string name="tria_afegeix">Toevoegen en opslaan</string>
+    <string name="sense_nom_full">%1$s · %2$s · %3$s kW</string>
+    <string name="fitxa_ensenyat_titol">Wat je hem hebt aangeleerd</string>
+    <string name="fitxa_ensenyat_nota">Wat je weghaalt telt niet meer om hem te herkennen, en de keren die daardoor van hem waren, krijgen weer geen naam.</string>
+    <string name="fitxa_ensenyat_directe">live, +%1$s W</string>
+    <string name="fitxa_ensenyat_vegada">antwoord op «Wat was het?»</string>
+    <string name="fitxa_ensenyat_pregunta">antwoord op de verbruiksmelding</string>
+    <string name="fitxa_ensenyat_pic">antwoord bij een piekmoment</string>
+    <string name="fitxa_ensenyat_resposta">antwoord</string>
+    <string name="fitxa_treu">Weghalen</string>
+    <plurals name="fitxa_ensenyat_estona">
+        <item quantity="one">eerdere periode · %1$d meting, %2$s W</item>
+        <item quantity="other">eerdere periode · %1$d metingen, %2$s W</item>
+    </plurals>
+    <plurals name="fitxa_ensenyat_repetit">
+        <item quantity="one">wat zich herhaalt · %1$d keer</item>
+        <item quantity="other">wat zich herhaalt · %1$d keer</item>
+    </plurals>
 </resources>

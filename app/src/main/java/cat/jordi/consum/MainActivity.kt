@@ -1,5 +1,11 @@
 package cat.jordi.consum
 
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.remember
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import cat.jordi.consum.dades.ASPECTE_FOSC
 import cat.jordi.consum.dades.ASPECTE_CLAR
 import cat.jordi.consum.ui.Superficie
@@ -182,8 +188,18 @@ private fun Arrel(vm: ConsumViewModel) {
     }
     // Un període anterior de l'Historial té la pàgina d'un altre color (maqueta 10)
     val fons = if (principal && vm.pestanya == Pestanya.HISTORIAL && vm.resum?.actual == false) Sepia else Fons
+    // L'avís per desfer l'última resposta (maqueta 17): uns 10 segons
+    val avisos = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val desfer = vm.desfer
+    LaunchedEffect(desfer) {
+        if (desfer == null) return@LaunchedEffect
+        val r = avisos.showSnackbar(desfer.text.text(context), context.getString(R.string.desfer_accio), duration = SnackbarDuration.Long)
+        if (r == SnackbarResult.ActionPerformed) vm.desfes(desfer) else vm.oblidaDesfer(desfer)
+    }
     Scaffold(
         containerColor = fons,
+        snackbarHost = { SnackbarHost(avisos) },
         topBar = {
             TopAppBar(
                 title = { Text(titol) },
@@ -197,7 +213,7 @@ private fun Arrel(vm: ConsumViewModel) {
                 },
                 actions = {
                     if (principal) {
-                        if (vm.sincronitzant) {
+                        if (vm.sincronitzant || vm.recalculant) {
                             Box(Modifier.padding(12.dp)) { CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) }
                         } else {
                             IconButton(onClick = vm::sincronitza) { Icon(Icons.Outlined.Sync, stringResource(R.string.principal_recull_dades)) }

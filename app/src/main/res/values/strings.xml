@@ -250,7 +250,7 @@
     <!-- El consum en espera (stand-by) -->
     <string name="aparells_en_espera">En espera: %1$s W</string>
     <!-- El mateix, i %3$s són els minuts que sol estar encès -->
-    <string name="aparells_torna_entrenar">Torna a entrenar-lo</string>
+    <string name="aparells_torna_entrenar">Treu-ho tot i torna a començar</string>
     <string name="aparells_es_tipic">És un valor típic: escaneja l\'etiqueta per afinar-lo.</string>
     <string name="aparells_esborra">Esborra\'l</string>
     <!-- El que llegeix el lector de pantalla en arribar a les gràfiques -->
@@ -259,7 +259,7 @@
     <string name="error_sense_app">Aquest mòbil no té cap app per fer-ho.</string>
     <!-- La confirmació abans d'esborrar un aparell o de tornar-lo a entrenar; %1$s és el nom de l'aparell -->
     <string name="aparells_confirma_esborra">Vols esborrar «%1$s»? També s\'esborra el que l\'app n\'ha après.</string>
-    <string name="aparells_confirma_entrena">Vols tornar a entrenar «%1$s»? S\'esborren les mostres que en té.</string>
+    <string name="aparells_confirma_entrena">Vols treure tot el que li has ensenyat a «%1$s» i tornar a començar? No es pot desfer.</string>
 
     <!-- Pantalla Entrena -->
     <string name="entrena_avisos_titol">Avisos de consum inesperat</string>
@@ -1022,7 +1022,7 @@
     <string name="fitxa_pinca2_text">Es mesura allà: l\'app l\'aprèn sola d\'aquella línia.</string>
     <string name="fitxa_ultimes">Les últimes vegades</string>
     <string name="fitxa_cap_vegada">Encara no l\'ha vist funcionar.</string>
-    <string name="fitxa_nota">El que li ensenyes és seu. El que l\'app hi reconeix, ho pots treure si no era ell.</string>
+    <string name="fitxa_nota">Si una vegada no era seva, toca «No era ell»: també a les que li has ensenyat tu.</string>
     <string name="fitxa_ensenyat">ensenyat per tu</string>
     <string name="fitxa_reconegut">reconegut</string>
     <string name="fitxa_no_era">No era ell</string>
@@ -1117,13 +1117,14 @@
     <string name="exporta_cap_minuts">dia;hora;W;%1$s W;aproximat</string>
 
     <!-- Maqueta 16: el giny de la pantalla d'inici -->
-    <string name="giny_titol">Casa · ara</string>
-    <string name="giny_avui">Avui %1$s kWh · %2$s</string>
+    <string name="giny_casa">Casa</string>
+    <string name="giny_ara_hora">ara · %1$s</string>
+    <string name="giny_avui_kwh">Avui %1$s kWh</string>
+    <string name="giny_ara_aparell">Ara: %1$s</string>
     <string name="giny_avui_curt">avui %1$s kWh</string>
-    <string name="giny_mes">%1$s · %2$s</string>
     <string name="giny_gran_nom">Consum: ara, avui i qui més</string>
     <string name="giny_petit_nom">Consum: ara</string>
-    <string name="giny_gran_descripcio">Els watts d\'ara, el consum d\'avui i el que més gasta</string>
+    <string name="giny_gran_descripcio">Els watts d\'ara, el d\'avui, la gràfica de les 3 últimes hores i el que més gasta</string>
     <string name="giny_petit_descripcio">Els watts d\'ara i els kWh d\'avui</string>
 
     <!-- Maqueta 16: el mode fosc -->
@@ -1131,4 +1132,47 @@
     <string name="connecta_aspecte_mobil">Com el mòbil</string>
     <string name="connecta_aspecte_clar">Clar</string>
     <string name="connecta_aspecte_fosc">Fosc</string>
+
+    <!-- Maqueta 17: desfer, tots els aparells i afegir-ne un de nou -->
+    <string name="desfer_accio">Desfés</string>
+    <string name="desfer_era">Desat: era %1$s</string>
+    <string name="desfer_no_era">D\'acord: no era %1$s</string>
+    <string name="desfer_no_preguntis">D\'acord: no es tornarà a preguntar</string>
+    <string name="desfer_tret">Fet: ja no compta per a %1$s</string>
+    <string name="desfer_nou">Afegit %1$s i desat</string>
+    <string name="desfer_espera">Desat: %1$s, %2$s W en espera</string>
+    <string name="desfer_estona">Desat: l\'estona de %1$s</string>
+    <string name="desfer_directe">Desat: %1$s, %2$s W</string>
+    <string name="tria_tots">Tots els aparells…</string>
+    <string name="tria_que_era">Què era?</string>
+    <string name="tria_busca">Busca…</string>
+    <string name="tria_sassemblen">S\'hi assemblen</string>
+    <string name="tria_tots_titol">Tots</string>
+    <string name="tria_cap">Cap aparell es diu així.</string>
+    <string name="tria_sense_linia">Els de la pinça 2 no hi surten: aquesta vegada és de la resta de la casa. Si un aparell no hi és ben posat, canvia-ho a la seva fitxa.</string>
+    <string name="tria_nou">Afegeix-ne un de nou</string>
+    <string name="tria_nou_text">el tipus i el nom; l\'app n\'aprendrà el consum d\'aquesta vegada</string>
+    <string name="tria_nou_titol">Un aparell nou</string>
+    <string name="tria_tipus">De quin tipus és?</string>
+    <string name="tria_nom_pregunta">Com li dius?</string>
+    <string name="tria_nom">Nom</string>
+    <string name="tria_nou_nota">Aquesta vegada serà seva, i n\'aprendrà la firma.</string>
+    <string name="tria_afegeix">Afegeix i desa</string>
+    <string name="sense_nom_full">%1$s · %2$s · %3$s kW</string>
+    <string name="fitxa_ensenyat_titol">El que li has ensenyat</string>
+    <string name="fitxa_ensenyat_nota">El que treus ja no compta per reconèixer-lo, i les vegades que eren seves per això tornen a quedar sense nom.</string>
+    <string name="fitxa_ensenyat_directe">en directe, +%1$s W</string>
+    <string name="fitxa_ensenyat_vegada">resposta a «Què era?»</string>
+    <string name="fitxa_ensenyat_pregunta">resposta a l\'avís de consum</string>
+    <string name="fitxa_ensenyat_pic">resposta en un moment punta</string>
+    <string name="fitxa_ensenyat_resposta">resposta</string>
+    <string name="fitxa_treu">Treu-ho</string>
+    <plurals name="fitxa_ensenyat_estona">
+        <item quantity="one">estona passada · %1$d mostra, %2$s W</item>
+        <item quantity="other">estona passada · %1$d mostres, %2$s W</item>
+    </plurals>
+    <plurals name="fitxa_ensenyat_repetit">
+        <item quantity="one">el que es repeteix · %1$d cop</item>
+        <item quantity="other">el que es repeteix · %1$d cops</item>
+    </plurals>
 </resources>

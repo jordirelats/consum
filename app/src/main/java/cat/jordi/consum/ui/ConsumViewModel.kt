@@ -30,6 +30,8 @@ import cat.jordi.consum.dades.Periode
 import cat.jordi.consum.dades.Pic
 import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Punt
+import cat.jordi.consum.dades.Desfer
+import cat.jordi.consum.dades.Ensenyat
 import cat.jordi.consum.dades.Fitxa
 import cat.jordi.consum.dades.Obertes
 import cat.jordi.consum.dades.ResumSetmana
@@ -344,9 +346,14 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         }
     }
 
+    /** Cada tarifa desada: un refresc començat amb la d'abans no ha d'escriure els seus euros a sobre dels nous. */
+    @Volatile
+    private var generacioTarifa = 0
+
     private suspend fun refrescaAra() {
         val p = periode
         val d = diaHistorial
+        val generacio = generacioTarifa
         val dades = withContext(Dispatchers.IO) {
             // Si s'ha ensenyat, respost o canviat alguna cosa, de qui és cada vegada (maqueta 13)
             repo.reassignaVegades()
@@ -361,6 +368,7 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
                 repo.aparellsLinia(),
             )
         }
+        if (generacio != generacioTarifa) return
         serie = dades.serie
         avuiKwh = dades.avui.kwh
         avuiEuros = dades.avui.euros
@@ -406,10 +414,90 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
 
     /** «No era ell»: aquesta vegada no era d'aquest aparell. */
     fun noEraEll(v: Vegada) {
+        val nom = aparells.firstOrNull { it.id == v.aparellId }?.nom.orEmpty()
+        desa(TextRecurs(R.string.desfer_no_era, nom)) { repo.noEraEll(v) }
+    }
+
+    // ---------- Desfer (maqueta 17) ----------
+
+    /** L'última resposta o entrenament, que encara es pot desfer uns segons. */
+    var desfer by mutableStateOf<AvisDesfer?>(null)
+        private set
+
+    /** Una resposta s'està desant: un segon toc no en fa una altra (ni un «Desfés» que no desfaria la primera). */
+    private var desant = false
+
+    /**
+     * Desa (al fil de fons) i, si ha anat bé, ofereix desfer-ho de seguida, abans de refrescar la pantalla (que pot trigar).
+     * [desfetALaPantalla]: el que cal tornar com era a la pantalla si es desfà.
+     */
+    private fun desa(text: TextRecurs, desfetALaPantalla: (() -> Unit)? = null, accio: () -> Desfer?) {
+        if (desant) return
+        desant = true
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.noEraEll(v) }
+            try {
+                val d = withContext(Dispatchers.IO) { accio() }
+                if (d != null) desfer = AvisDesfer(text, d, desfetALaPantalla)
+            } finally {
+                desant = false
+            }
             refrescaAra()
         }
+    }
+
+    /**
+     * Respon amb un aparell que ja hi és ([aparellId]) o amb un de nou ([nou], des de «Tots els aparells…»): primer es crea,
+     * i desfer-ho també el treu.
+     */
+    private fun respon(
+        aparellId: Long?, nou: Aparell?, text: (String) -> TextRecurs, fet: ((Long) -> Unit)? = null, desfetALaPantalla: (() -> Unit)? = null,
+        accio: (Long) -> Desfer?,
+    ) {
+        if (desant) return
+        desant = true
+        viewModelScope.launch {
+            try {
+                val r = withContext(Dispatchers.IO) {
+                    val id = aparellId ?: nou?.let { repo.afegeixAparell(it) } ?: return@withContext null
+                    val d = accio(id)
+                    if (d == null) {
+                        if (nou != null) repo.desfes(Desfer(aparellNou = id))
+                        return@withContext null
+                    }
+                    val nom = repo.aparells().firstOrNull { it.id == id }?.nom.orEmpty()
+                    Triple(id, if (nou != null) TextRecurs(R.string.desfer_nou, nom) else text(nom), if (nou != null) d.copy(aparellNou = id) else d)
+                }
+                r?.let { (id, t, d) ->
+                    fet?.invoke(id)
+                    desfer = AvisDesfer(t, d, desfetALaPantalla)
+                }
+            } finally {
+                desant = false
+            }
+            refrescaAra()
+        }
+    }
+
+    /** «Desfés» de l'avís [d]: si mentrestant n'ha arribat un altre, aquest ja no es desfà. */
+    fun desfes(d: AvisDesfer) {
+        if (desfer !== d) return
+        desfer = null
+        d.desfetALaPantalla?.invoke()
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.desfes(d.accio) }
+            refrescaAra()
+        }
+    }
+
+    /** L'avís de desfer ja ha passat (o se n'ha fet un altre). */
+    fun oblidaDesfer(d: AvisDesfer) {
+        if (desfer === d) desfer = null
+    }
+
+    /** «Treu-ho»: una cosa ensenyada a un aparell, des de la fitxa. */
+    fun treuEnsenyat(e: Ensenyat) {
+        val nom = aparells.firstOrNull { a -> (e.mostres.firstOrNull()?.aparellId ?: e.etiquetes.firstOrNull()?.aparellId) == a.id }?.nom.orEmpty()
+        desa(TextRecurs(R.string.desfer_tret, nom)) { repo.treuEnsenyat(e) }
     }
 
     private class Dades(
@@ -473,29 +561,22 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     }
 
     /** Què és una cosa que es repeteix ([aparellId] null: «No ho sé»). [sol]: s'engega sola. */
-    fun responRepetit(r: Repetit, aparellId: Long?, sol: Boolean) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.responRepetit(r.id, aparellId, sol) }
-            refrescaAra()
+    fun responRepetit(r: Repetit, aparellId: Long?, sol: Boolean, nou: Aparell? = null) {
+        if (aparellId == null && nou == null) {
+            desa(TextRecurs(R.string.desfer_no_preguntis)) { repo.responRepetit(r.id, null, false) }
+            return
         }
+        respon(aparellId, nou, { TextRecurs(R.string.desfer_era, it) }) { id -> repo.responRepetit(r.id, id, sol) }
     }
 
     /** De qui és una vegada grossa sense nom (maqueta 15). */
-    fun responVegada(v: Vegada, aparellId: Long) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.responVegada(v, aparellId) }
-            refrescaAra()
-        }
-    }
+    fun responVegada(v: Vegada, aparellId: Long?, nou: Aparell? = null) =
+        respon(aparellId, nou, { TextRecurs(R.string.desfer_era, it) }) { id -> repo.responVegada(v, id) }
 
     /** «No ho sé»: aquesta vegada ja no es pregunta. */
-    fun ignoraVegada(v: Vegada) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.ignoraVegada(v) }
-            refrescaAra()
-        }
-    }
+    fun ignoraVegada(v: Vegada) = desa(TextRecurs(R.string.desfer_no_preguntis)) { repo.ignoraVegada(v) }
 
+    @Volatile
     private var resumCalculat = 0L
 
     /** La setmana passada, mentre no s'ha vist: com a molt un cop cada mitja hora (és una setmana sencera de dades). */
@@ -546,13 +627,17 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     }
 
     /** Què s'ha apagat en una baixada ([aparellId] null: «No ho sé»). */
-    fun responBaixada(b: Baixada, aparellId: Long?) {
-        baixades = baixades.map { if (it.ts == b.ts) it.copy(aparellId = aparellId, respost = true) else it }
-        if (aparellId == null) return
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.desaEspera(aparellId, b.w) }
-            refrescaAra()
+    fun responBaixada(b: Baixada, aparellId: Long?, nou: Aparell? = null) {
+        if (aparellId == null && nou == null) {
+            baixades = baixades.map { if (it.ts == b.ts) it.copy(respost = true) else it }
+            return
         }
+        // Les baixades es toquen aquí, al fil de la pantalla (la caça hi afegeix les noves): en desar, i en desfer-ho
+        respon(
+            aparellId, nou, { TextRecurs(R.string.desfer_espera, it, num(b.w)) },
+            fet = { id -> baixades = baixades.map { if (it.ts == b.ts) it.copy(aparellId = id, respost = true) else it } },
+            desfetALaPantalla = { baixades = baixades.map { if (it.ts == b.ts) it.copy(aparellId = null, respost = false) else it } },
+        ) { id -> repo.desaEspera(id, b.w) }
     }
 
     /** Clara, fosca o com el mòbil (maqueta 16). */
@@ -629,7 +714,8 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     /** Desa els trams marcats com a mostres de l'aparell i torna a Entrena, amb el que n'ha après. */
     fun ensenyaEstona(aparell: Aparell, trams: List<TramPassat>) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.ensenyaEstona(aparell.id, trams) }
+            val d = withContext(Dispatchers.IO) { repo.ensenyaEstona(aparell.id, trams) }
+            d?.let { desfer = AvisDesfer(TextRecurs(R.string.desfer_estona, aparell.nom), it) }
             estona = null
             refrescaAra()
             val r = referencies[aparell.id]
@@ -695,6 +781,8 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
 
     fun esborraAparell(id: Long) {
         if (pantalla == Pantalla.APARELL) pantalla = Pantalla.PRINCIPAL
+        // El que es podia desfer d'abans ja no té sentit: tornaria a posar coses d'un aparell que no hi és
+        desfer = null
         viewModelScope.launch {
             withContext(Dispatchers.IO) { repo.esborraAparell(id) }
             refrescaAra()
@@ -738,7 +826,10 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
                 else -> {
                     // Si es va encendre fa més d'un dia, segurament no es va marcar quan es va apagar: no se'n sap la durada
                     val durada = if (encen) null else encesos[aparell.id]?.let { (ara - it) / 1000 }?.takeIf { it <= 24 * 3600 }
-                    withContext(Dispatchers.IO) { repo.desaMostra(aparell.id, salt, durada) }
+                    val d = withContext(Dispatchers.IO) { repo.desaMostra(aparell.id, salt, durada) }
+                    // Desfer-ho torna l'aparell a com estava a Entrena (encès o apagat)
+                    val abans = encesos
+                    desfer = AvisDesfer(TextRecurs(R.string.desfer_directe, aparell.nom, num(salt)), d) { encesos = abans }
                     // Només canvia d'encès a apagat (o al revés) si s'ha vist el salt
                     encesos = if (encen) encesos + (aparell.id to ara) else encesos - aparell.id
                     val n = (referencies[aparell.id]?.mostres ?: 0) + 1
@@ -758,16 +849,18 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     }
 
     /** [sol]: l'usuari diu que l'aparell s'engega sol; se n'aprèn l'interval i no se n'avisa més. */
-    fun respon(pregunta: Pregunta, aparellId: Long?, sol: Boolean = false) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.respon(pregunta.id, aparellId, sol) }
-            // Si la pregunta també és a les notificacions, ja no cal
-            NotificationManagerCompat.from(getApplication<Application>()).cancel(pregunta.id.toInt())
-            refrescaAra()
+    fun respon(pregunta: Pregunta, aparellId: Long?, sol: Boolean = false, nou: Aparell? = null) {
+        // Si la pregunta també és a les notificacions, ja no cal
+        NotificationManagerCompat.from(getApplication<Application>()).cancel(pregunta.id.toInt())
+        if (aparellId == null && nou == null) {
+            desa(TextRecurs(R.string.desfer_no_preguntis)) { repo.respon(pregunta.id, null) }
+            return
         }
+        respon(aparellId, nou, { TextRecurs(R.string.desfer_era, it) }) { id -> repo.respon(pregunta.id, id, sol) }
     }
 
     fun tornaAEntrenar(aparellId: Long) {
+        desfer = null
         viewModelScope.launch {
             withContext(Dispatchers.IO) { repo.tornaAEntrenar(aparellId) }
             refrescaAra()
@@ -780,15 +873,52 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         Vigilancia.actualitza(getApplication())
     }
 
+    /** Mentre es tornen a calcular els euros amb una tarifa nova (la roda de dalt). */
+    var recalculant by mutableStateOf(false)
+        private set
+
+    /**
+     * Amb la tarifa nova, primer el que depèn del preu (el d'ara, avui, el període de l'Historial, el mes i la setmana
+     * passada), que és de seguida; amb un preu de mercat, primer els preus d'avui i de demà; i després tota la resta.
+     */
     fun desaTarifa(t: Tarifa) {
         config.tarifa = t
+        generacioTarifa++
         Vigilancia.actualitza(getApplication())
         pantalla = Pantalla.PRINCIPAL
+        resumCalculat = 0
         viewModelScope.launch {
-            refrescaAra()
+            recalculant = true
+            try {
+                refrescaPreus()
+                runCatching { repo.actualitzaPreus(nomesRecents = true) }
+                refrescaPreus()
+                withContext(Dispatchers.IO) { runCatching { Ginys.actualitza(getApplication(), repo, lectura, forca = true) } }
+                refrescaAra()
+            } finally {
+                recalculant = false
+            }
+            // Els dies d'abans, sense pressa
             runCatching { repo.actualitzaPreus() }
             refrescaAra()
         }
+    }
+
+    /** Només el que depèn del preu: ràpid, perquè després de canviar la tarifa no es vegin els euros d'abans. */
+    private suspend fun refrescaPreus() {
+        val p = periode
+        val d = diaHistorial
+        val generacio = generacioTarifa
+        val r = withContext(Dispatchers.IO) {
+            resumCalculat = 0
+            listOf(repo.infoPreu(), repo.avui(), repo.resum(p, d), repo.resumMes(), resumDeLaSetmana())
+        }
+        if (generacio != generacioTarifa) return
+        infoPreu = r[0] as InfoPreu
+        (r[1] as Avui).let { avuiKwh = it.kwh; avuiEuros = it.euros; avuiAproximat = it.aproximat }
+        if (p == periode && d == diaHistorial) resum = r[2] as Resum
+        resumMes = r[3] as Resum
+        resumSetmana = r[4] as ResumSetmana?
     }
 
     /** Després de canviar la configuració: torna a començar les lectures. */
@@ -802,3 +932,9 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
 
 /** Una baixada de la potència a la caça del sempre encès: quan, quants W, i què era (si s'ha dit). */
 data class Baixada(val ts: Long, val w: Double, val aparellId: Long? = null, val respost: Boolean = false)
+
+/**
+ * L'avís per desfer l'última resposta o entrenament (maqueta 17): què s'ha desat, com desfer-ho, i què cal tornar com era a
+ * la pantalla.
+ */
+class AvisDesfer(val text: TextRecurs, val accio: Desfer, val desfetALaPantalla: (() -> Unit)? = null)
