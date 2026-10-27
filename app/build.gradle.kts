@@ -1,8 +1,21 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+/*
+ * La clau amb què se signen les versions publicades. És fora del repositori (../claus/, al costat de la carpeta app), o on
+ * digui `consum.clau` a local.properties. Totes les versions s'han de signar amb la mateixa clau: si no, una de nova no
+ * s'instal·la a sobre de l'anterior, i desinstal·lar esborra les dades del mòbil. Si no hi és (qui compili l'app pel seu
+ * compte), se signa amb la clau de depuració del seu ordinador.
+ */
+val propietatsLocals = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+val clauConsum = rootProject.file(propietatsLocals.getProperty("consum.clau") ?: "../claus/consum-signatura.keystore")
 
 android {
     namespace = "cat.jordi.consum"
@@ -18,13 +31,24 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
+    signingConfigs {
+        // És una clau de depuració (amb les contrasenyes de sempre), però guardada amb el projecte i no a l'ordinador
+        create("consum") {
+            storeFile = clauConsum
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         debug {
             ndk { abiFilters += "x86_64" }
+            if (clauConsum.exists()) signingConfig = signingConfigs.getByName("consum")
         }
         release {
             // Signada amb la mateixa clau que les versions de prova, perquè s'actualitzin a sobre sense desinstal·lar
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (clauConsum.exists()) "consum" else "debug")
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
