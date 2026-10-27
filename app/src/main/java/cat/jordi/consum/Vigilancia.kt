@@ -58,9 +58,14 @@ class Vigilancia : Service() {
             if (l != null) {
                 val limit = repo.config.tarifa.limitKw
                 if (limit != null && calAvisarPotencia(repo.config, l.total.w, ConsumApp.oberta)) {
+                    // Primer els minuts nous (a casa i si no s'està sincronitzant): el que hi ha encès surt de les vegades que
+                    // encara duren (maqueta 15)
+                    repo.sincronitzaSiLliure(l)
                     Avisos.avisaPotencia(this, l.total.w, limit, runCatching { repo.encesAra(l) }.getOrDefault(emptyList()))
                 }
                 runCatching { NotificationManagerCompat.from(this).notify(ID, notificacio(l.total.w)) }
+                // El giny de la pantalla d'inici, com a molt un cop per minut
+                runCatching { Ginys.actualitza(this, repo, l) }
                 val ara = System.currentTimeMillis()
                 if (ara - comprovat > 60_000 && !ConsumApp.oberta) {
                     comprovat = ara

@@ -44,7 +44,7 @@ private fun pas(maxim: Double): Double {
     return passos.firstOrNull { maxim / it <= 4 } ?: (ceil(maxim / 4 / 100) * 100)
 }
 
-private val EstilEix = TextStyle(fontSize = 11.sp, color = Eix, fontWeight = FontWeight.Medium)
+private val EstilEix get() = TextStyle(fontSize = 11.sp, color = Eix, fontWeight = FontWeight.Medium)
 
 /**
  * La potència de les últimes 24 hores, amb l'eix en kW a l'esquerra i les hores a sota.

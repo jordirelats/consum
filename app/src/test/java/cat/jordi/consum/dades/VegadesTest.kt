@@ -86,4 +86,52 @@ class VegadesTest {
         // Un aparell amb només la potència típica (sense mostres) no es queda res
         assertEquals(null to null, assigna(vegada(2000.0, 10), listOf(aparell(9, Categoria.RENTADORA)), emptyMap(), emptyList()))
     }
+
+    @Test
+    fun unaEstonaLlargaNoSEmportaElQueTeASobre() {
+        // L'estona de la càrrega del cotxe (6 hores) cobreix sencera la placa de 20 minuts que s'hi va encendre a sobre: si la
+        // placa s'hi assembla, és de la placa
+        val e = listOf(Etiqueta(0, t0 - 30 * 60, t0 + 330 * 60, 9))
+        assertEquals(4L to Com.RECONEGUT, assigna(vegada(1600.0, 20, variacio = 0.9), tots, refs, e))
+        // La vegada del cotxe és del cotxe
+        assertEquals(9L to Com.ENSENYAT, assigna(vegada(2400.0, 360), tots, refs, e))
+        // Una cosa a sobre que no s'assembla a cap aparell (l'escalfament dins del cicle de la rentadora) és de l'estona
+        assertEquals(9L to Com.ENSENYAT, assigna(vegada(5000.0, 20), tots, refs, e))
+        // Però no si l'usuari ha dit que no era ell
+        val no = e + Etiqueta(0, t0, t0 + 19 * 60 + 59, 9, no = true)
+        assertEquals(null to null, assigna(vegada(5000.0, 20), tots, refs, no))
+    }
+
+    @Test
+    fun elQueHiHaEncesAra() {
+        val ara = t0 + 30 * 60
+        // A l'últim minut del Shelly hi havia el rentaplats (des de fa 20 minuts) i una vegada sense nom
+        val rentaplats = Vegada(1, 0, t0 + 10 * 60, ara - 120, 19, 2175.0, 0.69, 0.0, 1.0, 1, Com.RECONEGUT)
+        val desconeguda = Vegada(2, 0, t0 + 20 * 60, ara - 120, 9, 600.0, 0.09, 0.0, 1.0)
+        val tot = encesDelCanal(ara, 0, 2175.0 + 600.0 + 80.0, listOf(rentaplats, desconeguda), tots, refs, neveraW = 52.0)
+        assertEquals(listOf(TipusEnces.APARELL, TipusEnces.SENSE_IDENTIFICAR, TipusEnces.NEVERA, TipusEnces.PETITS), tot.map { it.tipus })
+        assertEquals(1L, tot[0].aparellId)
+        assertEquals(t0 + 10 * 60, tot[0].desDe)
+        // El que porta: el de la vegada i, des de l'últim minut, a la seva potència
+        assertEquals(0.69 + 2175.0 * 60 / 3_600_000, tot[0].kwh!!, 0.001)
+        assertEquals(28.0, tot[3].w, 0.1)
+        // El rentaplats s'ha apagat després de l'últim minut: ja no hi cap, i no surt
+        val apagat = encesDelCanal(ara, 0, 600.0, listOf(rentaplats, desconeguda), tots, refs)
+        assertEquals(listOf(TipusEnces.SENSE_IDENTIFICAR), apagat.map { it.tipus })
+        // Una vegada sense nom de 3 minuts que fa la potència del rentaplats (sense el bullidor, que en fa una de semblant):
+        // sembla ell; de 60 minuts, ja no (dura massa, i el rànquing tampoc no l'hi dona)
+        val sensBullidor = tots.filter { it.categoria != Categoria.BULLIDOR }
+        val jove = Vegada(3, 0, ara - 240, ara - 120, 3, 2175.0, 0.1, 0.0, 1.0)
+        assertEquals(1L, encesDelCanal(ara, 0, 2175.0, listOf(jove), sensBullidor, refs).single().aparellId)
+        val llarga = jove.copy(ts = ara - 3720, minuts = 60)
+        assertEquals(TipusEnces.SENSE_IDENTIFICAR, encesDelCanal(ara, 0, 2175.0, listOf(llarga), sensBullidor, refs).single().tipus)
+        // Amb el bullidor, per la potència sola no se sap quin dels dos és
+        assertEquals(TipusEnces.SENSE_IDENTIFICAR, encesDelCanal(ara, 0, 2175.0, listOf(jove), tots, refs).single().tipus)
+        // S'acaba d'encendre una cosa de 960 W: per la potència només pot ser l'estufa
+        val nou = encesDelCanal(ara, 0, 960.0, emptyList(), tots, refs)
+        assertEquals(3L, nou.single().aparellId)
+        assertEquals(null, nou.single().com)
+        // I una de 5 kW no s'assembla a res
+        assertEquals(TipusEnces.NOU, encesDelCanal(ara, 0, 5000.0, emptyList(), tots, refs).single().tipus)
+    }
 }

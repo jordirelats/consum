@@ -830,4 +830,92 @@
     <string name="placa_model_titol">Het model op het typeplaatje</string>
     <string name="placa_model_llegit">Ik heb het model «%1$s» gelezen.</string>
     <string name="placa_model_no_surt">Staat niet in EPREL: voeg het hieronder toe met het vermogen van het plaatje.</string>
+
+    <!-- Maqueta 15 -->
+    <string name="ara_des_de">sinds %1$s</string>
+    <string name="ara_des_de_kwh">sinds %1$s · tot nu %2$s kWh</string>
+    <string name="ara_acaba_encendre">net aangezet</string>
+    <string name="ara_sembla_ell">net aangezet · aan het vermogen te zien is hij het</string>
+    <string name="ara_sembla_ell_des_de">%1$s · aan het vermogen te zien is hij het</string>
+    <string name="ara_a_la_pinca">meetklem 2 · %1$s</string>
+    <string name="ara_acaba_encendre_no_se">net aangezet · ik weet nog niet wat het is</string>
+    <string name="ara_no_se_que_es">%1$s · ik weet niet wat het is: zeg het bij Aanleren</string>
+    <string name="ara_nomes_potencia">Van buitenaf ziet de app alleen het totale vermogen, en wat hij zegt is op basis van het vermogen. Thuis, met het detail van elke minuut, weet hij het zeker.</string>
+    <string name="sense_nom_titol">Wat het meest verbruikt en nog geen naam heeft</string>
+    <string name="sense_nom_text">De afgelopen 7 dagen %1$s kWh niet herkend: %2$s %% van alles. Deze keren zijn het grootste deel. Wat waren ze?</string>
+    <string name="sense_nom_nota">Beantwoord er één: de keren die erop lijken worden ook van hem, en de volgende herkent de app zelf.</string>
+    <string name="sense_nom_quan">%1$s · %2$s</string>
+    <string name="sense_nom_detall">%1$s · %2$s kW</string>
+    <string name="durada_h_min">%1$d u %2$d min</string>
+    <string name="durada_min">%1$d min</string>
+    <string name="espera_titol">Wat het huis verbruikt als je niets doet</string>
+    <string name="espera_any">≈ %1$s per jaar</string>
+    <string name="espera_que_es">Het is wat nooit zakt (de afgelopen 3 dagen): router, apparaten op stand-by, opladers… Over een heel jaar telt het.</string>
+    <string name="espera_que_es_linia">Het is wat nooit zakt (de afgelopen 3 dagen), zonder de groep «%1$s»: router, apparaten op stand-by, opladers… Over een heel jaar telt het.</string>
+    <string name="espera_cal_un_dia">Er is een dag aan gegevens nodig om het te weten.</string>
+    <string name="espera_apaga_titol">Zet uit en kijk</string>
+    <string name="espera_apaga_text">Zet uit of trek de stekker eruit van wat je niet gebruikt en zie het meteen dalen. Laat zo\'n 20 seconden tussen het ene en het andere.</string>
+    <string name="espera_ara">Nu %1$s W</string>
+    <string name="espera_nomes_casa">Werkt thuis, waar de Shelly elke seconde meet. Van buitenaf, via de cloud, zie je kleine veranderingen niet.</string>
+    <string name="espera_esperant">Als je iets uitzet, verschijnt het hier.</string>
+    <string name="espera_cada_10">Elke 10 W die je weghaalt is zo\'n %1$s per jaar.</string>
+    <string name="espera_ja_saps">Wat je al weet</string>
+    <string name="espera_sempre_ences">altijd aan</string>
+    <string name="espera_en_espera">stand-by</string>
+    <string name="espera_sense_nom">Nog zonder naam: %1$s W.</string>
+    <string name="espera_no_ho_saps">onbekend</string>
+    <string name="espera_que_has_apagat">Wat heb je uitgezet?</string>
+    <string name="resum_setmana_titol">De week van %1$s tot %2$s</string>
+    <string name="resum_sense_nom">%1$s %% heeft nog geen naam: bij Aanleren zeg je het met één tik.</string>
+    <string name="resum_sempre">Altijd aan is %1$s %% ervan: spoor het op.</string>
+    <string name="resum_per_fer">Te doen</string>
+    <string name="resum_mira">Bekijk de week</string>
+    <string name="resum_d_acord">Oké</string>
+    <string name="avis_canal_resum">Weekoverzicht</string>
+    <string name="avis_canal_resum_descripcio">Op maandag het verbruik van vorige week.</string>
+    <string name="avis_resum_titol">Vorige week: %1$s kWh · %2$s</string>
+    <string name="avis_resum_qui_mes">Het meest: %1$s (%2$s kWh).</string>
+    <string name="connecta_resum_titol">Het weekoverzicht</string>
+    <string name="connecta_resum_text">Op maandag een melding met wat het huis verbruikte, wat het meest en wat er nog te doen is.</string>
+    <plurals name="resum_repetits">
+        <item quantity="one">Eén ding herhaalt zich en heeft nog geen naam: bij Aanleren.</item>
+        <item quantity="other">%d dingen herhalen zich en hebben nog geen naam: bij Aanleren.</item>
+    </plurals>
+
+    <!-- Maqueta 16 -->
+    <string name="exporta_titol">Gegevens exporteren</string>
+    <string name="exporta_text">Een CSV-bestand, dat je met elk rekenblad opent.</string>
+    <string name="exporta_quin_periode">Welke periode?</string>
+    <string name="exporta_mes">Deze maand</string>
+    <string name="exporta_any">Dit jaar</string>
+    <string name="exporta_tot">Alles</string>
+    <string name="exporta_hores">Per uur</string>
+    <string name="exporta_hores_text">kWh en euro per uur, ook van meetklem 2</string>
+    <string name="exporta_vegades">Elke keer</string>
+    <string name="exporta_vegades_text">wanneer, hoe lang, kWh en van welk apparaat</string>
+    <string name="exporta_minuts">Elke minuut</string>
+    <string name="exporta_minuts_text">alle details; het bestand is groot</string>
+    <string name="exporta_desa">Opslaan</string>
+    <string name="exporta_on">Wordt opgeslagen waar je kiest (Downloads, Drive…): je telefoon vraagt waar.</string>
+    <string name="exporta_fet">Opgeslagen: %1$d regels.</string>
+    <string name="exporta_error">Het bestand kon niet worden opgeslagen.</string>
+    <string name="exporta_cap_hores">dag;uur;kWh;%1$s kWh;euro;uit de cloud kWh</string>
+    <string name="exporta_cap_vegades">dag;begin;eind;minuten;W;kWh;apparaat;hoe;meetklem 2</string>
+    <string name="exporta_cap_minuts">dag;uur;W;%1$s W;benaderd</string>
+
+    <!-- Maqueta 16: widget -->
+    <string name="giny_titol">Thuis · nu</string>
+    <string name="giny_avui">Vandaag %1$s kWh · %2$s</string>
+    <string name="giny_avui_curt">vandaag %1$s kWh</string>
+    <string name="giny_mes">%1$s · %2$s</string>
+    <string name="giny_gran_nom">Verbruik: nu, vandaag en het meest</string>
+    <string name="giny_petit_nom">Verbruik: nu</string>
+    <string name="giny_gran_descripcio">Het vermogen nu, het verbruik van vandaag en wat het meest verbruikt</string>
+    <string name="giny_petit_descripcio">Het vermogen nu en de kWh van vandaag</string>
+
+    <!-- Maqueta 16: donkere modus -->
+    <string name="connecta_aspecte">Weergave</string>
+    <string name="connecta_aspecte_mobil">Zoals telefoon</string>
+    <string name="connecta_aspecte_clar">Licht</string>
+    <string name="connecta_aspecte_fosc">Donker</string>
 </resources>

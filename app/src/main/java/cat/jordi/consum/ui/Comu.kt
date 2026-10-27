@@ -24,8 +24,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,36 +53,53 @@ import cat.jordi.consum.dades.NivellPotencia
 import cat.jordi.consum.dades.TextRecurs
 import java.text.NumberFormat
 
-val Primari = Color(0xFF0F766E)
-val PrimariFluix = Color(0xFFCCFBF1)
-val Fons = Color(0xFFF6F7F6)
+/**
+ * Clar o fosc (maqueta 16). Els colors de l'app es llegeixen d'aquí cada cop que es fan servir, també dins de les gràfiques:
+ * en canviar-ho, tota la pantalla es torna a pintar. Ho decideix [MainActivity] amb la Configuració i el mòbil.
+ */
+object Aspecte {
+    var fosc by mutableStateOf(false)
+}
+
+private fun tria(clar: Long, fosc: Long) = Color(if (Aspecte.fosc) fosc else clar)
+
+val Primari get() = tria(0xFF0F766E, 0xFF2DD4BF)
+val PrimariFluix get() = tria(0xFFCCFBF1, 0xFF133B37)
+val Fons get() = tria(0xFFF6F7F6, 0xFF111614)
 
 // L'Historial d'un període anterior (maqueta 10): la pàgina color sèpia, com una foto antiga
-val Sepia = Color(0xFFF3ECE0)
-val SepiaFort = Color(0xFFE9D9BD)
-val SepiaTargeta = Color(0xFFFFFAF2)
-val SepiaVora = Color(0xFFE6D3B3)
-val SepiaText = Color(0xFF5C4316)
-val Suau = Color(0xFF5F6B66)
-val Separador = Color(0xFFE3E7E5)
-val Sempre = Color(0xFF94A3B8)
-val SempreFluix = Color(0xFFEEF2F6)
-val Desconegut = Color(0xFFD97706)
-val DesconegutFluix = Color(0xFFFEF3C7)
+val Sepia get() = tria(0xFFF3ECE0, 0xFF1E1A14)
+val SepiaFort get() = tria(0xFFE9D9BD, 0xFF3A2F1E)
+val SepiaTargeta get() = tria(0xFFFFFAF2, 0xFF27221B)
+val SepiaVora get() = tria(0xFFE6D3B3, 0xFF4A3C26)
+val SepiaText get() = tria(0xFF5C4316, 0xFFE9D2A6)
+val Suau get() = tria(0xFF5F6B66, 0xFF9AA7A2)
+val Separador get() = tria(0xFFE3E7E5, 0xFF2C3532)
+val Sempre get() = tria(0xFF94A3B8, 0xFF94A3B8)
+val SempreFluix get() = tria(0xFFEEF2F6, 0xFF232B33)
+val Desconegut get() = tria(0xFFD97706, 0xFFF59E0B)
+val DesconegutFluix get() = tria(0xFFFEF3C7, 0xFF3A2C0E)
 /** El taronja dels textos: el [Desconegut] no arriba al contrast que cal per llegir-lo. */
-val DesconegutText = Color(0xFFB45309)
-val Linia = Color(0xFF2563EB)
-val LiniaFluix = Color(0xFFDBEAFE)
-val Ok = Color(0xFF15803D)
-val OkFluix = Color(0xFFDCFCE7)
+val DesconegutText get() = tria(0xFFB45309, 0xFFFBBF24)
+val Linia get() = tria(0xFF2563EB, 0xFF60A5FA)
+val LiniaFluix get() = tria(0xFFDBEAFE, 0xFF172A45)
+val Ok get() = tria(0xFF15803D, 0xFF4ADE80)
+val OkFluix get() = tria(0xFFDCFCE7, 0xFF12321F)
 /** El que ve del núvol de Shelly i encara és aproximat. */
-val Nuvol = Color(0xFF7C3AED)
-val NuvolFluix = Color(0xFFEDE9FE)
+val Nuvol get() = tria(0xFF7C3AED, 0xFFA78BFA)
+val NuvolFluix get() = tria(0xFFEDE9FE, 0xFF2A2145)
 /** Des del 80 % de la potència contractada, i des del 90 %. */
-val PotenciaAlta = Color(0xFFD97706)
-val PotenciaLimit = Color(0xFFDC2626)
+val PotenciaAlta get() = tria(0xFFD97706, 0xFFF59E0B)
+val PotenciaLimit get() = tria(0xFFDC2626, 0xFFF87171)
+/** El fons de les targetes, el text principal, el text sobre el [Primari], i el fons de l'avís del límit. */
+val Superficie get() = tria(0xFFFFFFFF, 0xFF1B2220)
+val TextPrincipal get() = tria(0xFF1C2421, 0xFFE6ECEA)
+val SobrePrimari get() = tria(0xFFFFFFFF, 0xFF06201D)
+val LimitFluix get() = tria(0xFFFEF2F2, 0xFF3B1A1A)
+private val PuntApagat get() = tria(0xFFD4D9D7, 0xFF3A4541)
+
 /** Les etiquetes dels eixos de les gràfiques: prou grans i fosques per llegir-les. */
-val Eix = Color(0xFF3F4A45)
+val Eix get() = tria(0xFF3F4A45, 0xFFB8C4BF)
 
 fun colorNivell(n: NivellPotencia, normal: Color) = when (n) {
     NivellPotencia.NORMAL -> normal
@@ -88,15 +109,19 @@ fun colorNivell(n: NivellPotencia, normal: Color) = when (n) {
 
 @Composable
 fun TemaConsum(contingut: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Primari, onPrimary = Color.White, primaryContainer = PrimariFluix, onPrimaryContainer = Primari,
-            secondaryContainer = PrimariFluix, onSecondaryContainer = Primari,
-            background = Fons, surface = Fons, surfaceContainer = Color.White, onSurfaceVariant = Suau,
-            outlineVariant = Separador,
-        ),
-        content = contingut,
+    val colors = if (Aspecte.fosc) darkColorScheme(
+        primary = Primari, onPrimary = SobrePrimari, primaryContainer = PrimariFluix, onPrimaryContainer = Primari,
+        secondaryContainer = PrimariFluix, onSecondaryContainer = Primari,
+        background = Fons, onBackground = TextPrincipal, surface = Fons, onSurface = TextPrincipal,
+        surfaceContainer = Superficie, surfaceContainerHigh = Superficie, surfaceContainerHighest = Superficie,
+        onSurfaceVariant = Suau, outlineVariant = Separador,
+    ) else lightColorScheme(
+        primary = Primari, onPrimary = SobrePrimari, primaryContainer = PrimariFluix, onPrimaryContainer = Primari,
+        secondaryContainer = PrimariFluix, onSecondaryContainer = Primari,
+        background = Fons, surface = Fons, surfaceContainer = Superficie, onSurfaceVariant = Suau,
+        outlineVariant = Separador,
     )
+    MaterialTheme(colorScheme = colors, content = contingut)
 }
 
 /** Un número com s'escriu en la llengua de l'app (en català, punt de milers i coma decimal). */
@@ -164,7 +189,7 @@ fun icona(c: Categoria): ImageVector = when (c) {
 }
 
 @Composable
-fun Targeta(modifier: Modifier = Modifier, color: Color = Color.White, contingut: @Composable ColumnScope.() -> Unit) {
+fun Targeta(modifier: Modifier = Modifier, color: Color = Superficie, contingut: @Composable ColumnScope.() -> Unit) {
     Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = color) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), content = contingut)
     }
@@ -187,7 +212,7 @@ fun Bombolla(icona: ImageVector, fons: Color, color: Color) {
 fun Punts(n: Int) {
     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         repeat(3) { i ->
-            Box(Modifier.size(6.dp).clip(CircleShape).background(if (i < n) Primari else Color(0xFFD4D9D7)))
+            Box(Modifier.size(6.dp).clip(CircleShape).background(if (i < n) Primari else PuntApagat))
         }
     }
 }
@@ -239,13 +264,13 @@ fun <T> Pestanyes(opcions: List<T>, triada: T, nom: @Composable (T) -> String, e
             // Amb selected, el lector de pantalla diu quina pestanya està triada
             Surface(
                 selected = actiu, onClick = { enTriar(o) }, modifier = Modifier.weight(1f).semantics { role = Role.Tab }, shape = RoundedCornerShape(10.dp),
-                color = if (actiu) Primari else Color.White,
+                color = if (actiu) Primari else Superficie,
                 // Amb vora, les que no estan triades també semblen botons dins d'una targeta blanca
                 border = if (actiu) null else BorderStroke(1.dp, Separador),
             ) {
                 Text(
                     nom(o), Modifier.padding(vertical = 8.dp), fontSize = 13.sp,
-                    color = if (actiu) Color.White else Suau, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    color = if (actiu) SobrePrimari else Suau, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
             }
         }
@@ -263,12 +288,12 @@ fun NotaAproximat(text: String, esCorregira: Boolean) {
     Nota(if (esCorregira) "$text ${stringResource(R.string.comu_es_corregira)}" else text, Modifier.padding(top = 4.dp))
 }
 
-val PuntaColor = Color(0xFFDC2626)
-val PuntaText = Color(0xFFB91C1C)
-val PuntaFluix = Color(0xFFFEE2E2)
-val VallColor = Color(0xFF16A34A)
-val VallText = Color(0xFF15803D)
-val VallFluix = Color(0xFFDCFCE7)
+val PuntaColor get() = tria(0xFFDC2626, 0xFFF87171)
+val PuntaText get() = tria(0xFFB91C1C, 0xFFFCA5A5)
+val PuntaFluix get() = tria(0xFFFEE2E2, 0xFF3B1A1A)
+val VallColor get() = tria(0xFF16A34A, 0xFF4ADE80)
+val VallText get() = tria(0xFF15803D, 0xFF86EFAC)
+val VallFluix get() = tria(0xFFDCFCE7, 0xFF12321F)
 
 /** Per escriure amb el to d'un color de les gràfiques: el mateix to, prou fosc per llegir-lo. */
 fun textFort(c: Color): Color = when (c) {
@@ -306,7 +331,7 @@ fun TiraPreus(hores: List<HoraPreu>, ara: Long?, alcada: androidx.compose.ui.uni
                 val actual = ara != null && h.ts == ara
                 Box(
                     Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(colorPreu(h, hores))
-                        .then(if (actual) Modifier.border(2.dp, Color(0xFF1C2421), RoundedCornerShape(3.dp)) else Modifier)
+                        .then(if (actual) Modifier.border(2.dp, TextPrincipal, RoundedCornerShape(3.dp)) else Modifier)
                 )
             }
         }
@@ -332,7 +357,7 @@ fun BarresPreu(hores: List<HoraPreu>, ara: Long?) {
                 Modifier.weight(1f).fillMaxHeight(((h.preu ?: 0.0) / maxim).toFloat().coerceIn(0.02f, 1f))
                     .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
                     .background(colorPreu(h, hores).copy(alpha = if (actual) 1f else 0.6f))
-                    .then(if (actual) Modifier.border(1.5.dp, Color(0xFF1C2421), RoundedCornerShape(2.dp)) else Modifier)
+                    .then(if (actual) Modifier.border(1.5.dp, TextPrincipal, RoundedCornerShape(2.dp)) else Modifier)
             )
         }
     }

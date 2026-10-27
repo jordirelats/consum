@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Els colors del mode fosc (maqueta 16): el fons de la finestra mentre s'obre l'app, i el giny -->
+<resources>
+    <color name="fons">#FF111614</color>
+    <color name="giny_fons">#F21B2220</color>
+    <color name="giny_text">#FFE6ECEA</color>
+    <color name="giny_suau">#FF9AA7A2</color>
+    <color name="giny_primari">#FF2DD4BF</color>
+</resources>

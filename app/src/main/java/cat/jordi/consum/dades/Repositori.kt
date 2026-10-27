@@ -80,10 +80,39 @@ data class InfoPreu(
 /** La fitxa d'un aparell (maqueta 13): el que ha gastat aquest mes, quantes vegades, i les últimes. */
 data class Fitxa(val aparellId: Long, val kwhMes: Double, val copsMes: Int, val ultimes: List<Vegada>)
 
+/**
+ * Les vegades que encara duraven a l'últim minut del Shelly (maqueta 15), si aquest minut és de fa poc ([fresques]: a casa,
+ * amb les dades al dia); i la nevera que s'engega sola, amb el seu compressor.
+ */
+data class Obertes(val fresques: Boolean, val vegades: List<Vegada>, val nevera: Aparell?, val neveraW: Double?)
+
+/**
+ * Una vegada grossa que encara no té nom (maqueta 15): els euros, els aparells que s'hi poden assemblar (del més semblant al
+ * que menys) i la potència minut a minut de la resta de la casa, amb un quart d'hora a cada costat, per a la gràfica.
+ */
+data class VegadaSenseNom(val vegada: Vegada, val euros: Double, val candidats: List<Aparell>, val punts: List<Pair<Long, Double>>)
+
+/** El que més gasta i encara no té nom: les vegades més grosses dels últims 7 dies, i quant és tot el que no en té (kWh, part). */
+data class SenseNom(val vegades: List<VegadaSenseNom>, val kwh: Double, val part: Double)
+
+/** El resum d'una setmana (maqueta 15), de dilluns a diumenge, i quantes coses que es repeteixen encara no tenen nom. */
+data class ResumSetmana(val dilluns: LocalDate, val resum: Resum, val repetits: Int)
+
+/** Si canvia com es troben les vegades, s'han de tornar a buscar totes (vegeu [Config.versioVegades]). */
+private const val VERSIO_VEGADES = 2
+
+/** Les dades de fa més de 35 dies es llegeixen del resum per hores, i el detall de cada minut s'esborra quan fa 400 dies. */
+private const val DIES_SENSE_RESUM = 35L
+private const val DIES_AMB_MINUTS = 400L
+
 /** Què costaria la línia de la segona pinça si gastés a les hores barates. */
 data class ConsellLinia(val estalviMes: Double, val percentCar: Int)
 
 class Repositori(val config: Config, private val bd: BaseDades) {
+    init {
+        bd.resumFins = config.resumFins
+    }
+
     private val zona get() = ZoneId.systemDefault()
     private val sincronitzant = Mutex()
     private val intentsPreus = java.util.concurrent.ConcurrentHashMap<LocalDate, Long>()
@@ -157,8 +186,18 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             // Les vegades noves, i de qui són totes (maqueta 13)
             actualitzaVegades()
             reassignaVegades()
+            resumeixVells()
             n
         }
+    }
+
+    /**
+     * Per a l'avís de potència: els minuts nous, només si es llegeix el Shelly de casa i ara no se sincronitza (si no,
+     * l'avís esperaria tota la sincronització, o els 10 s que triga a no trobar el Shelly des de fora).
+     */
+    suspend fun sincronitzaSiLliure(l: Lectura) {
+        if (l.origen != Origen.LOCAL || sincronitzant.isLocked) return
+        runCatching { sincronitza() }
     }
 
     /**
@@ -452,6 +491,8 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     fun tornaABuscarVegades() {
         calRebuscar = true
         calReassignar = true
+        // I des de quan hi ha la pinça 2, de nou
+        config.iniciLinia = 0
     }
 
     /**
@@ -468,7 +509,8 @@ class Repositori(val config: Config, private val bd: BaseDades) {
 
     private fun buscaVegades() {
         val darrer = bd.darrerTs(0) ?: return
-        val rebuscar = calRebuscar
+        // També quan aquesta versió les troba d'una altra manera (la 0.28 separa el que s'encén a sobre d'una vegada llarga)
+        val rebuscar = calRebuscar || config.versioVegades < VERSIO_VEGADES
         calRebuscar = false
         val fins = if (rebuscar || !bd.hiHaVegades()) 0L else config.vegadesFins
         val desDe = if (fins == 0L) bd.primerExacte() ?: return
@@ -478,17 +520,19 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         var s = desDe
         while (s <= darrer) {
             val e = minOf(s + 7 * 86400, darrer + 60)
+            // Primer on s'acaben les que comencen dins del tros; després, totes les que comencen abans d'aquell punt: també les
+            // que s'han encès a sobre d'una de llarga després del final del tros (el tros següent comença on acaba la llarga)
+            val perCanal = canals.map { (canal, linia) -> canal to Episodis.troba(bd.minutsW(linia, s - 2 * 3600, e + 24 * 3600), llargada = 2) }
             var seguent = e
-            for ((canal, linia) in canals) {
-                val trobades = Episodis.troba(bd.minutsW(linia, s - 2 * 3600, e + 24 * 3600), llargada = 2).filter { it.ts in s until e }
-                trobades.forEach { noves += Vegada.de(canal, it) }
-                trobades.filter { it.fi >= e }.maxOfOrNull { it.fi + 60 }?.let { seguent = maxOf(seguent, it) }
+            for ((_, trobades) in perCanal) {
+                trobades.filter { it.ts in s until e && it.fi >= e }.maxOfOrNull { it.fi + 60 }?.let { seguent = maxOf(seguent, it) }
             }
+            for ((canal, trobades) in perCanal) trobades.filter { it.ts in s until seguent }.forEach { noves += Vegada.de(canal, it) }
             s = seguent
         }
         bd.substitueixVegades(desDe, assignaTotes(noves))
         config.vegadesFins = darrer
-        calReassignar = true
+        config.versioVegades = VERSIO_VEGADES
     }
 
     /** De qui és cada vegada, amb el que l'app sap ara ([assigna]). */
@@ -502,12 +546,28 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val refsCasa = referencies()
         val linia = aparellsLinia()
         val refsLinia = referenciesLinia()
+        // Abans de la pinça 2, els aparells de la línia també eren a la resta de la casa (el cotxe de Guíxols fins al 25/10)
+        val iniciLinia = iniciLinia()
+        val tots = casa + linia
+        val refsTots = refsCasa + refsLinia
         return vegades.map { v ->
             val e = index.de(v)
-            val (a, com) = if (v.canal == 0) assigna(v, casa, refsCasa, e, exclosos) else assigna(v, linia, refsLinia, e, exclosos)
+            val (a, com) = when {
+                v.canal == 1 -> assigna(v, linia, refsLinia, e, exclosos)
+                abansDeLaLinia(v, iniciLinia) -> assigna(v, tots, refsTots, e, exclosos)
+                else -> assigna(v, casa, refsCasa, e, exclosos)
+            }
             v.copy(aparellId = a, com = com)
         }
     }
+
+    /** El primer minut de la pinça 2: es desa, perquè no es mogui quan se n'esborrin els minuts vells. */
+    private fun iniciLinia(): Long? = config.iniciLinia.takeIf { it > 0 } ?: bd.primerLinia()?.also { config.iniciLinia = it }
+
+    /** Una vegada de la resta de la casa d'abans de la pinça 2: hi podia haver qualsevol aparell, també els de la línia. */
+    private fun abansDeLaLinia(v: Vegada, iniciLinia: Long?) = v.canal == 0 && linia() && (iniciLinia == null || v.ts < iniciLinia)
+
+    private fun linia() = config.teLinia
 
     /**
      * Torna a mirar de qui és cada vegada, si hi ha hagut algun canvi des de l'última vegada: després que l'usuari
@@ -543,6 +603,235 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     private fun part(v: Vegada, desDe: Long, finsA: Long): Double {
         val fi = v.fi + 60
         return (min(fi, finsA) - max(v.ts, desDe)).coerceAtLeast(0).toDouble() / (fi - v.ts)
+    }
+
+    // ---------- Què hi ha encès ara (maqueta 15) ----------
+
+    /** Les vegades que encara duraven a l'últim minut del Shelly: només si és de fa menys de 10 minuts (a casa i al dia). */
+    fun obertes(): Obertes {
+        val nevera = neveraAutomatica(bd.aparells())
+        val neveraW = config.neveraW.takeIf { it > 0 && nevera != null }
+        val darrer = bd.darrerTs(0)
+        if (darrer == null || ara() - darrer > 10 * 60) return Obertes(false, emptyList(), nevera, neveraW)
+        return Obertes(true, bd.vegades(darrer - 2 * 60, ara() + 60).filter { it.fi >= darrer - 2 * 60 }, nevera, neveraW)
+    }
+
+    /**
+     * Els aparells encesos ara (com a molt 3), per dir-ho a l'avís de potència: el nom i els W. Amb el mateix criteri que la
+     * pantalla Ara i el rànquing ([encesDelCanal]); el que no se sap què és, no hi surt, i la línia sense aparells, amb el seu nom.
+     */
+    fun encesAra(l: Lectura): List<Pair<String, Double>> {
+        val fons = fonsW() ?: return emptyList()
+        val o = obertes()
+        val noms = aparells().associate { it.id to it.nom }
+        val wLinia = if (config.teLinia) (l.linia?.w ?: 0.0).coerceAtLeast(0.0) else 0.0
+        val casa = encesDelCanal(ara(), 0, l.total.w - wLinia - fons, o.vegades, aparellsAEntrenar(), referencies())
+        val apLinia = aparellsLinia()
+        val linia = when {
+            wLinia < AnalisiPics.LLINDAR -> emptyList()
+            apLinia.isEmpty() -> listOf(EncesAra(TipusEnces.PETITS, 1, wLinia))
+            else -> encesDelCanal(ara(), 1, wLinia, o.vegades, apLinia, referenciesLinia())
+        }
+        return (casa + linia).mapNotNull { e ->
+            when {
+                e.aparellId != null -> noms[e.aparellId]?.let { it to e.w }
+                e.canal == 1 && e.w >= AnalisiPics.LLINDAR -> config.nomLinia to e.w
+                else -> null
+            }
+        }.sortedByDescending { it.second }.take(3)
+    }
+
+    // ---------- El que més gasta i encara no té nom (maqueta 15) ----------
+
+    /** Els aparells que poden ser una vegada: els de la resta de la casa, o els de la línia si és d'abans de la pinça 2. */
+    private fun candidatsDe(v: Vegada): List<Aparell> = when {
+        v.canal == 1 -> aparellsLinia()
+        abansDeLaLinia(v, iniciLinia()) -> aparellsAEntrenar() + aparellsLinia()
+        else -> aparellsAEntrenar()
+    }
+
+    /**
+     * Les vegades més grosses dels últims 7 dies que encara no tenen nom (com a molt [quants], de 0,3 kWh o més; no les que
+     * l'usuari ha dit que no sap què eren), per preguntar-ne d'un toc; i quant és tot el que no té nom i quina part del total.
+     * A Guíxols, la setmana del 19 al 25/10: el 61 %, gairebé tot les dues càrregues del cotxe del dissabte.
+     */
+    fun senseNom(quants: Int = 3): SenseNom {
+        val desDe = ara() - 7 * 86400
+        val finsA = ara() + 60
+        val sense = bd.vegades(desDe, finsA).filter { it.canal == 0 && it.aparellId == null }
+        val kwh = sense.sumOf { it.kwh * part(it, desDe, finsA) }
+        val total = bd.kwhEntre(desDe, finsA)
+        val ignorades = config.senseNomIgnorades
+        val p = Preus(desDe, finsA)
+        val refs = referencies() + referenciesLinia()
+        val grosses = sense.filter { it.ts !in ignorades && it.kwh >= 0.3 }.sortedByDescending { it.kwh }.take(quants).map { v ->
+            val candidats = candidatsDe(v)
+            VegadaSenseNom(
+                v, v.kwh * p.de(v.ts), endevina(v.w, candidats, refs, candidats.size, v.minuts.toDouble(), v.forma),
+                bd.minutsW(linia = false, v.ts - 15 * 60, v.fi + 16 * 60).map { it.ts to it.w },
+            )
+        }
+        return SenseNom(grosses, kwh, if (total > 0.05) kwh / total else 0.0)
+    }
+
+    /**
+     * De qui és una vegada sense nom: una mostra de l'aparell amb la potència, la durada i la firma de la vegada (si s'engega
+     * sol, amb un interval al voltant de la potència) i una etiqueta a l'inici, que no s'emporta el que s'hi va encendre a
+     * sobre. Les vegades que s'hi assemblen seran seves quan es tornin a repartir.
+     */
+    @Synchronized
+    fun responVegada(v: Vegada, aparellId: Long) {
+        val a = bd.aparells().firstOrNull { it.id == aparellId } ?: return
+        if (!bd.teMostra(aparellId, v.ts, "vegada")) {
+            val interval = if (a.funciona == Funcionament.SOL) v.w * 0.8 to v.w * 1.2 else null
+            bd.desaMostra(aparellId, v.ts, v.w, v.fi - v.ts + 60, "vegada", interval, v.variacio, v.arrencada)
+        }
+        bd.desaEtiqueta(Etiqueta(v.canal, v.ts, v.ts, aparellId))
+        haCanviat()
+    }
+
+    /** «No ho sé»: aquesta vegada ja no es pregunta (se n'oblida al cap d'una setmana, quan ja no surt). */
+    @Synchronized
+    fun ignoraVegada(v: Vegada) {
+        config.senseNomIgnorades = config.senseNomIgnorades.filter { it > ara() - 8 * 86400 }.toSet() + v.ts
+    }
+
+    // ---------- El resum de la setmana i el sempre encès (maqueta 15) ----------
+
+    /** La setmana passada, de dilluns a diumenge, si l'app en té dades; null si no. */
+    fun resumSetmana(): ResumSetmana? {
+        val dilluns = iniciPeriode(Periode.SETMANA, LocalDate.now(zona)).minusWeeks(1)
+        val r = resum(Periode.SETMANA, dilluns)
+        if (!r.ambDades || (r.ranquing?.total ?: 0.0) < 0.5) return null
+        return ResumSetmana(dilluns, r, bd.repetits(EstatPregunta.PENDENT).size)
+    }
+
+    /**
+     * Què s'ha apagat a la caça del sempre encès: si l'aparell està sempre encès, aquesta és la seva potència (i el que gasta
+     * l'any); si no, el que gasta en espera.
+     */
+    fun desaEspera(aparellId: Long, w: Double) {
+        val a = bd.aparells().firstOrNull { it.id == aparellId } ?: return
+        bd.desaAparell(if (a.funciona == Funcionament.SEMPRE) a.copy(potenciaW = w, kwhAny = w * 8.76) else a.copy(esperaW = w))
+        haCanviat()
+    }
+
+    // ---------- El resum per hores de les dades velles (maqueta 16) ----------
+
+    /**
+     * Un cop al dia: els dies de fa més de 35 dies passen al resum per hores (cada un amb el fons d'aquells dies; sense minuts
+     * exactes, amb el d'ara), i d'aquí en endavant les sumes de l'Historial en surten. Els minuts de fa més de 400 dies
+     * s'esborren: a l'any, la base de dades creixia uns 60 MB, i la vista de l'any llegia mig milió de minuts.
+     */
+    fun resumeixVells() {
+        synchronized(bloqueigResum) { resumeix() }
+    }
+
+    private fun resumeix() {
+        if (ara() - config.resumMirat < 20 * 3600) return
+        config.resumMirat = ara()
+        // Amb el rellotge del mòbil malament (en el futur), no: el resum i l'esborrat van amb les dades que hi ha de debò
+        val darrer = bd.darrerMinut() ?: return
+        val avui = minOf(LocalDate.now(zona), Instant.ofEpochSecond(darrer).atZone(zona).toLocalDate())
+        val nouFins = iniciDia(avui.minusDays(DIES_SENSE_RESUM))
+        val primer = bd.primerMinut() ?: return
+        var dia = Instant.ofEpochSecond(maxOf(config.resumFins, primer)).atZone(zona).toLocalDate()
+        val fonsAra = fonsWh()
+        while (iniciDia(dia) < nouFins) {
+            resumeixDia(dia, fonsAra)
+            dia = dia.plusDays(1)
+        }
+        if (nouFins > config.resumFins) {
+            config.resumFins = nouFins
+            bd.resumFins = nouFins
+        }
+        bd.esborraMinuts(minOf(config.resumFins, iniciDia(avui.minusDays(DIES_AMB_MINUTS))))
+    }
+
+    private fun resumeixDia(dia: LocalDate, fonsAra: Double) {
+        val desDe = iniciDia(dia)
+        val finsA = iniciDia(dia.plusDays(1))
+        val fons = bd.fons(finsA - 3 * 86400, finsA, nomesExactes = true) ?: fonsAra
+        bd.resumeix(desDe, finsA, fons, desfasHora(zona, desDe))
+    }
+
+    /**
+     * El resum per hores té el seu bloqueig: fer-lo pot trigar (el primer cop, mesos de dades), i el del repositori aturaria
+     * les lectures en directe. També el fa servir [refesResum], perquè un dia que el núvol omple mentre es resumeix no es perdi.
+     */
+    private val bloqueigResum = Any()
+
+    /** Han canviat els minuts d'uns dies que ja tenen resum (el núvol per hores): se'n torna a fer. */
+    private fun refesResum(desDe: Long, finsA: Long) {
+        synchronized(bloqueigResum) { refes(desDe, finsA) }
+    }
+
+    private fun refes(desDe: Long, finsA: Long) {
+        if (desDe >= config.resumFins) return
+        val fonsAra = fonsWh()
+        var dia = Instant.ofEpochSecond(desDe).atZone(zona).toLocalDate()
+        while (iniciDia(dia) < minOf(finsA, config.resumFins)) {
+            resumeixDia(dia, fonsAra)
+            dia = dia.plusDays(1)
+        }
+    }
+
+    // ---------- Exportar les dades (maqueta 16) ----------
+
+    /**
+     * Escriu en CSV el consum de cada hora (amb la línia de la pinça 2 i els euros), cada vegada (amb l'aparell) o cada minut,
+     * del període triat. Torna quantes files ha escrit. Cada minut es llegeix per setmanes: d'un any són mig milió de files.
+     */
+    fun exporta(tipus: TipusExport, periode: PeriodeExport, sortida: Appendable, capcalera: List<String>, textCom: Map<Com, String>): Int {
+        val avui = LocalDate.now(zona)
+        val desDe = when (periode) {
+            PeriodeExport.MES -> iniciDia(avui.withDayOfMonth(1))
+            PeriodeExport.ANY -> iniciDia(avui.withDayOfYear(1))
+            PeriodeExport.TOT -> bd.primerTs() ?: ara()
+        }
+        val finsA = ara() + 60
+        // La marca d'UTF-8 al davant: sense, l'Excel no llegeix bé els accents dels noms
+        sortida.append('\uFEFF')
+        val csv = Csv(sortida)
+        csv.fila(*capcalera.toTypedArray())
+        val dia = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val hora = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+        fun local(ts: Long) = Instant.ofEpochSecond(ts).atZone(zona)
+        var n = 0
+        when (tipus) {
+            TipusExport.HORES -> {
+                val p = Preus(desDe, finsA)
+                for (h in perHores(desDe, finsA, fonsWh())) {
+                    val t = local(h.ts)
+                    csv.fila(t.format(dia), t.format(hora), h.total, if (config.teLinia) h.linia else null, h.total * p.de(h.ts), h.nuvol.takeIf { it > 0 })
+                    n++
+                }
+            }
+            TipusExport.VEGADES -> {
+                val noms = bd.aparells().associate { it.id to it.nom }
+                for (v in bd.vegades(desDe, finsA)) {
+                    val t = local(v.ts)
+                    csv.fila(
+                        t.format(dia), t.format(hora), local(v.fi + 60).format(hora), v.minuts, v.w.toInt(), v.kwh,
+                        v.aparellId?.let(noms::get), v.com?.let(textCom::get), if (v.canal == 1) config.nomLinia else null,
+                    )
+                    n++
+                }
+            }
+            TipusExport.MINUTS -> {
+                var s = desDe
+                while (s < finsA) {
+                    val e = minOf(s + 7 * 86400, finsA)
+                    for (m in bd.serie(s, e)) {
+                        val t = local(m.ts)
+                        csv.fila(t.format(dia), t.format(hora), m.wTotal.toInt(), if (config.teLinia) m.wLinia.toInt() else null, if (m.aprox) 1 else 0)
+                        n++
+                    }
+                    s = e
+                }
+            }
+        }
+        return n
     }
 
     // ---------- Entrenament ----------
@@ -695,6 +984,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         omplintNuvol.withLock {
             val nuvol = ShellyNuvol(c.servidorNuvol, c.clauNuvol, c.idDispositiu)
             val avui = LocalDate.now(zona)
+            // Fins a un any: els minuts se'n guarden 400 dies, i el resum dels dies que el núvol omple es torna a fer
             val limit = avui.minusDays(365)
             val primerExacte = bd.primerExacte()?.let { Instant.ofEpochSecond(it).atZone(zona).toLocalDate() }
             val mirats = c.nuvolMirats.toMutableSet()
@@ -706,6 +996,8 @@ class Repositori(val config: Config, private val bd: BaseDades) {
                 val minuts = hores.filter { (ts, _) -> ts + 3600 <= ara() }
                     .flatMap { (ts, wh) -> minutsDelNuvol(ts, wh, exactes.filterKeys { it >= ts && it < ts + 3600 }) }
                 bd.insereixNuvol(canal, minuts)
+                // Si aquell dia ja tenia resum per hores, se'n torna a fer
+                if (minuts.isNotEmpty()) refesResum(minuts.minOf { it.first }, minuts.maxOf { it.first } + 60)
             }
             suspend fun demana(canal: Int, d: LocalDate): List<Pair<Long, Double>> {
                 if (demanats++ > 0) delay(1100)
@@ -752,6 +1044,8 @@ class Repositori(val config: Config, private val bd: BaseDades) {
     /** Apaga l'opció: fora els minuts del núvol per hores, i la vegada que s'encengui es tornarà a mirar tot. */
     fun oblidaNuvol() {
         bd.esborraNuvol()
+        // El resum per hores dels dies que en tenien, sense el núvol
+        bd.primerMinut()?.let { refesResum(it, config.resumFins) }
         config.nuvolMirats = emptySet()
         config.nuvolSenseAbans = Long.MIN_VALUE
     }
@@ -1014,21 +1308,5 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             bd.desaEtiqueta(Etiqueta(0, tros.desDe, tros.desDe, aparellId))
             haCanviat()
         }
-    }
-
-    /** Els aparells que expliquen ara el consum (com a molt 3), per dir-ho a l'avís de potència: nom i W. */
-    fun encesAra(l: Lectura): List<Pair<String, Double>> {
-        val wLinia = if (config.teLinia) (l.linia?.w ?: 0.0).coerceAtLeast(0.0) else 0.0
-        val fons = fonsW() ?: return emptyList()
-        val noms = aparells().associate { it.id to it.nom }
-        val llista = explicador().explica(l.total.w - wLinia - fons).aparells.mapNotNull { (id, w) -> noms[id]?.let { it to w } }.toMutableList()
-        if (wLinia >= AnalisiPics.LLINDAR) {
-            // Els aparells de la línia que l'expliquen; el que quedi, amb el nom de la línia
-            val e = explicadorLinia()?.explica(wLinia)
-            e?.aparells?.forEach { (id, w) -> noms[id]?.let { llista += it to w } }
-            val resta = e?.residu ?: wLinia
-            if (resta >= AnalisiPics.LLINDAR) llista += config.nomLinia to resta
-        }
-        return llista.sortedByDescending { it.second }.take(3)
     }
 }

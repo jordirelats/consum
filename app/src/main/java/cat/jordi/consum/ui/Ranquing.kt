@@ -147,13 +147,19 @@ private fun FilaDelRanquing(posicio: Int, f: FilaRanquing, part: Double, obre: (
     }
 }
 
-/** La resta: el que no és de cap aparell, separat del rànquing. [fixos]: els costos fixos del període (€). */
+/**
+ * La resta: el que no és de cap aparell, separat del rànquing. [fixos]: els costos fixos del període (€). Tocant el sempre
+ * encès s'obre la seva caça ([obreSempre]); tocant el que no té nom, Entrena ([obreSenseId]).
+ */
 @Composable
-fun RestaConsum(r: Ranquing, fonsW: Double?, nomLinia: String, fixos: Double?) {
+fun RestaConsum(
+    r: Ranquing, fonsW: Double?, nomLinia: String, fixos: Double?, obreSempre: (() -> Unit)? = null, obreSenseId: (() -> Unit)? = null,
+) {
     FilaConsum(
         Icons.Outlined.Power, SempreFluix, Sempre, stringResource(R.string.ranquing_sempre),
         fonsW?.let { stringResource(R.string.ranquing_sempre_text, num(it)) } ?: stringResource(R.string.historial_cal_un_dia),
         "${num(r.sempre, 1)} kWh", subValor = euros(r.sempreEuros),
+        modifier = if (obreSempre != null) Modifier.clickable(onClick = obreSempre) else Modifier,
     )
     if (r.petits >= 0.05) FilaConsum(
         Icons.Outlined.LightMode, SempreFluix, Sempre, stringResource(R.string.ranquing_petits), stringResource(R.string.ranquing_petits_text),
@@ -162,6 +168,7 @@ fun RestaConsum(r: Ranquing, fonsW: Double?, nomLinia: String, fixos: Double?) {
     if (r.senseIdentificar >= 0.05) FilaConsum(
         Icons.Outlined.QuestionMark, DesconegutFluix, Desconegut, stringResource(R.string.ranquing_sense_id), stringResource(R.string.ranquing_sense_id_text),
         "${num(r.senseIdentificar, 1)} kWh", subValor = euros(r.senseIdentificarEuros),
+        modifier = if (obreSenseId != null) Modifier.clickable(onClick = obreSenseId) else Modifier,
     )
     if (r.liniaAltres >= 0.05) FilaConsum(
         Icons.Outlined.Bolt, LiniaFluix, Linia, stringResource(R.string.ranquing_linia_altres, nomLinia), stringResource(R.string.ranquing_linia_altres_text),

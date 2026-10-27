@@ -1,5 +1,12 @@
 package cat.jordi.consum
 
+import cat.jordi.consum.dades.ASPECTE_FOSC
+import cat.jordi.consum.dades.ASPECTE_CLAR
+import cat.jordi.consum.ui.Superficie
+import cat.jordi.consum.ui.SobrePrimari
+import cat.jordi.consum.ui.Aspecte
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.isSystemInDarkTheme
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -57,6 +64,7 @@ import cat.jordi.consum.ui.PantallaAparells
 import cat.jordi.consum.ui.PantallaAra
 import cat.jordi.consum.ui.PantallaConnecta
 import cat.jordi.consum.ui.PantallaEntrena
+import cat.jordi.consum.ui.PantallaEspera
 import cat.jordi.consum.ui.PantallaFitxa
 import cat.jordi.consum.ui.PantallaHistorial
 import cat.jordi.consum.ui.PantallaPassat
@@ -75,17 +83,30 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Idioma.actualitza(this)
-        // L'app sempre és clara: les icones de les barres d'Android, fosques, també amb el mòbil en mode fosc
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
-        )
+        barres(fosc = false)
         // En girar la pantalla torna a arribar el mateix intent: l'avís i el que s'havia compartit ja s'han recollit
         if (savedInstanceState == null) {
             obre(intent)
             rep(intent)
         }
-        setContent { TemaConsum { Arrel(vm) } }
+        setContent {
+            // Clara o fosca (maqueta 16): com el mòbil, o el que s'hagi triat a la Configuració
+            val fosc = when (vm.aspecte) {
+                ASPECTE_CLAR -> false
+                ASPECTE_FOSC -> true
+                else -> isSystemInDarkTheme()
+            }
+            Aspecte.fosc = fosc
+            LaunchedEffect(fosc) { barres(fosc) }
+            TemaConsum { Arrel(vm) }
+        }
+    }
+
+    /** Les icones de les barres d'Android: fosques sobre l'app clara, i clares sobre la fosca. */
+    private fun barres(fosc: Boolean) {
+        val transparent = android.graphics.Color.TRANSPARENT
+        val estil = if (fosc) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent)
+        enableEdgeToEdge(statusBarStyle = estil, navigationBarStyle = estil)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -156,6 +177,7 @@ private fun Arrel(vm: ConsumViewModel) {
         Pantalla.PREU -> stringResource(R.string.principal_preu_llum)
         Pantalla.PASSAT -> stringResource(R.string.principal_estona_passada)
         Pantalla.APARELL -> vm.aparells.firstOrNull { it.id == vm.aparellObert }?.nom ?: ""
+        Pantalla.ESPERA -> stringResource(R.string.ranquing_sempre)
         Pantalla.PRINCIPAL -> stringResource(if (vm.pestanya == Pestanya.ARA) R.string.principal_casa else vm.pestanya.nomId)
     }
     // Un període anterior de l'Historial té la pàgina d'un altre color (maqueta 10)
@@ -192,14 +214,14 @@ private fun Arrel(vm: ConsumViewModel) {
                 ExtendedFloatingActionButton(
                     onClick = { vm.pantalla = Pantalla.AFEGIR },
                     modifier = Modifier.semantics { contentDescription = afegeix },
-                    containerColor = Primari, contentColor = Color.White,
+                    containerColor = Primari, contentColor = SobrePrimari,
                     icon = { Icon(Icons.Outlined.Add, null) }, text = { Text(afegeix) },
                 )
             }
         },
         bottomBar = {
             if (principal) {
-                NavigationBar(containerColor = Color.White) {
+                NavigationBar(containerColor = Superficie) {
                     Pestanya.entries.forEach { p ->
                         NavigationBarItem(
                             selected = vm.pestanya == p,
@@ -234,6 +256,7 @@ private fun Arrel(vm: ConsumViewModel) {
                 Pantalla.PREU -> PantallaPreu(vm)
                 Pantalla.PASSAT -> PantallaPassat(vm)
                 Pantalla.APARELL -> PantallaFitxa(vm)
+                Pantalla.ESPERA -> PantallaEspera(vm)
                 Pantalla.PRINCIPAL -> when (vm.pestanya) {
                     Pestanya.ARA -> PantallaAra(vm)
                     Pestanya.APARELLS -> PantallaAparells(vm)

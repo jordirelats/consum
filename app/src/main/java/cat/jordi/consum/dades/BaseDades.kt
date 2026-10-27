@@ -29,7 +29,15 @@ data class Hora(val ts: Long, val sempre: Double, val linia: Double, val descone
  * (aprox = 2, maqueta 11) omplen les absències llargues i el d'abans de l'app; els exactes, que es baixen
  * del Shelly a casa, els substitueixen.
  */
-class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 8) {
+class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null, 9) {
+
+    /**
+     * Fins on hi ha el resum per hores (maqueta 16; s, una mitjanit; 0: encara no n'hi ha). D'aquí enrere, les sumes surten de
+     * la taula «hores»: l'any sencer són 8.760 files en lloc de mig milió de minuts. Els minuts encara hi són fins que fan
+     * 400 dies, per als moments punta, les gràfiques i exportar-los; després s'esborren.
+     */
+    @Volatile
+    var resumFins = 0L
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -46,6 +54,20 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
         creaEntrenament(db)
         creaRepetits(db)
         creaVegades(db)
+        creaHores(db)
+    }
+
+    /**
+     * El resum per hores (versió 9, maqueta 16), en Wh: el total de la casa, el sempre encès, la línia i la resta (amb el fons
+     * d'aquells dies), el que ve del núvol per hores, quants minuts eren exactes, el que passa del fons als minuts aproximats,
+     * la línia als aproximats, i si n'hi havia del comptador de fora (aprox = 1). [ts]: l'inici de l'hora local.
+     */
+    private fun creaHores(db: SQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE hores (ts INTEGER PRIMARY KEY, total REAL NOT NULL, sempre REAL NOT NULL, linia REAL NOT NULL,
+               desconegut REAL NOT NULL, nuvol REAL NOT NULL, exactes INTEGER NOT NULL, sense_detall REAL NOT NULL,
+               linia_aprox REAL NOT NULL, aprox1 INTEGER NOT NULL)"""
+        )
     }
 
     /**
@@ -117,6 +139,7 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
             }
             creaRepetits(db)
         }
+        if (oldVersion < 9) creaHores(db)
         if (oldVersion < 8) {
             creaVegades(db)
             // El que ja s'havia ensenyat o respost abans de la 0.26 passa a ser etiquetes: el seu consum és d'aquell aparell.
@@ -236,7 +259,24 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     /** Si s'apaga l'opció: fora els minuts del núvol per hores. */
     fun esborraNuvol() {
-        writableDatabase.delete("minuts", "aprox = 2", null)
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("minuts", "aprox = 2", null)
+            // Les hores del resum dels dies que encara tenen minuts es tornaran a fer sense el núvol ([Repositori.oblidaNuvol])
+            db.execSQL("DELETE FROM hores WHERE nuvol > 0 AND ts >= IFNULL((SELECT MIN(ts) FROM minuts), 0)")
+            // Les més velles ja no tenen minuts: se'n treu la part del núvol, i el que era exacte es queda
+            db.execSQL(
+                """UPDATE hores SET sempre = sempre * (total - nuvol) / total, linia = linia * (total - nuvol) / total,
+                   desconegut = desconegut * (total - nuvol) / total, sense_detall = sense_detall * (total - nuvol) / total,
+                   linia_aprox = linia_aprox * (total - nuvol) / total, total = total - nuvol, nuvol = 0
+                   WHERE nuvol > 0 AND total > nuvol"""
+            )
+            db.execSQL("DELETE FROM hores WHERE nuvol > 0")
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
     }
 
     /** Què s'ha recuperat del núvol: quants dies (de la zona del mòbil), quants kWh i des de quan. */
@@ -249,15 +289,19 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     /** Si entre aquestes dues hores hi ha algun minut del núvol per hores. */
     fun teNuvol(desDe: Long, finsA: Long): Boolean =
-        readableDatabase.rawQuery(
-            "SELECT 1 FROM minuts WHERE aprox = 2 AND ts >= ? AND ts < ? LIMIT 1", arrayOf(desDe.toString(), finsA.toString())
-        ).use { it.moveToFirst() }
+        delResum("nuvol", desDe, finsA) > 0 || ambMinuts(desDe, finsA) { d, f ->
+            readableDatabase.rawQuery(
+                "SELECT 1 FROM minuts WHERE aprox = 2 AND ts >= ? AND ts < ? LIMIT 1", arrayOf(d.toString(), f.toString())
+            ).use { if (it.moveToFirst()) 1.0 else 0.0 }
+        } > 0
 
     /** Si entre aquestes dues hores hi ha algun minut aproximat. */
     fun teAproximats(desDe: Long, finsA: Long): Boolean =
-        readableDatabase.rawQuery(
-            "SELECT 1 FROM minuts WHERE aprox = 1 AND ts >= ? AND ts < ? LIMIT 1", arrayOf(desDe.toString(), finsA.toString())
-        ).use { it.moveToFirst() }
+        delResum("aprox1", desDe, finsA) > 0 || ambMinuts(desDe, finsA) { d, f ->
+            readableDatabase.rawQuery(
+                "SELECT 1 FROM minuts WHERE aprox = 1 AND ts >= ? AND ts < ? LIMIT 1", arrayOf(d.toString(), f.toString())
+            ).use { if (it.moveToFirst()) 1.0 else 0.0 }
+        } > 0
 
     /**
      * El consum de fons (Wh per minut): el percentil 5 de la resta. Null si encara no hi ha prou dades.
@@ -279,6 +323,17 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
      * arguments com a text, i MIN(número, text) de SQLite torna sempre el número.
      */
     fun perHores(desDe: Long, finsA: Long, fonsWh: Double, desfas: Long): List<Hora> {
+        val b = resumFins
+        val vells = if (desDe < b) readableDatabase.rawQuery(
+            "SELECT ts, sempre, linia, desconegut, nuvol FROM hores WHERE ts >= ? AND ts < ? ORDER BY ts",
+            arrayOf(desDe.toString(), minOf(finsA, b).toString()),
+        ).use { c ->
+            buildList { while (c.moveToNext()) add(Hora(c.getLong(0), c.getDouble(1) / 1000, c.getDouble(2) / 1000, c.getDouble(3) / 1000, c.getDouble(4) / 1000)) }
+        } else emptyList()
+        return if (finsA > b) vells + perHoresMinuts(maxOf(desDe, b), finsA, fonsWh, desfas) else vells
+    }
+
+    private fun perHoresMinuts(desDe: Long, finsA: Long, fonsWh: Double, desfas: Long): List<Hora> {
         val f = fonsWh.toString()
         val d = desfas.toString()
         return readableDatabase.rawQuery(
@@ -320,14 +375,88 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     /** L'energia de tota la casa (kWh) entre dos instants. */
     fun kwhEntre(desDe: Long, finsA: Long): Double =
-        readableDatabase.rawQuery(
-            "SELECT IFNULL(SUM(wh), 0) FROM minuts WHERE canal = 0 AND ts >= ? AND ts < ?", arrayOf(desDe.toString(), finsA.toString()),
-        ).use { if (it.moveToFirst()) it.getDouble(0) / 1000 else 0.0 }
-
-    fun primerTs(): Long? =
-        readableDatabase.rawQuery("SELECT MIN(ts) FROM minuts", null).use {
-            if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null
+        delResum("total", desDe, finsA) / 1000 + ambMinuts(desDe, finsA) { d, f ->
+            readableDatabase.rawQuery(
+                "SELECT IFNULL(SUM(wh), 0) FROM minuts WHERE canal = 0 AND ts >= ? AND ts < ?", arrayOf(d.toString(), f.toString()),
+            ).use { if (it.moveToFirst()) it.getDouble(0) / 1000 else 0.0 }
         }
+
+    /** La suma d'una columna del resum per hores entre dos instants (la part d'abans de [resumFins]). */
+    private fun delResum(columna: String, desDe: Long, finsA: Long): Double {
+        if (desDe >= resumFins) return 0.0
+        return readableDatabase.rawQuery(
+            "SELECT IFNULL(SUM($columna), 0) FROM hores WHERE ts >= ? AND ts < ?", arrayOf(desDe.toString(), minOf(finsA, resumFins).toString()),
+        ).use { if (it.moveToFirst()) it.getDouble(0) else 0.0 }
+    }
+
+    /** El que surt dels minuts: la part des de [resumFins]. */
+    private fun ambMinuts(desDe: Long, finsA: Long, consulta: (Long, Long) -> Double): Double {
+        val d = maxOf(desDe, resumFins)
+        return if (finsA > d) consulta(d, finsA) else 0.0
+    }
+
+    /**
+     * Fa el resum per hores d'un dia (o d'una estona) amb el fons d'aquells dies ([fonsWh], Wh per minut). Si no hi ha cap
+     * minut (ja s'han esborrat), no hi toca: el resum que hi hagi és l'únic que en queda.
+     */
+    fun resumeix(desDe: Long, finsA: Long, fonsWh: Double, desfas: Long) {
+        val args = arrayOf(desDe.toString(), finsA.toString())
+        val n = readableDatabase.rawQuery("SELECT COUNT(*) FROM minuts WHERE canal = 0 AND ts >= ? AND ts < ?", args).use { if (it.moveToFirst()) it.getLong(0) else 0 }
+        if (n == 0L) return
+        val f = fonsWh.toString()
+        val d = desfas.toString()
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("hores", "ts >= ? AND ts < ?", args)
+            db.execSQL(
+                """INSERT OR REPLACE INTO hores (ts, total, sempre, linia, desconegut, nuvol, exactes, sense_detall, linia_aprox, aprox1)
+                   SELECT ((m0.ts + CAST(? AS INTEGER)) / 3600) * 3600 - CAST(? AS INTEGER) AS h,
+                     SUM(m0.wh),
+                     SUM(MIN(MAX(m0.wh - IFNULL(m1.wh, 0), 0), CAST(? AS REAL))),
+                     SUM(IFNULL(m1.wh, 0)),
+                     SUM(MAX(m0.wh - IFNULL(m1.wh, 0) - CAST(? AS REAL), 0)),
+                     SUM(CASE WHEN m0.aprox = 2 THEN m0.wh ELSE 0 END),
+                     SUM(CASE WHEN m0.aprox = 0 THEN 1 ELSE 0 END),
+                     SUM(CASE WHEN m0.aprox <> 0 THEN MAX(m0.wh - IFNULL(m1.wh, 0) - CAST(? AS REAL), 0) ELSE 0 END),
+                     SUM(CASE WHEN IFNULL(m1.aprox, 0) <> 0 THEN m1.wh ELSE 0 END),
+                     MAX(m0.aprox = 1)
+                   $restaSql GROUP BY h""",
+                arrayOf(d, d, f, f, f, desDe.toString(), finsA.toString()),
+            )
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /** Fora els minuts d'abans de [abans]: ja són al resum per hores. Les vegades i les etiquetes es queden. */
+    fun esborraMinuts(abans: Long) {
+        if (abans <= 0) return
+        writableDatabase.delete("minuts", "ts < ?", arrayOf(abans.toString()))
+    }
+
+    /** L'últim minut que hi ha, exacte o no. */
+    fun darrerMinut(): Long? =
+        readableDatabase.rawQuery("SELECT MAX(ts) FROM minuts", null).use { if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null }
+
+    /** El primer minut que encara hi és (d'abans, només hi ha el resum). */
+    fun primerMinut(): Long? =
+        readableDatabase.rawQuery("SELECT MIN(ts) FROM minuts", null).use { if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null }
+
+    /** El primer minut de totes les dades (també del resum per hores, si els minuts ja s'han esborrat). */
+    fun primerTs(): Long? = primer("SELECT MIN(ts) FROM minuts", "SELECT MIN(ts) FROM hores")
+
+    /**
+     * El primer minut en què la pinça 2 mesura alguna cosa (30 W o més): des de quan hi ha la pinça. El Shelly desa el canal 2
+     * encara que no hi hagi pinça, amb zeros (a Guíxols, fins al 25/10).
+     */
+    fun primerLinia(): Long? = primer("SELECT MIN(ts) FROM minuts WHERE canal = 1 AND wh >= 0.5", "SELECT MIN(ts) FROM hores WHERE linia >= 30")
+
+    private fun primer(deMinuts: String, deHores: String): Long? =
+        listOf(deMinuts, deHores).mapNotNull { sql ->
+            readableDatabase.rawQuery(sql, null).use { if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null }
+        }.minOrNull()
 
     fun aparells(): List<Aparell> =
         readableDatabase.rawQuery(
@@ -548,9 +677,11 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     /** L'energia de la línia (kWh) als minuts aproximats (des de fora, o del núvol per hores) d'entre dos instants. */
     fun liniaAproximada(desDe: Long, finsA: Long): Double =
-        readableDatabase.rawQuery(
-            "SELECT IFNULL(SUM(wh), 0) FROM minuts WHERE canal = 1 AND aprox <> 0 AND ts >= ? AND ts < ?", arrayOf(desDe.toString(), finsA.toString()),
-        ).use { if (it.moveToFirst()) it.getDouble(0) / 1000 else 0.0 }
+        delResum("linia_aprox", desDe, finsA) / 1000 + ambMinuts(desDe, finsA) { d, f ->
+            readableDatabase.rawQuery(
+                "SELECT IFNULL(SUM(wh), 0) FROM minuts WHERE canal = 1 AND aprox <> 0 AND ts >= ? AND ts < ?", arrayOf(d.toString(), f.toString()),
+            ).use { if (it.moveToFirst()) it.getDouble(0) / 1000 else 0.0 }
+        }
 
     fun hiHaVegades(): Boolean = readableDatabase.rawQuery("SELECT 1 FROM vegades LIMIT 1", null).use { it.moveToFirst() }
 
@@ -613,17 +744,21 @@ class BaseDades(context: Context) : SQLiteOpenHelper(context, "consum.db", null,
 
     /** Quants minuts exactes de tota la casa hi ha entre dos instants. */
     fun minutsExactes(desDe: Long, finsA: Long): Long =
-        readableDatabase.rawQuery("SELECT COUNT(*) FROM minuts WHERE canal = 0 AND aprox = 0 AND ts >= ? AND ts < ?", arrayOf(desDe.toString(), finsA.toString())).use {
-            if (it.moveToFirst()) it.getLong(0) else 0
-        }
+        (delResum("exactes", desDe, finsA) + ambMinuts(desDe, finsA) { d, f ->
+            readableDatabase.rawQuery("SELECT COUNT(*) FROM minuts WHERE canal = 0 AND aprox = 0 AND ts >= ? AND ts < ?", arrayOf(d.toString(), f.toString())).use {
+                if (it.moveToFirst()) it.getLong(0).toDouble() else 0.0
+            }
+        }).toLong()
 
     /**
      * El que passa del fons als minuts aproximats (des de fora, o del núvol per hores) d'entre dos instants (kWh): sense el
      * detall de cada minut, no se sap de qui és. El fons, en Wh per minut, es converteix a número (vegeu [perHores]).
      */
     fun senseDetall(desDe: Long, finsA: Long, fonsWh: Double): Double =
-        readableDatabase.rawQuery(
-            "SELECT IFNULL(SUM(MAX(m0.wh - IFNULL(m1.wh, 0) - CAST(? AS REAL), 0)), 0) $restaSql AND m0.aprox <> 0",
-            arrayOf(fonsWh.toString(), desDe.toString(), finsA.toString()),
-        ).use { if (it.moveToFirst()) it.getDouble(0) / 1000 else 0.0 }
+        delResum("sense_detall", desDe, finsA) / 1000 + ambMinuts(desDe, finsA) { d, f ->
+            readableDatabase.rawQuery(
+                "SELECT IFNULL(SUM(MAX(m0.wh - IFNULL(m1.wh, 0) - CAST(? AS REAL), 0)), 0) $restaSql AND m0.aprox <> 0",
+                arrayOf(fonsWh.toString(), d.toString(), f.toString()),
+            ).use { if (it.moveToFirst()) it.getDouble(0) / 1000 else 0.0 }
+        }
 }

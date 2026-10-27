@@ -71,6 +71,20 @@
             </intent-filter>
         </receiver>
 
+        <!-- Els ginys de la pantalla d'inici (maqueta 16) -->
+        <receiver android:name=".GinyGran" android:exported="false" android:label="@string/giny_gran_nom">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/giny_gran" />
+        </receiver>
+        <receiver android:name=".GinyPetit" android:exported="false" android:label="@string/giny_petit_nom">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/giny_petit" />
+        </receiver>
+
         <!-- La resposta a una pregunta des de la notificació -->
         <receiver android:name=".RespostaReceiver" android:exported="false" />
 

@@ -12,6 +12,11 @@ import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Referencia
+import cat.jordi.consum.dades.Repositori
+import cat.jordi.consum.ui.euros
+import cat.jordi.consum.ui.num
+import java.time.DayOfWeek
+import java.time.LocalDateTime
 import cat.jordi.consum.dades.endevina
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +35,8 @@ object Avisos {
     private const val CANAL_POTENCIA = "potencia"
     const val CANAL_VIGILANCIA = "vigilancia"
     private const val ID_POTENCIA = 900_001
+    private const val CANAL_RESUM = "resum"
+    private const val ID_RESUM = 900_002
     const val OBRE = "obre"
     const val ENTRENA = "entrena"
 
@@ -44,7 +51,10 @@ object Avisos {
             description = context.getString(R.string.avis_canal_vigilancia_descripcio)
             setShowBadge(false)
         }
-        context.getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(canal, potencia, vigilancia))
+        val resum = NotificationChannel(CANAL_RESUM, context.getString(R.string.avis_canal_resum), NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = context.getString(R.string.avis_canal_resum_descripcio)
+        }
+        context.getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(canal, potencia, vigilancia, resum))
     }
 
     fun obreApp(context: Context): PendingIntent = PendingIntent.getActivity(
@@ -77,6 +87,48 @@ object Avisos {
             .build()
         try {
             gestor.notify(ID_POTENCIA, n)
+        } catch (_: SecurityException) {
+        }
+    }
+
+    /**
+     * El resum de la setmana (maqueta 15): el dilluns des de les 9 (o el primer cop que es mira després), un sol cop per
+     * setmana, si l'app té dades de la setmana passada. El total, qui ha gastat més i el que queda per fer.
+     */
+    fun miraResum(context: Context, repo: Repositori) {
+        val c = repo.config
+        if (!c.resumSetmana) return
+        val ara = LocalDateTime.now()
+        val dilluns = ara.toLocalDate().with(DayOfWeek.MONDAY)
+        if (ara.toLocalDate() == dilluns && ara.hour < 9) return
+        val setmana = dilluns.minusWeeks(1).toEpochDay()
+        if (c.resumAvisat >= setmana) return
+        val s = repo.resumSetmana()
+        c.resumAvisat = setmana
+        val rq = s?.resum?.ranquing ?: return
+        val gestor = NotificationManagerCompat.from(context)
+        if (!gestor.areNotificationsEnabled()) return
+        val titol = context.getString(R.string.avis_resum_titol, num(rq.total, 1), euros(s.resum.euros.total))
+        val text = buildList {
+            rq.aparells.firstOrNull()?.let { add(context.getString(R.string.avis_resum_qui_mes, it.nom, num(it.kwh, 1))) }
+            val sempre = rq.sempre / rq.total.coerceAtLeast(0.001)
+            when {
+                s.repetits > 0 -> add(context.resources.getQuantityString(R.plurals.resum_repetits, s.repetits, s.repetits))
+                rq.senseIdentificar / rq.total.coerceAtLeast(0.001) >= 0.2 ->
+                    add(context.getString(R.string.resum_sense_nom, num(rq.senseIdentificar / rq.total * 100)))
+                sempre >= 0.15 -> add(context.getString(R.string.resum_sempre, num(sempre * 100)))
+            }
+        }.joinToString(" ")
+        val n = NotificationCompat.Builder(context, CANAL_RESUM)
+            .setSmallIcon(R.drawable.ic_llamp)
+            .setContentTitle(titol)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(obreApp(context))
+            .setAutoCancel(true)
+            .build()
+        try {
+            gestor.notify(ID_RESUM, n)
         } catch (_: SecurityException) {
         }
     }

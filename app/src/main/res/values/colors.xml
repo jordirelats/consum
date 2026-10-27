@@ -2,4 +2,9 @@
 <resources>
     <color name="fons">#FFF6F7F6</color>
     <color name="primari">#FF0F766E</color>
+    <!-- El giny de la pantalla d'inici (maqueta 16) -->
+    <color name="giny_fons">#F2FFFFFF</color>
+    <color name="giny_text">#FF1C2421</color>
+    <color name="giny_suau">#FF5F6B66</color>
+    <color name="giny_primari">#FF0F766E</color>
 </resources>

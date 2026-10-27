@@ -1,12 +1,24 @@
 package cat.jordi.consum.ui
 
+import cat.jordi.consum.dades.ASPECTE_MOBIL
+import cat.jordi.consum.dades.ASPECTE_FOSC
+import cat.jordi.consum.dades.ASPECTE_CLAR
+import androidx.compose.foundation.clickable
+import cat.jordi.consum.dades.TipusExport
+import cat.jordi.consum.dades.PeriodeExport
+import cat.jordi.consum.dades.Com
+import androidx.compose.material.icons.outlined.Download
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import android.app.LocaleConfig
 import android.app.LocaleManager
 import android.os.Build
 import android.os.LocaleList
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -27,6 +39,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -63,8 +76,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.R
-import cat.jordi.consum.dades.Funcionament
 import cat.jordi.consum.Vigilancia
+import cat.jordi.consum.dades.Funcionament
 import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.dades.Pais
 import cat.jordi.consum.dades.missatge
@@ -73,14 +86,14 @@ import cat.jordi.consum.shelly.ShellyLocal
 import cat.jordi.consum.shelly.ShellyNuvol
 import cat.jordi.consum.shelly.Trobat
 import cat.jordi.consum.shelly.descobreix
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** El primer cop, i després com a configuració: on és el Shelly, les pinces, el núvol i el preu. */
 @Composable
@@ -153,12 +166,22 @@ fun PantallaConnecta(vm: ConsumViewModel) {
         ) {
             Targeta {
                 TitolTargeta(stringResource(R.string.connecta_titol_shelly))
-                if (trobats.isEmpty()) Nota(stringResource(R.string.connecta_buscant))
-                trobats.forEach { t ->
-                    TextButton(onClick = { host = t.host; info = null }) {
-                        Icon(Icons.Outlined.Wifi, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("${t.nom} · ${t.host}")
+                // Els que es troben, en una sola fila que es desplaça de costat: amb l'alçada fixa, la pàgina no es mou mentre
+                // en van sortint i un toc no cau en un altre lloc. La nota hi és sempre, a sobre
+                Nota(stringResource(R.string.connecta_buscant))
+                Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.CenterStart) {
+                    if (trobats.isEmpty()) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            trobats.forEach { t ->
+                                AssistChip(
+                                    onClick = { host = t.host; info = null },
+                                    label = { Text("${t.nom} · ${t.host}") },
+                                    leadingIcon = { Icon(Icons.Outlined.Wifi, null, Modifier.size(18.dp)) },
+                                )
+                            }
+                        }
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -247,7 +270,10 @@ fun PantallaConnecta(vm: ConsumViewModel) {
             }
             if (config.configurat) TargetaAvisPotencia(vm)
             if (config.configurat) TargetaAvisInesperat(vm)
+            if (config.configurat) TargetaResumSetmana(vm)
+            if (config.configurat) TargetaExporta(vm)
             if (config.teNuvol) TargetaNuvolHores(vm)
+            TargetaAspecte(vm)
             // Abans d'Android 13 no hi ha idioma per app: fa com el mòbil
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) TargetaIdioma()
             Targeta {
@@ -526,3 +552,91 @@ private fun netejaServidor(s: String) = s.trim().removePrefix("https://").remove
 
 /** L'ID que fa servir el núvol és la MAC en minúscules: accepta "shellyemg3-dcb4…" o "DC:B4:…". */
 private fun netejaId(s: String) = s.trim().lowercase().substringAfterLast('-').replace(":", "")
+
+/** El resum de la setmana, els dilluns (maqueta 15): una notificació amb el total, qui ha gastat més i el que queda per fer. */
+@Composable
+private fun TargetaResumSetmana(vm: ConsumViewModel) {
+    var actiu by remember { mutableStateOf(vm.config.resumSetmana) }
+    Targeta {
+        Row(
+            Modifier.fillMaxWidth().toggleable(actiu, role = Role.Switch) { actiu = it; vm.config.resumSetmana = it },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.connecta_resum_titol), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Nota(stringResource(R.string.connecta_resum_text))
+            }
+            Switch(actiu, null)
+        }
+    }
+}
+
+/**
+ * Exportar les dades (maqueta 16): un fitxer CSV per obrir amb un full de càlcul, del consum de cada hora, de cada vegada o de
+ * cada minut, d'aquest mes, de l'any o de tot. Es desa on l'usuari triï, amb el selector de fitxers d'Android.
+ */
+@Composable
+private fun TargetaExporta(vm: ConsumViewModel) {
+    var periode by rememberSaveable { mutableStateOf(PeriodeExport.MES) }
+    var tipus by rememberSaveable { mutableStateOf<TipusExport?>(null) }
+    // Les columnes es separen amb punt i coma: el nom de la línia no en pot portar
+    val nomLinia = vm.config.nomLinia.ifBlank { stringResource(R.string.pinca2_xip) }.replace(';', ',')
+    val capcaleres = mapOf(
+        TipusExport.HORES to stringResource(R.string.exporta_cap_hores, nomLinia),
+        TipusExport.VEGADES to stringResource(R.string.exporta_cap_vegades),
+        TipusExport.MINUTS to stringResource(R.string.exporta_cap_minuts, nomLinia),
+    ).mapValues { it.value.split(";") }
+    val textCom = mapOf(Com.ENSENYAT to stringResource(R.string.fitxa_ensenyat), Com.RECONEGUT to stringResource(R.string.fitxa_reconegut))
+    val desa = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        val t = tipus
+        if (uri != null && t != null) vm.exporta(t, periode, uri, capcaleres.getValue(t), textCom)
+    }
+    Targeta {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Download, null, tint = Primari, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.exporta_titol), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Nota(stringResource(R.string.exporta_text), Modifier.padding(top = 4.dp))
+        Text(stringResource(R.string.exporta_quin_periode), Modifier.padding(top = 8.dp, bottom = 6.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Pestanyes(PeriodeExport.entries, periode, { stringResource(it.nomId) }) { periode = it }
+        val avui = java.time.LocalDate.now()
+        val sufix = when (periode) {
+            PeriodeExport.MES -> "%d-%02d".format(avui.year, avui.monthValue)
+            PeriodeExport.ANY -> "${avui.year}"
+            PeriodeExport.TOT -> "tot"
+        }
+        TipusExport.entries.forEach { t ->
+            Row(
+                Modifier.fillMaxWidth().clickable(enabled = !vm.exportant) { tipus = t; desa.launch("consum-${t.fitxer}-$sufix.csv") }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(t.nomId), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(t.textId), fontSize = 12.sp, color = Suau)
+                }
+                Icon(Icons.Outlined.Download, stringResource(R.string.exporta_desa), tint = Primari)
+            }
+        }
+        if (vm.exportant) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))
+        vm.missatgeExport?.let { Text(it.text(), Modifier.padding(top = 4.dp), fontSize = 13.sp, color = Primari) }
+        Nota(stringResource(R.string.exporta_on), Modifier.padding(top = 4.dp))
+    }
+}
+
+/** Clara, fosca o com el mòbil (maqueta 16). */
+@Composable
+private fun TargetaAspecte(vm: ConsumViewModel) {
+    Targeta {
+        TitolTargeta(stringResource(R.string.connecta_aspecte))
+        Pestanyes(listOf(ASPECTE_MOBIL, ASPECTE_CLAR, ASPECTE_FOSC), vm.aspecte, { a ->
+            stringResource(
+                when (a) {
+                    ASPECTE_CLAR -> R.string.connecta_aspecte_clar
+                    ASPECTE_FOSC -> R.string.connecta_aspecte_fosc
+                    else -> R.string.connecta_aspecte_mobil
+                }
+            )
+        }) { vm.triaAspecte(it) }
+    }
+}

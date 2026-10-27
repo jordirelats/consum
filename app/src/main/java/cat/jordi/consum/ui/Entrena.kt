@@ -18,7 +18,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.QuestionMark
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SuggestionChip
@@ -33,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -47,6 +55,9 @@ import androidx.compose.ui.unit.sp
 import cat.jordi.consum.R
 import cat.jordi.consum.dades.Aparell
 import cat.jordi.consum.dades.Funcionament
+import cat.jordi.consum.dades.Idioma
+import cat.jordi.consum.dades.SenseNom
+import cat.jordi.consum.dades.VegadaSenseNom
 import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Punt
 import cat.jordi.consum.dades.Referencia
@@ -83,6 +94,8 @@ fun PantallaEntrena(vm: ConsumViewModel) {
             }
         }
 
+        // El que més gasta i encara no té nom (maqueta 15): d'un toc
+        vm.senseNom?.takeIf { it.vegades.isNotEmpty() }?.let { TargetaSenseNom(vm, it) }
         vm.preguntes.forEach { p -> key(p.id) { TargetaPregunta(vm, p) } }
         // El que es repeteix sempre igual (maqueta 12): preguntat un cop
         vm.repetits.forEach { r -> key("r${r.id}") { TargetaRepetit(vm, r) } }
@@ -272,3 +285,90 @@ private fun TargetaRepetit(vm: ConsumViewModel, r: Repetit) {
         }
     }
 }
+
+/**
+ * El que més gasta i encara no té nom (maqueta 15): les vegades més grosses dels últims 7 dies que l'app no sap de qui són,
+ * per dir-ho d'un toc. A Guíxols, les dues càrregues del cotxe del dissabte 24 eren gairebé tot el 61 % sense identificar.
+ */
+@Composable
+private fun TargetaSenseNom(vm: ConsumViewModel, s: SenseNom) {
+    Targeta {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.QuestionMark, null, tint = Desconegut, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.sense_nom_titol), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Nota(stringResource(R.string.sense_nom_text, num(s.kwh, 1), num(s.part * 100)), Modifier.padding(top = 4.dp))
+        s.vegades.forEach { x -> key(x.vegada.ts) { FilaSenseNom(vm, x) } }
+        if (s.vegades.size > 1) {
+            Row(Modifier.padding(top = 8.dp).clip(RoundedCornerShape(10.dp)).background(PrimariFluix).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Check, null, tint = Primari, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.sense_nom_nota), fontSize = 12.5.sp, lineHeight = 17.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaSenseNom(vm: ConsumViewModel, x: VegadaSenseNom) {
+    val v = x.vegada
+    var totes by remember { mutableStateOf(false) }
+    val zona = ZoneId.systemDefault()
+    val dia = Instant.ofEpochSecond(v.ts).atZone(zona).format(DateTimeFormatter.ofPattern(stringResource(R.string.format_dia_curt), Idioma.locale))
+    Column(Modifier.padding(top = 10.dp)) {
+        HorizontalDivider(color = Separador)
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.sense_nom_quan, dia, hora(v.ts)), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.sense_nom_detall, durada(v.minuts), num(v.w / 1000, 1)), fontSize = 12.sp, color = Suau)
+            }
+            FormaVegada(x.punts, v.ts, v.fi + 60)
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text("${num(v.kwh, 1)} kWh", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Text(euros(x.euros), fontSize = 12.sp, color = Suau)
+            }
+        }
+        FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            (if (totes) x.candidats else x.candidats.take(3)).forEach { a ->
+                SuggestionChip(onClick = { vm.responVegada(v, a.id) }, label = { Text(a.nom) })
+            }
+            if (!totes && x.candidats.size > 3) SuggestionChip(onClick = { totes = true }, label = { Text(stringResource(R.string.entrena_un_altre)) })
+            SuggestionChip(onClick = { vm.ignoraVegada(v) }, label = { Text(stringResource(R.string.entrena_no_ho_se)) })
+        }
+        if (x.candidats.isEmpty()) Nota(stringResource(R.string.entrena_primer_afegeix))
+    }
+}
+
+/** La forma d'una vegada, petita i sense eixos: la potència de la resta de la casa, amb la vegada pintada a sota. */
+@Composable
+private fun FormaVegada(punts: List<Pair<Long, Double>>, desDe: Long, finsA: Long) {
+    if (punts.size < 2) return
+    Canvas(Modifier.width(84.dp).height(34.dp)) {
+        val t0 = punts.first().first.toFloat()
+        val t1 = punts.last().first.toFloat().coerceAtLeast(t0 + 1)
+        val ymax = punts.maxOf { it.second }.toFloat().coerceAtLeast(1f) * 1.08f
+        fun x(ts: Long) = (ts - t0) / (t1 - t0) * size.width
+        fun y(w: Double) = size.height - (w.toFloat() / ymax).coerceIn(0f, 1f) * size.height
+        val linia = Path()
+        val area = Path()
+        punts.forEachIndexed { i, (ts, w) ->
+            if (i == 0) linia.moveTo(x(ts), y(w)) else linia.lineTo(x(ts), y(w))
+        }
+        val dins = punts.filter { it.first in desDe until finsA }
+        if (dins.size >= 2) {
+            area.moveTo(x(dins.first().first), size.height)
+            dins.forEach { (ts, w) -> area.lineTo(x(ts), y(w)) }
+            area.lineTo(x(dins.last().first), size.height)
+            area.close()
+            drawPath(area, Desconegut.copy(alpha = 0.15f))
+        }
+        drawPath(linia, Desconegut, style = Stroke(1.6.dp.toPx()))
+    }
+}
+
+/** «6 h 7 min» o «45 min». */
+@Composable
+fun durada(minuts: Int): String =
+    if (minuts >= 60) stringResource(R.string.durada_h_min, minuts / 60, minuts % 60) else stringResource(R.string.durada_min, minuts)

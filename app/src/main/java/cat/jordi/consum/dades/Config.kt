@@ -106,6 +106,33 @@ class Config(context: Context) {
         get() = p.getLong("vegades_fins", 0)
         set(v) = p.edit().putLong("vegades_fins", v).apply()
 
+    /**
+     * Amb quina manera de trobar-les s'han buscat les vegades desades: si una versió de l'app les troba d'una altra manera
+     * (la 0.28 separa el que s'encén a sobre d'una vegada llarga), es tornen a buscar totes.
+     */
+    var versioVegades: Int
+        get() = p.getInt("versio_vegades", 1)
+        set(v) = p.edit().putInt("versio_vegades", v).apply()
+
+    /** Les vegades grosses sense nom que l'usuari ha dit que no sap què eren (maqueta 15): l'inici de cadascuna (s). */
+    var senseNomIgnorades: Set<Long>
+        get() = text("sense_nom_ignorades").split(",").mapNotNull { it.toLongOrNull() }.toSet()
+        set(v) = desa("sense_nom_ignorades", v.sorted().joinToString(","))
+
+    /**
+     * El resum de la setmana (maqueta 15): si s'avisa els dilluns, i el dilluns (epoch day) de l'última setmana que se n'ha
+     * avisat i de l'última que l'usuari ha vist a la pantalla Ara.
+     */
+    var resumSetmana: Boolean
+        get() = p.getBoolean("resum_setmana", true)
+        set(v) = p.edit().putBoolean("resum_setmana", v).apply()
+    var resumAvisat: Long
+        get() = p.getLong("resum_avisat", 0)
+        set(v) = p.edit().putLong("resum_avisat", v).apply()
+    var resumVist: Long
+        get() = p.getLong("resum_vist", 0)
+        set(v) = p.edit().putLong("resum_vist", v).apply()
+
     /** Quan s'han buscat per últim cop els episodis de la línia i el que es repeteix (maqueta 12, s). */
     var liniaMirada: Long
         get() = p.getLong("linia_mirada", 0)
@@ -160,11 +187,51 @@ class Config(context: Context) {
         get() = p.getLong("darrera_comprovacio", 0)
         set(v) = p.edit().putLong("darrera_comprovacio", v).apply()
 
+    /**
+     * El resum per hores de les dades velles (maqueta 16): fins on arriba (una mitjanit, s; 0: encara no n'hi ha) i quan s'ha
+     * mirat per últim cop. I el primer minut de la pinça 2, que no es mou encara que se n'esborrin els minuts vells.
+     */
+    var resumFins: Long
+        get() = p.getLong("resum_fins", 0)
+        set(v) = p.edit().putLong("resum_fins", v).apply()
+    var resumMirat: Long
+        get() = p.getLong("resum_mirat", 0)
+        set(v) = p.edit().putLong("resum_mirat", v).apply()
+    var iniciLinia: Long
+        get() = p.getLong("inici_pinca2", 0)
+        set(v) = p.edit().putLong("inici_pinca2", v).apply()
+
+    /** Clara, fosca o com el mòbil (maqueta 16): [ASPECTE_MOBIL], [ASPECTE_CLAR] o [ASPECTE_FOSC]. */
+    var aspecte: Int
+        get() = p.getInt("aspecte", ASPECTE_MOBIL)
+        set(v) = p.edit().putInt("aspecte", v).apply()
+
+    /** El que ensenya el giny de la pantalla d'inici (maqueta 16): l'última lectura, el consum d'avui i el que més gasta. */
+    var giny: EstatGiny?
+        get() = if (!p.contains("giny_ts")) null else EstatGiny(
+            p.getLong("giny_ts", 0), p.getFloat("giny_w", 0f).toDouble(),
+            p.getFloat("giny_kwh", -1f).takeIf { it >= 0 }?.toDouble(), p.getFloat("giny_euros", 0f).toDouble(),
+            p.getString("giny_mes_nom", null), p.getFloat("giny_mes_w", -1f).takeIf { it >= 0 }?.toDouble(),
+        )
+        set(v) {
+            if (v == null) return
+            p.edit().putLong("giny_ts", v.ts).putFloat("giny_w", v.w.toFloat()).putFloat("giny_kwh", (v.kwh ?: -1.0).toFloat())
+                .putFloat("giny_euros", (v.euros ?: 0.0).toFloat()).putString("giny_mes_nom", v.mesNom)
+                .putFloat("giny_mes_w", (v.mesW ?: -1.0).toFloat()).apply()
+        }
+
     /** Configurada vol dir que sap on llegir: el Shelly de casa, el núvol o tots dos. */
     val configurat get() = host.isNotBlank() || teNuvol
     val teLinia get() = nomLinia.isNotBlank()
     val teNuvol get() = servidorNuvol.isNotBlank() && clauNuvol.isNotBlank() && idDispositiu.isNotBlank()
 }
+
+const val ASPECTE_MOBIL = 0
+const val ASPECTE_CLAR = 1
+const val ASPECTE_FOSC = 2
+
+/** El que ensenya el giny: la lectura (instant i W), el consum d'avui (kWh, €) i el que més gasta ara (nom i W). */
+data class EstatGiny(val ts: Long, val w: Double, val kwh: Double?, val euros: Double?, val mesNom: String?, val mesW: Double?)
 
 /** Els comptadors d'energia del Shelly (Wh acumulats) en un minut. */
 data class Comptador(val ts: Long, val wh: Double, val whLinia: Double?)

@@ -115,7 +115,7 @@ data class Repetit(
  * Els episodis d'una sèrie de minuts (maqueta 12; prototip: recerca/deteccio/episodis_setmana.py). La base de cada minut és
  * el 20 % més baix de les dues hores d'abans, i un episodi són [llargada] minuts o més (3, o 2 per repartir el consum:
  * l'estufa de Guíxols fa molts cicles de 2 minuts) que la passen 250 W o més. Un minut per sota no el talla; dos, o un forat
- * de dades de més de 3 minuts, sí.
+ * de dades de més de 3 minuts, sí. El que s'encén a sobre d'un episodi llarg i pla és un episodi a part ([ambElDeSobre]).
  */
 object Episodis {
     const val MINIM = 250.0
@@ -151,7 +151,52 @@ object Episodis {
             }
         }
         tanca()
-        return grups.mapNotNull { (g, b) -> descriu(minuts, g.first(), g.last(), b) }
+        return grups.flatMap { (g, b) -> ambElDeSobre(minuts, g.first(), g.last(), b, llargada) }.sortedBy { it.ts }
+    }
+
+    /**
+     * Un episodi llarg i pla amb el que s'hi encén a sobre (maqueta 16): la placa mentre es carrega el cotxe. Dins de
+     * l'episodi, els trams de [llargada] minuts o més que passen 250 W del seu nivell (la mediana) són episodis a part, amb
+     * aquell nivell com a base; i el llarg es queda, en aquells minuts, el seu nivell. Només si el llarg és pla (la majoria dels
+     * minuts de fora dels trams, a menys d'un 20 % o 150 W del nivell) i els trams en són menys de la meitat: la placa sola
+     * polsa, i els seus minuts alts no són una altra cosa.
+     */
+    private fun ambElDeSobre(m: List<MinutW>, a: Int, b: Int, base: Double, llargada: Int): List<Episodi> {
+        val ep = descriu(m, a, b, base) ?: return emptyList()
+        if (b - a + 1 < 10 || ep.forma == Forma.POLSA) return listOf(ep)
+        val nivell = base + ep.w
+        val trams = mutableListOf<IntRange>()
+        var ini = -1
+        var fi = -1
+        var forat = 0
+        fun tanca() {
+            if (ini >= 0 && fi - ini + 1 >= llargada) trams += ini..fi
+            ini = -1
+            forat = 0
+        }
+        // Els minuts de les puntes són a mitges: un tram ha de ser de dins
+        for (i in a + 1 until b) {
+            if (m[i].ts - m[i - 1].ts > 3 * 60) tanca()
+            if (m[i].w - nivell >= MINIM) {
+                if (ini < 0) ini = i
+                fi = i
+                forat = 0
+            } else if (ini >= 0 && ++forat > 1) {
+                tanca()
+            }
+        }
+        tanca()
+        if (trams.isEmpty()) return listOf(ep)
+        val dins = trams.sumOf { it.count() }
+        if (dins * 2 > b - a + 1) return listOf(ep)
+        val fora = (a + 1 until b).filter { i -> trams.none { i in it } }
+        val plans = fora.count { i -> abs(m[i].w - nivell) <= max(0.2 * ep.w, 150.0) }
+        if (plans < 0.7 * fora.size) return listOf(ep)
+        val sobre = trams.mapNotNull { t -> descriu(m, t.first, t.last, nivell) }
+        if (sobre.isEmpty()) return listOf(ep)
+        // El llarg, sense el que hi havia a sobre
+        val exces = ep.exces.mapIndexed { j, x -> if (trams.any { (a + j) in it }) minOf(x, ep.w) else x }
+        return listOf(ep.copy(exces = exces, kwh = exces.sum() / 60_000)) + sobre
     }
 
     private fun descriu(m: List<MinutW>, a: Int, b: Int, base: Double): Episodi? {

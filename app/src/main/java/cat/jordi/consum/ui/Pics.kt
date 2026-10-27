@@ -172,7 +172,7 @@ private fun ElementDelPic(vm: ConsumViewModel, e: ElementPic, total: Double) {
             var tots by remember(e) { mutableStateOf(false) }
             Column(
                 Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(10.dp)).background(DesconegutFluix)
-                    .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
+                    .border(1.dp, Desconegut.copy(alpha = 0.4f), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
             ) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text("+${num(e.w / 1000, 1)} kW", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = DesconegutText)

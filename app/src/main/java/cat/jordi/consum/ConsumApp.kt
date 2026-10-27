@@ -54,6 +54,8 @@ class Sincronitza(context: Context, params: WorkerParameters) : CoroutineWorker(
         val repo = (applicationContext as ConsumApp).repo
         if (repo.config.configurat) {
             runCatching { repo.sincronitza() }
+            // Qui només té el núvol no sincronitza: el resum per hores de les dades velles, aquí
+            runCatching { repo.resumeixVells() }
             runCatching {
                 repo.lectura()?.let { l ->
                     // Si la vigilància no és en marxa, la potència es mira aquí, cada 15 minuts
@@ -66,10 +68,14 @@ class Sincronitza(context: Context, params: WorkerParameters) : CoroutineWorker(
                     if (!ConsumApp.oberta) repo.comprovaInesperat(resta)?.let { p ->
                         Avisos.avisa(applicationContext, p, repo.aparellsAEntrenar(), repo.referencies())
                     }
+                    // El giny de la pantalla d'inici, a part: si falla, els avisos ja s'han mirat
+                    runCatching { Ginys.actualitza(applicationContext, repo, l) }
                 }
             }
         }
         runCatching { repo.actualitzaPreus() }
+        // El dilluns, el resum de la setmana passada (maqueta 15)
+        runCatching { Avisos.miraResum(applicationContext, repo) }
         // El que falta, amb el núvol per hores (maqueta 11): com a molt cada 6 hores, i pocs dies per vegada
         if (repo.config.nuvolHores && System.currentTimeMillis() / 1000 - repo.config.nuvolDarrer > 6 * 3600) {
             runCatching { repo.omplNuvol(maxDies = 10) }

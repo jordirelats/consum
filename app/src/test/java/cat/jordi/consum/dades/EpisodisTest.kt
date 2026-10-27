@@ -135,6 +135,36 @@ class EpisodisTest {
         assertTrue(!r((0 until 7).map { mati + it * 86400L }).sembla(zona))
     }
 
+    @Test
+    fun elQueSEncenASobreEsUnaAltraVegada() {
+        // El cotxe (2,4 kW, 6 hores) i, a sobre, la placa (2,5 kW que polsa) durant 20 minuts, com el dissabte 24 a Guíxols
+        val eps = Episodis.troba(serie(600) { i ->
+            when {
+                i in 150 until 170 -> Triple(2400.0 + 2500.0, 2400.0 + 4000.0, 2400.0 + 500.0)
+                i in 100 until 460 -> constant(2400.0)
+                else -> null
+            }
+        }, llargada = 2)
+        assertEquals(2, eps.size)
+        val (cotxe, placa) = eps.sortedByDescending { it.minuts }
+        assertEquals(360, cotxe.minuts)
+        assertEquals(2400.0, cotxe.w, 1.0)
+        // El cotxe es queda el seu nivell, i la placa, el que hi passa per sobre: la suma és tot el que passava de la base
+        assertEquals(2400.0 * 360 / 60_000, cotxe.kwh, 0.01)
+        assertEquals(20, placa.minuts)
+        assertEquals(2500.0, placa.w, 1.0)
+        assertEquals(Forma.POLSA, placa.forma)
+        assertEquals((2400.0 * 360 + 2500.0 * 20) / 60_000, cotxe.kwh + placa.kwh, 0.01)
+        // La placa sola polsa: els seus minuts alts no són una altra cosa
+        val sola = Episodis.troba(serie(300) { i ->
+            if (i in 100 until 140) (if (i % 3 == 0) Triple(3500.0, 4000.0, 0.0) else Triple(1500.0, 4000.0, 0.0)) else null
+        }, llargada = 2)
+        assertEquals(1, sola.size)
+        // Un aparell que va pujant (la bomba de calor) tampoc es parteix
+        val puja = Episodis.troba(serie(300) { i -> if (i in 100 until 170) constant(330.0 + (i - 100) * 5.0) else null }, llargada = 2)
+        assertEquals(1, puja.size)
+    }
+
     /** Les dades d'una pinça amb tots els camps (fora del repositori): [ts, energia, ..., màx, mín, ...]. */
     private fun llegeix(nom: String): List<MinutW>? {
         val fitxer = File(System.getProperty("user.home"), "Projectes/Consum-Shelly/recerca/reactiva/$nom")
@@ -165,8 +195,18 @@ class EpisodisTest {
         val motor = repetits.single { it.minuts in 5.0..7.0 }
         assertEquals(Forma.PIC, motor.forma)
         assertTrue(motor.cadaMinuts in 120.0..240.0)
-        val curt = repetits.single { it.minuts <= 3.0 }
+        // (des de la 0.28 també hi ha els cicles que s'encenen a sobre de la càrrega del cotxe: el més nombrós és el del cap de setmana)
+        val curt = repetits.filter { it.minuts <= 3.0 }.maxBy { it.cops.size }
         assertTrue(curt.cops.size >= 30)
         assertEquals(Forma.CONSTANT, curt.forma)
+        // Dissabte 24 (maqueta 16): la cuina de les 20:31, a sobre de la càrrega del cotxe de les 19:54, és una vegada a part
+        val zona = java.time.ZoneId.of("Europe/Madrid")
+        fun a(h: Int, m: Int) = java.time.LocalDate.of(2026, 10, 24).atTime(h, m).atZone(zona).toEpochSecond()
+        val vegades = Episodis.troba(resta, llargada = 2)
+        val cotxe = vegades.single { it.ts in a(19, 50)..a(19, 58) && it.minuts > 300 }
+        val cuina = vegades.filter { it.ts in a(20, 28)..a(21, 10) && it.w > 1500 }
+        assertTrue(cuina.isNotEmpty())
+        // El cotxe es queda uns 14–16 kWh (abans, 18,05 kWh amb tot el que tenia a sobre)
+        assertTrue(cotxe.kwh in 13.5..16.5)
     }
 }

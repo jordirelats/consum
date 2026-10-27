@@ -1,5 +1,9 @@
 package cat.jordi.consum.ui
 
+import cat.jordi.consum.dades.TipusExport
+import cat.jordi.consum.dades.PeriodeExport
+import cat.jordi.consum.dades.Com
+import android.net.Uri
 import android.app.Application
 import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
@@ -12,6 +16,7 @@ import androidx.lifecycle.viewModelScope
 import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.Avisos
 import cat.jordi.consum.ConsumApp
+import cat.jordi.consum.Ginys
 import cat.jordi.consum.R
 import cat.jordi.consum.VersioNova
 import cat.jordi.consum.Vigilancia
@@ -27,6 +32,9 @@ import cat.jordi.consum.dades.Pic
 import cat.jordi.consum.dades.Pregunta
 import cat.jordi.consum.dades.Punt
 import cat.jordi.consum.dades.Fitxa
+import cat.jordi.consum.dades.Obertes
+import cat.jordi.consum.dades.ResumSetmana
+import cat.jordi.consum.dades.SenseNom
 import cat.jordi.consum.dades.Referencia
 import cat.jordi.consum.dades.Vegada
 import cat.jordi.consum.dades.Repetit
@@ -38,6 +46,7 @@ import cat.jordi.consum.dades.Tros
 import cat.jordi.consum.dades.mediana
 import cat.jordi.consum.dades.missatge
 import cat.jordi.consum.dades.mou
+import cat.jordi.consum.dades.iniciPeriode
 import cat.jordi.consum.shelly.Lectura
 import cat.jordi.consum.shelly.Origen
 import kotlinx.coroutines.CancellationException
@@ -49,7 +58,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-enum class Pantalla { CONNECTA, PRINCIPAL, AFEGIR, QUESTIONARI, PREU, PASSAT, APARELL }
+enum class Pantalla { CONNECTA, PRINCIPAL, AFEGIR, QUESTIONARI, PREU, PASSAT, APARELL, ESPERA }
 
 enum class Pestanya(@StringRes val nomId: Int) {
     ARA(R.string.pestanya_ara), APARELLS(R.string.pestanya_aparells), ENTRENA(R.string.pestanya_entrena), HISTORIAL(R.string.pestanya_historial)
@@ -158,10 +167,29 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         private set
     var explicadorLinia by mutableStateOf<Explicador?>(null)
         private set
+    var aparellsLinia by mutableStateOf<List<Aparell>>(emptyList())
+        private set
 
     /** El que es repeteix sempre igual i encara no se sap què és (maqueta 12). */
     var repetits by mutableStateOf<List<Repetit>>(emptyList())
         private set
+
+    /** Les vegades que encara duren (maqueta 15): el que hi ha encès ara, amb el mateix criteri que el rànquing. */
+    var obertes by mutableStateOf<Obertes?>(null)
+        private set
+
+    /** Les vegades grosses dels últims 7 dies que encara no tenen nom (maqueta 15). */
+    var senseNom by mutableStateOf<SenseNom?>(null)
+        private set
+
+    /** El resum de la setmana passada, mentre l'usuari no l'ha vist (maqueta 15). */
+    var resumSetmana by mutableStateOf<ResumSetmana?>(null)
+        private set
+
+    /** La caça del sempre encès (maqueta 15): el que ha baixat la potència mentre la pantalla és oberta, del més nou al més vell. */
+    var baixades by mutableStateOf<List<Baixada>>(emptyList())
+        private set
+    private var darreraBaixada = 0L
 
     /** L'aparell que s'està mesurant ara (si n'hi ha) i el missatge del resultat de l'últim. */
     var mesurant by mutableStateOf<Long?>(null)
@@ -255,6 +283,7 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
                         val resta = resta(l)
                         viu.addLast(ara to resta)
                         while (viu.isNotEmpty() && viu.first().first < ara - 120_000) viu.removeFirst()
+                        if (pantalla == Pantalla.ESPERA && l.origen == Origen.LOCAL) miraBaixada(ara)
                         // Amb l'app oberta, el consum inesperat es mira cada minut
                         if (ara - comprovat > 60_000) {
                             comprovat = ara
@@ -265,9 +294,12 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
                 }
             }
             launch {
+                // Cada minut, els minuts nous del Shelly i les vegades que encara duren (per a «Què hi ha encès ara»); cada 5
+                // minuts, tot
+                var n = 0
                 while (isActive) {
-                    sincronitzaAra()
-                    delay(5 * 60_000L)
+                    if (n++ % 5 == 0) sincronitzaAra() else sincronitzaLleuger()
+                    delay(60_000L)
                 }
             }
         }
@@ -290,6 +322,8 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
             TextRecurs(R.string.vm_error_sincronitzacio)
         }
         runCatching { repo.actualitzaPreus() }
+        val l = lectura
+        withContext(Dispatchers.IO) { runCatching { Ginys.actualitza(getApplication(), repo, l) } }
         enCurs--
         sincronitzant = enCurs > 0
         refrescaAra()
@@ -297,6 +331,23 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
 
     fun sincronitza() {
         viewModelScope.launch { sincronitzaAra() }
+    }
+
+    /** Només els minuts nous i les vegades que encara duren, sense refer tota la resta. */
+    private suspend fun sincronitzaLleuger() {
+        val l = lectura
+        obertes = withContext(Dispatchers.IO) {
+            // Des de fora (pel núvol) el Shelly de casa no respon: no cal esperar-lo cada minut
+            if (l?.origen != Origen.NUVOL) try {
+                repo.sincronitza()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+            // El giny de la pantalla d'inici, cada minut mentre l'app és oberta
+            runCatching { Ginys.actualitza(getApplication(), repo, l) }
+            repo.obertes()
+        }
     }
 
     private suspend fun refrescaAra() {
@@ -311,6 +362,9 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
                 repo.infoPreu(), repo.consellLinia(),
                 repo.referencies(), repo.preguntesPendents(), repo.aparellsAEntrenar(),
                 repo.referenciesLinia(), repo.explicadorLinia(), repo.repetitsPendents(),
+                repo.obertes(), repo.senseNom(),
+                resumDeLaSetmana(),
+                repo.aparellsLinia(),
             )
         }
         serie = dades.serie
@@ -326,6 +380,10 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         referenciesLinia = dades.referenciesLinia
         explicadorLinia = dades.explicadorLinia
         repetits = dades.repetits
+        obertes = dades.obertes
+        senseNom = dades.senseNom
+        resumSetmana = dades.resumSetmana
+        aparellsLinia = dades.aparellsLinia
         fonsW = dades.fons
         resumMes = dades.mes
         aparells = dades.aparells
@@ -369,6 +427,7 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         val referencies: Map<Long, Referencia>, val preguntes: List<Pregunta>,
         val aEntrenar: List<Aparell>,
         val referenciesLinia: Map<Long, Referencia>, val explicadorLinia: Explicador?, val repetits: List<Repetit>,
+        val obertes: Obertes, val senseNom: SenseNom, val resumSetmana: ResumSetmana?, val aparellsLinia: List<Aparell>,
     )
 
     fun refresca() {
@@ -434,6 +493,112 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         viewModelScope.launch {
             withContext(Dispatchers.IO) { repo.responRepetit(r.id, aparellId, sol) }
             refrescaAra()
+        }
+    }
+
+    /** De qui és una vegada grossa sense nom (maqueta 15). */
+    fun responVegada(v: Vegada, aparellId: Long) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.responVegada(v, aparellId) }
+            refrescaAra()
+        }
+    }
+
+    /** «No ho sé»: aquesta vegada ja no es pregunta. */
+    fun ignoraVegada(v: Vegada) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.ignoraVegada(v) }
+            refrescaAra()
+        }
+    }
+
+    private var resumCalculat = 0L
+
+    /** La setmana passada, mentre no s'ha vist: com a molt un cop cada mitja hora (és una setmana sencera de dades). */
+    private fun resumDeLaSetmana(): ResumSetmana? {
+        val dilluns = iniciPeriode(Periode.SETMANA, LocalDate.now()).minusWeeks(1)
+        if (dilluns.toEpochDay() <= config.resumVist) return null
+        val ara = System.currentTimeMillis()
+        if (resumSetmana?.dilluns == dilluns && ara - resumCalculat < 30 * 60_000L) return resumSetmana
+        resumCalculat = ara
+        return repo.resumSetmana()
+    }
+
+    /** El resum de la setmana ja s'ha vist: no torna a sortir fins a la setmana que ve. */
+    fun tancaResum() {
+        resumSetmana?.let { config.resumVist = it.dilluns.toEpochDay() }
+        resumSetmana = null
+    }
+
+    /** Del resum de la setmana a l'Historial d'aquella setmana. */
+    fun miraSetmana(dilluns: LocalDate) {
+        periode = Periode.SETMANA
+        pestanya = Pestanya.HISTORIAL
+        veesA(dilluns)
+    }
+
+    /** El que ha costat de mitjana cada kWh aquest mes (o el preu d'ara), per passar W a euros l'any. */
+    val preuMitja: Double? get() = resumMes?.preuMitja ?: infoPreu?.ara?.preu
+
+    /** Obre la caça del sempre encès, amb la llista de baixades buida. */
+    fun obreEspera() {
+        baixades = emptyList()
+        pantalla = Pantalla.ESPERA
+    }
+
+    /**
+     * Si la potència acaba de baixar (la mediana dels últims 8 s, 4 W o més per sota de la de fa 13 a 25 s), una baixada nova:
+     * l'usuari hi pot dir què ha apagat. La del compressor de la nevera (±30 % de la seva potència) es diu sola.
+     */
+    private fun miraBaixada(ara: Long) {
+        if (ara - darreraBaixada < 20_000) return
+        val abans = medianaDes(ara - 25_000, ara - 13_000) ?: return
+        val ara8 = medianaDes(ara - 8_000) ?: return
+        val dw = abans - ara8
+        if (dw < 4) return
+        darreraBaixada = ara
+        val nevera = obertes?.neveraW?.takeIf { dw in it * 0.7..it * 1.3 }?.let { obertes?.nevera }
+        baixades = (listOf(Baixada(ara / 1000, dw, nevera?.id, nevera != null)) + baixades).take(12)
+    }
+
+    /** Què s'ha apagat en una baixada ([aparellId] null: «No ho sé»). */
+    fun responBaixada(b: Baixada, aparellId: Long?) {
+        baixades = baixades.map { if (it.ts == b.ts) it.copy(aparellId = aparellId, respost = true) else it }
+        if (aparellId == null) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.desaEspera(aparellId, b.w) }
+            refrescaAra()
+        }
+    }
+
+    /** Clara, fosca o com el mòbil (maqueta 16). */
+    var aspecte by mutableStateOf(config.aspecte)
+        private set
+
+    fun triaAspecte(a: Int) {
+        config.aspecte = a
+        aspecte = a
+    }
+
+    /** Exportar les dades (maqueta 16): si s'està escrivint el fitxer, i com ha anat. */
+    var exportant by mutableStateOf(false)
+        private set
+    var missatgeExport by mutableStateOf<TextRecurs?>(null)
+        private set
+
+    /** Escriu el CSV al fitxer que l'usuari ha triat (Baixades, Drive…). */
+    fun exporta(tipus: TipusExport, periode: PeriodeExport, uri: Uri, capcalera: List<String>, textCom: Map<Com, String>) {
+        viewModelScope.launch {
+            exportant = true
+            missatgeExport = null
+            val r = withContext(Dispatchers.IO) {
+                runCatching {
+                    getApplication<Application>().contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { repo.exporta(tipus, periode, it, capcalera, textCom) }
+                        ?: error("no s'ha pogut obrir")
+                }
+            }
+            exportant = false
+            missatgeExport = r.fold({ TextRecurs(R.string.exporta_fet, it) }, { TextRecurs(R.string.exporta_error) })
         }
     }
 
@@ -650,3 +815,6 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         enPrimerPla(true)
     }
 }
+
+/** Una baixada de la potència a la caça del sempre encès: quan, quants W, i què era (si s'ha dit). */
+data class Baixada(val ts: Long, val w: Double, val aparellId: Long? = null, val respost: Boolean = false)

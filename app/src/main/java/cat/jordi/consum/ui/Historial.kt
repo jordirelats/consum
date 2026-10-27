@@ -17,13 +17,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.Euro
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Power
-import androidx.compose.material.icons.outlined.QuestionMark
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -32,7 +28,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -102,7 +97,7 @@ fun PantallaHistorial(vm: ConsumViewModel) {
             }
             Targeta {
                 TitolTargeta(stringResource(R.string.ranquing_resta_titol))
-                RestaConsum(rq, r.fonsW, vm.config.nomLinia, r.euros.fixos)
+                RestaConsum(rq, r.fonsW, vm.config.nomLinia, r.euros.fixos, obreSempre = vm::obreEspera, obreSenseId = { vm.pestanya = Pestanya.ENTRENA })
             }
         }
     }
@@ -153,7 +148,7 @@ private fun NavegaPeriode(vm: ConsumViewModel, r: Resum?) {
     val enrere = periodesEnrere(p, dia, LocalDate.now())
     val passat = enrere > 0
     Surface(
-        shape = RoundedCornerShape(14.dp), color = if (passat) SepiaTargeta else Color.White,
+        shape = RoundedCornerShape(14.dp), color = if (passat) SepiaTargeta else Superficie,
         border = if (passat) BorderStroke(1.5.dp, SepiaVora) else null,
     ) {
         Row(Modifier.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -155,7 +155,7 @@ fun TargetaEscaneig(enLlegir: (LecturaFactura?) -> Unit) {
     }
     val fitxer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(::llegeix) }
 
-    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = androidx.compose.ui.graphics.Color.White, border = BorderStroke(2.dp, Primari)) {
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = Superficie, border = BorderStroke(2.dp, Primari)) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Description, null, tint = Primari, modifier = Modifier.size(20.dp))
