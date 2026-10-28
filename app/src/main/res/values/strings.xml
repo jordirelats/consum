@@ -1088,12 +1088,12 @@
     <string name="pestanya_per_fer">Per fer</string>
     <string name="aparells_afegeix">Afegeix</string>
     <string name="config_connexio">Connexió</string>
-    <string name="config_preu">Preu i potència</string>
+    <string name="config_preu">Tarifa i potència</string>
     <string name="config_avisos">Avisos</string>
     <string name="config_dades">Dades</string>
     <string name="config_aspecte">Aspecte i idioma</string>
     <string name="config_sobre">Sobre l\'app</string>
-    <string name="config_sobre_text">Consum segueix el consum d\'una casa amb un Shelly EM, sense cap servidor: les dades queden al mòbil. És programari lliure (GPL-3.0), a github.com/jordirelats/consum.</string>
+    <string name="config_sobre_text">Consum segueix el consum d\'una casa amb un Shelly EM, sense cap servidor: les dades queden al mòbil.</string>
     <string name="config_shelly_a">Shelly %1$s</string>
     <string name="config_nomes_nuvol">només pel núvol</string>
     <string name="config_nuvol_ok">núvol</string>
@@ -1192,4 +1192,24 @@
         <item quantity="other">la setmana passada: %d avisos</item>
     </plurals>
     <string name="afegir_tipus_diferent">L\'etiqueta és d\'un aparell de tipus «%1$s»; quedarà com a «%2$s», que és el que has triat.</string>
+
+    <!-- Els crèdits i la tarifa a la Configuració (1.0.1) -->
+    <string name="config_tarifa_titol">La tarifa de la llum</string>
+    <string name="config_canvia_tarifa">Canvia la tarifa</string>
+    <string name="config_canvia_tarifa_nota">El país, el tipus de contracte i els preus. També es poden llegir d\'una foto o del PDF de la factura.</string>
+    <string name="credits_autor">Feta per Jordi Relats, a Catalunya, per a una casa amb un Shelly. És programari lliure, amb la llicència GPL-3.0.</string>
+    <string name="credits_claude">Programada amb l\'ajuda de Claude Code (Anthropic).</string>
+    <string name="credits_codi">El codi, a GitHub</string>
+    <string name="credits_dades">D\'on surten les dades</string>
+    <string name="credits_biblioteques">El que porta a dins</string>
+    <string name="credits_llicencia">Llicència %1$s</string>
+    <string name="credits_shelly">el comptador i el seu núvol, d\'on surten totes les lectures</string>
+    <string name="credits_eprel">la base de dades europea de l\'etiqueta energètica</string>
+    <string name="credits_energyzero">els preus dinàmics dels Països Baixos</string>
+    <string name="credits_ree">el PVPC d\'Espanya, els preus del mercat</string>
+    <string name="credits_inter">la lletra de l\'app</string>
+    <string name="credits_tesseract">la lectura del text de les fotos (OCR), dins del mòbil</string>
+    <string name="credits_zxing">l\'escàner del QR de l\'etiqueta</string>
+    <string name="credits_compose">la interfície i les icones</string>
+    <string name="credits_kotlin">el llenguatge de programació</string>
 </resources>

@@ -32,6 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Euro
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NotificationsNone
@@ -407,11 +409,21 @@ private fun SeccioPreu(vm: ConsumViewModel) {
     }
     Pagina {
         Targeta {
-            TitolTargeta(stringResource(R.string.connecta_titol_preu))
+            TitolTargeta(stringResource(R.string.config_tarifa_titol))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(resumTarifa(tarifa), Modifier.weight(1f), fontSize = 14.sp)
-                Enllac(stringResource(R.string.connecta_canvia_preu), icona = Icons.Outlined.ChevronRight) { vm.preuDesDeConfig = true; vm.pantalla = Pantalla.PREU }
+                Cercle(Icons.Outlined.Euro, EstatIcona.SAP, 36.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(tarifa.pais.nomId), fontSize = 12.sp, color = Suau)
+                    Text(resumTarifa(tarifa), fontSize = 15.sp, fontWeight = FontWeight.Medium, lineHeight = 20.sp)
+                }
             }
+            Button(onClick = { vm.preuDesDeConfig = true; vm.pantalla = Pantalla.PREU }, Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                Icon(Icons.Outlined.Edit, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.config_canvia_tarifa))
+            }
+            Nota(stringResource(R.string.config_canvia_tarifa_nota), Modifier.padding(top = 6.dp))
         }
         Targeta {
             TitolTargeta(stringResource(R.string.connecta_potencia_contractada))
@@ -574,9 +586,60 @@ private fun SeccioSobre(vm: ConsumViewModel) {
         }
         Targeta {
             TitolTargeta(stringResource(R.string.config_sobre))
-            Nota(stringResource(R.string.config_sobre_text))
+            Text(stringResource(R.string.config_sobre_text), fontSize = 13.5.sp, lineHeight = 19.sp)
+            Text(stringResource(R.string.credits_autor), Modifier.padding(top = 8.dp), fontSize = 13.5.sp, lineHeight = 19.sp)
+            Text(stringResource(R.string.credits_claude), Modifier.padding(top = 4.dp), fontSize = 13.5.sp, lineHeight = 19.sp)
+            Enllac(stringResource(R.string.credits_codi), Modifier.padding(top = 4.dp), icona = Icons.Outlined.ChevronRight) { obreWeb(context, "https://github.com/jordirelats/consum") }
+        }
+        Targeta {
+            TitolTargeta(stringResource(R.string.credits_dades))
+            credits.filter { it.dades }.forEachIndexed { i, c ->
+                if (i > 0) Ratlla()
+                FilaCredit(c)
+            }
+        }
+        Targeta {
+            TitolTargeta(stringResource(R.string.credits_biblioteques))
+            credits.filter { !it.dades }.forEachIndexed { i, c ->
+                if (i > 0) Ratlla()
+                FilaCredit(c)
+            }
         }
     }
+}
+
+/** Una cosa que cal acreditar: el nom, de qui és, què hi fa, la llicència (si és programari) i on és. */
+private class Credit(val nom: String, val de: String, @androidx.annotation.StringRes val queId: Int, val llicencia: String?, val url: String, val dades: Boolean = false)
+
+/** Tot el que hi ha a l'app que no és nostre, i d'on surten les dades. */
+private val credits = listOf(
+    Credit("Shelly", "Allterco Robotics", R.string.credits_shelly, null, "https://www.shelly.com", dades = true),
+    Credit("EPREL", "Comissió Europea", R.string.credits_eprel, null, "https://eprel.ec.europa.eu", dades = true),
+    Credit("EnergyZero", "EnergyZero B.V.", R.string.credits_energyzero, null, "https://www.energyzero.nl", dades = true),
+    Credit("Red Eléctrica (REData)", "Red Eléctrica de España", R.string.credits_ree, null, "https://www.ree.es/es/datos/apidatos", dades = true),
+    Credit("Inter", "Rasmus Andersson", R.string.credits_inter, "SIL Open Font License 1.1", "https://rsms.me/inter/"),
+    Credit("Tesseract OCR i Tesseract4Android", "Google, HP i Adaptech", R.string.credits_tesseract, "Apache 2.0", "https://github.com/adaptech-cz/Tesseract4Android"),
+    Credit("ZXing Android Embedded", "JourneyApps i el projecte ZXing", R.string.credits_zxing, "Apache 2.0", "https://github.com/journeyapps/zxing-android-embedded"),
+    Credit("Jetpack Compose, AndroidX i Material 3", "Google", R.string.credits_compose, "Apache 2.0", "https://developer.android.com/jetpack/compose"),
+    Credit("Kotlin i kotlinx.coroutines", "JetBrains", R.string.credits_kotlin, "Apache 2.0", "https://kotlinlang.org"),
+)
+
+@Composable
+private fun FilaCredit(c: Credit) {
+    val context = LocalContext.current
+    Row(Modifier.fillMaxWidth().clickable { obreWeb(context, c.url) }.padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(c.nom, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(c.de + " · " + stringResource(c.queId), fontSize = 11.5.sp, color = Suau, lineHeight = 15.sp)
+            if (c.llicencia != null) Text(stringResource(R.string.credits_llicencia, c.llicencia), fontSize = 11.5.sp, color = Suau)
+        }
+        Icon(Icons.Outlined.OpenInNew, null, Modifier.size(16.dp), tint = Suau)
+    }
+}
+
+/** Obre una adreça al navegador; sense navegador, no passa res. */
+private fun obreWeb(context: android.content.Context, url: String) {
+    runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
 }
 
 /**

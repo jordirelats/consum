@@ -873,12 +873,12 @@
     <string name="pestanya_per_fer">Te doen</string>
     <string name="aparells_afegeix">Toevoegen</string>
     <string name="config_connexio">Verbinding</string>
-    <string name="config_preu">Prijs en vermogen</string>
+    <string name="config_preu">Tarief en vermogen</string>
     <string name="config_avisos">Meldingen</string>
     <string name="config_dades">Gegevens</string>
     <string name="config_aspecte">Weergave en taal</string>
     <string name="config_sobre">Over de app</string>
-    <string name="config_sobre_text">Consum volgt het verbruik van een huis met een Shelly EM, zonder server: de gegevens blijven op de telefoon. Het is vrije software (GPL-3.0), op github.com/jordirelats/consum.</string>
+    <string name="config_sobre_text">Consum volgt het verbruik van een huis met een Shelly EM, zonder server: de gegevens blijven op de telefoon.</string>
     <string name="config_shelly_a">Shelly %1$s</string>
     <string name="config_nomes_nuvol">alleen via de cloud</string>
     <string name="config_nuvol_ok">cloud</string>
@@ -977,4 +977,24 @@
         <item quantity="other">vorige week: %d meldingen</item>
     </plurals>
     <string name="afegir_tipus_diferent">Het label is van een «%1$s»; het wordt opgeslagen als «%2$s», wat je gekozen hebt.</string>
+
+    <!-- Els crèdits i la tarifa a la Configuració (1.0.1) -->
+    <string name="config_tarifa_titol">Het stroomtarief</string>
+    <string name="config_canvia_tarifa">Tarief wijzigen</string>
+    <string name="config_canvia_tarifa_nota">Het land, het soort contract en de prijzen. Ze kunnen ook van een foto of de pdf van de rekening gelezen worden.</string>
+    <string name="credits_autor">Gemaakt door Jordi Relats, in Catalonië, voor een huis met een Shelly. Het is vrije software, onder de GPL-3.0-licentie.</string>
+    <string name="credits_claude">Geprogrammeerd met hulp van Claude Code (Anthropic).</string>
+    <string name="credits_codi">De code, op GitHub</string>
+    <string name="credits_dades">Waar de gegevens vandaan komen</string>
+    <string name="credits_biblioteques">Wat erin zit</string>
+    <string name="credits_llicencia">Licentie %1$s</string>
+    <string name="credits_shelly">de meter en zijn cloud, waar alle metingen vandaan komen</string>
+    <string name="credits_eprel">de Europese database van het energielabel</string>
+    <string name="credits_energyzero">de dynamische prijzen van Nederland</string>
+    <string name="credits_ree">de PVPC van Spanje, de marktprijzen</string>
+    <string name="credits_inter">het lettertype van de app</string>
+    <string name="credits_tesseract">het lezen van tekst op foto\'s (OCR), op de telefoon zelf</string>
+    <string name="credits_zxing">de QR-scanner van het label</string>
+    <string name="credits_compose">de interface en de iconen</string>
+    <string name="credits_kotlin">de programmeertaal</string>
 </resources>

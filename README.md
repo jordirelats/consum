@@ -110,6 +110,27 @@ Install the APK from [Releases](../../releases). Licence: GPL-3.0. Not affiliate
 
 **Languages:** Catalan and Dutch. To add one, copy `app/src/main/res/values/strings.xml` to `app/src/main/res/values-<code>/strings.xml`, translate the texts (keep the names and the `%1$s` placeholders), set `codi_idioma` to your language code and open a pull request. Nothing else needs changing; untranslated texts fall back to Catalan.
 
+## Crèdits
+
+Feta per Jordi Relats, a Catalunya, per a una casa amb un Shelly; programada amb l'ajuda de Claude Code (Anthropic). Programari lliure, GPL-3.0.
+
+D'on surten les dades:
+
+- **Shelly** (Allterco Robotics): el comptador EM Gen3 i el seu núvol, d'on surten totes les lectures.
+- **EPREL** (Comissió Europea): la base de dades europea de l'etiqueta energètica.
+- **EnergyZero**: els preus dinàmics dels Països Baixos.
+- **Red Eléctrica de España** (REData): el PVPC d'Espanya.
+
+El que porta a dins:
+
+- **Inter** (Rasmus Andersson), la lletra: SIL Open Font License 1.1 (`LLICENCIES/Inter-OFL.txt`).
+- **Tesseract OCR** (Google, HP) amb **Tesseract4Android** (Adaptech) i el model `eng` de tessdata_fast: Apache 2.0.
+- **ZXing Android Embedded** (JourneyApps) i **ZXing**: Apache 2.0.
+- **Jetpack Compose, AndroidX i Material 3** amb les seves icones (Google): Apache 2.0.
+- **Kotlin** i **kotlinx.coroutines** (JetBrains): Apache 2.0.
+
+Els mateixos crèdits són a l'app, a Configuració → Sobre l'app.
+
 ## La lletra
 
 L'app fa servir la lletra [Inter](https://rsms.me/inter/), de Rasmus Andersson, amb la llicència SIL Open Font License 1.1 (`LLICENCIES/Inter-OFL.txt`). Els fitxers de `app/src/main/res/font/` són un subconjunt (el llatí) dels pesos que l'app fa servir.
