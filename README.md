@@ -1,3 +1,7 @@
+> **Consum ara es diu Wakker.** El desenvolupament continua a **https://github.com/jordirelats/wakker**, amb el mateix codi i la mateixa llicència. Aquesta és l'última versió amb el nom Consum (la 1.0.2). Per passar a Wakker sense perdre res: a Consum, Configuració → Dades → «Desa una còpia»; instal·la Wakker des del seu repositori; a la primera pantalla, «Tens una còpia de seguretat? Restaura-la»; i després desinstal·la Consum.
+>
+> **Consum is now Wakker.** Development continues at **https://github.com/jordirelats/wakker**, same code and licence. This is the last release under the Consum name (1.0.2). To move without losing anything: in Consum, Settings → Data → "Save a backup"; install Wakker from its repository; on the first screen, "Have a backup? Restore it"; then uninstall Consum.
+
 # Consum
 
 App d'Android per saber què gasta cada aparell de casa i quant costa, amb un mesurador d'energia Shelly i sense cap servidor.
