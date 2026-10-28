@@ -73,12 +73,12 @@ fun PantallaFitxa(vm: ConsumViewModel) {
     ) {
         Targeta {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Bombolla(icona(a.categoria), if (vm.config.teLinia && a.linia) LiniaFluix else PrimariFluix, if (vm.config.teLinia && a.linia) Linia else Primari)
+                Cercle(icona(a.categoria), EstatIcona.SAP, 40.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(a.nom, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                        if (vm.config.teLinia && a.linia) XipPinca()
+                        if (vm.config.teLinia && a.linia) Etiqueta(vm.config.nomLinia)
                     }
                     Text(
                         listOf(stringResource(a.categoria.nomId), "${a.marca} ${a.model}".trim()).filter { it.isNotBlank() }.joinToString(" · "),
@@ -89,7 +89,7 @@ fun PantallaFitxa(vm: ConsumViewModel) {
             // Aquest mes: les vegades (o la nevera, el compressor)
             val kwh = nevera?.kwh ?: f?.kwhMes ?: 0.0
             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
-                Text(num(kwh, 2), fontSize = 36.sp, fontWeight = FontWeight.Light)
+                Text(num(kwh, 2), style = EstilMitja)
                 Text(
                     " kWh   " + if (nevera != null) stringResource(R.string.fitxa_aquest_mes)
                     else pluralStringResource(R.plurals.fitxa_cops_mes, f?.copsMes ?: 0, f?.copsMes ?: 0),
@@ -124,7 +124,7 @@ fun PantallaFitxa(vm: ConsumViewModel) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Funcionament.entries.forEach { fu ->
                     // Un aparell sempre encès va dins del fons de tota la casa: no pot ser a la línia
-                    FilterChip(a.funciona == fu, { vm.desaAparells(listOf(a.copy(funciona = fu, linia = a.linia && fu != Funcionament.SEMPRE))) }, label = { Text(stringResource(fu.nomId)) })
+                    Xip(stringResource(fu.nomId), triat = a.funciona == fu) { vm.desaAparells(listOf(a.copy(funciona = fu, linia = a.linia && fu != Funcionament.SEMPRE))) }
                 }
             }
             Nota(stringResource(a.funciona.textId))
@@ -204,8 +204,8 @@ private fun FilaVegada(v: Vegada, noEra: () -> Unit) {
             Text("${num(v.kwh, 2)} kWh", fontSize = 14.sp, fontWeight = FontWeight.Medium)
             // «No era ell» a totes (maqueta 17): també a les que l'usuari havia dit per error
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (v.com == Com.ENSENYAT) XipEstat(stringResource(R.string.fitxa_ensenyat)) else XipEstat(stringResource(R.string.fitxa_reconegut), ok = false)
-                Text(stringResource(R.string.fitxa_no_era), Modifier.clickable(onClick = noEra).padding(vertical = 4.dp), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Primari)
+                Text(stringResource(if (v.com == Com.ENSENYAT) R.string.fitxa_ensenyat else R.string.fitxa_reconegut), fontSize = 11.sp, color = Suau)
+                Text(stringResource(R.string.fitxa_no_era), Modifier.clickable(onClick = noEra).padding(vertical = 4.dp), fontSize = 11.5.sp, color = Suau, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
             }
         }
     }

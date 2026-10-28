@@ -121,6 +121,8 @@ data class FilaRanquing(
     val linia: Boolean,
     /** La nevera: el compressor trobat sol a les dades, sense vegades. */
     val compressorW: Double? = null,
+    /** La línia de la pinça 2 sencera, sense cap aparell que s'hi hagi dit (o l'aparell que es diu com ella). */
+    val esLinia: Boolean = false,
 )
 
 /**

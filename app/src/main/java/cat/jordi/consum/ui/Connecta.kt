@@ -1,21 +1,15 @@
+@file:OptIn(ExperimentalLayoutApi::class)
+
 package cat.jordi.consum.ui
 
-import cat.jordi.consum.dades.ASPECTE_MOBIL
-import cat.jordi.consum.dades.ASPECTE_FOSC
-import cat.jordi.consum.dades.ASPECTE_CLAR
-import androidx.compose.foundation.clickable
-import cat.jordi.consum.dades.TipusExport
-import cat.jordi.consum.dades.PeriodeExport
-import cat.jordi.consum.dades.Com
-import androidx.compose.material.icons.outlined.Download
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.compose.rememberLauncherForActivityResult
 import android.app.LocaleConfig
 import android.app.LocaleManager
 import android.os.Build
 import android.os.LocaleList
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,27 +25,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Euro
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -64,6 +60,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
@@ -72,32 +69,135 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cat.jordi.consum.Actualitzacio
 import cat.jordi.consum.R
 import cat.jordi.consum.Vigilancia
+import cat.jordi.consum.dades.ASPECTE_CLAR
+import cat.jordi.consum.dades.ASPECTE_FOSC
+import cat.jordi.consum.dades.ASPECTE_MOBIL
+import cat.jordi.consum.dades.Com
 import cat.jordi.consum.dades.Funcionament
 import cat.jordi.consum.dades.Idioma
 import cat.jordi.consum.dades.Pais
+import cat.jordi.consum.dades.PeriodeExport
+import cat.jordi.consum.dades.TipusExport
 import cat.jordi.consum.dades.missatge
 import cat.jordi.consum.shelly.InfoShelly
 import cat.jordi.consum.shelly.ShellyLocal
 import cat.jordi.consum.shelly.ShellyNuvol
 import cat.jordi.consum.shelly.Trobat
 import cat.jordi.consum.shelly.descobreix
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
-/** El primer cop, i després com a configuració: on és el Shelly, les pinces, el núvol i el preu. */
+/**
+ * La Configuració (maqueta 18): una llista de seccions, cadascuna amb el valor actual en una línia, i cada secció una pantalla.
+ * Els canvis es desen sols, tret de la Connexió (l'adreça, les pinces i el núvol), que té el seu «Desa». El primer cop (sense
+ * cap Shelly), només la Connexió, amb «Comença».
+ */
 @Composable
 fun PantallaConnecta(vm: ConsumViewModel) {
+    if (!vm.config.configurat) {
+        SeccioConnexio(vm)
+        return
+    }
+    when (vm.seccioConfig) {
+        null -> LlistaSeccions(vm)
+        SeccioConfig.CONNEXIO -> SeccioConnexio(vm)
+        SeccioConfig.PREU -> SeccioPreu(vm)
+        SeccioConfig.AVISOS -> SeccioAvisos(vm)
+        SeccioConfig.DADES -> SeccioDades(vm)
+        SeccioConfig.ASPECTE -> SeccioAspecte(vm)
+        SeccioConfig.SOBRE -> SeccioSobre(vm)
+    }
+}
+
+/** Una pantalla de la Configuració: la columna que es desplaça. */
+@Composable
+private fun Pagina(contingut: @Composable () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        contingut()
+        Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun LlistaSeccions(vm: ConsumViewModel) {
+    val config = vm.config
+    val context = LocalContext.current
+    val tarifa = config.tarifa
+    val versio = remember { Actualitzacio.versioActual(context) }
+    val connexio = listOfNotNull(
+        if (config.host.isNotBlank()) stringResource(R.string.config_shelly_a, config.host) else stringResource(R.string.config_nomes_nuvol),
+        stringResource(R.string.config_nuvol_ok).takeIf { config.teNuvol },
+    ).joinToString(" · ")
+    val preu = listOfNotNull(resumTarifa(tarifa), tarifa.limitKw?.let { "${num(it, 2)} kW" }).joinToString(" · ")
+    val avisos = listOfNotNull(
+        if (config.avisPotencia && tarifa.limitKw != null) stringResource(if (config.avisAlMoment) R.string.config_avis_90_al_moment else R.string.config_avis_90_cada15) else null,
+        if (config.avisInesperat) stringResource(R.string.config_inesperat_valor, num(config.llindarInesperat / 1000, if (config.llindarInesperat < 1000) 1 else 0), textMinuts(config.minutsInesperat)) else null,
+    ).ifEmpty { listOf(stringResource(R.string.config_avisos_apagats)) }.joinToString(" · ")
+    val dades = listOfNotNull(
+        if (config.teNuvol) stringResource(if (config.nuvolHores) R.string.config_nuvol_hores_si else R.string.config_nuvol_hores_no) else null,
+        stringResource(R.string.config_exportar),
+    ).joinToString(" · ")
+    val aspecte = stringResource(
+        when (vm.aspecte) {
+            ASPECTE_CLAR -> R.string.connecta_aspecte_clar
+            ASPECTE_FOSC -> R.string.connecta_aspecte_fosc
+            else -> R.string.connecta_aspecte_mobil
+        }
+    ) + " · " + Idioma.locale.getDisplayLanguage(Idioma.locale).replaceFirstChar { it.titlecase(Idioma.locale) }
+    val sobre = listOfNotNull(stringResource(R.string.config_versio, versio), vm.versioNova?.let { stringResource(R.string.config_versio_nova_curt, it.versio) }).joinToString(" · ")
+    Pagina {
+        Targeta {
+            val files = listOf(
+                Triple(SeccioConfig.CONNEXIO, Icons.Outlined.Wifi, connexio),
+                Triple(SeccioConfig.PREU, Icons.Outlined.Euro, preu),
+                Triple(SeccioConfig.AVISOS, Icons.Outlined.NotificationsNone, avisos),
+                Triple(SeccioConfig.DADES, Icons.Outlined.Storage, dades),
+                Triple(SeccioConfig.ASPECTE, Icons.Outlined.Palette, aspecte),
+                Triple(SeccioConfig.SOBRE, Icons.Outlined.Info, sobre),
+            )
+            files.forEachIndexed { i, (seccio, icona, valor) ->
+                if (i > 0) Ratlla()
+                FilaSeccio(icona, stringResource(seccio.nomId), valor) { vm.seccioConfig = seccio }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaSeccio(icona: ImageVector, titol: String, valor: String, obre: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = obre).padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+        Cercle(icona, EstatIcona.NEUTRE, 36.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(titol, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(valor, fontSize = 11.5.sp, color = Suau, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Icon(Icons.Outlined.ChevronRight, null, Modifier.size(18.dp), tint = Suau)
+    }
+}
+
+/** «30 min» o «1 hora». */
+@Composable
+private fun textMinuts(m: Int) = if (m == 60) stringResource(R.string.connecta_inesperat_hora) else stringResource(R.string.connecta_inesperat_minuts, m)
+
+/** La connexió: on és el Shelly, les pinces i el núvol. El primer cop és tota la pantalla, amb «Comença». */
+@Composable
+private fun SeccioConnexio(vm: ConsumViewModel) {
     val config = vm.config
     val context = LocalContext.current
     val abast = rememberCoroutineScope()
@@ -162,7 +262,7 @@ fun PantallaConnecta(vm: ConsumViewModel) {
     Column(Modifier.fillMaxSize()) {
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Targeta {
                 TitolTargeta(stringResource(R.string.connecta_titol_shelly))
@@ -216,24 +316,25 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                 // Ni els sempre encesos ni un que es digui com la línia (és la línia mateixa)
                 val candidats = vm.aparells.filter { it.funciona != Funcionament.SEMPRE && !it.nom.equals(nomLinia.trim(), ignoreCase = true) }
                 if (nomLinia.isNotBlank() && config.teLinia && candidats.isNotEmpty()) {
-                    Text(stringResource(R.string.connecta_linia_aparells), Modifier.padding(top = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    candidats.forEach { a ->
-                        Row(
-                            Modifier.fillMaxWidth().toggleable(a.linia, role = Role.Checkbox) { vm.posaALinia(a, it) }.padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Checkbox(a.linia, null)
-                            Text(a.nom, fontSize = 14.sp)
+                    OpcioAmbAjuda(stringResource(R.string.connecta_linia_aparells), stringResource(R.string.connecta_linia_aparells_nota), apilat = true) {
+                        Column {
+                            candidats.forEach { a ->
+                                Row(
+                                    Modifier.fillMaxWidth().toggleable(a.linia, role = Role.Checkbox) { vm.posaALinia(a, it) }.padding(vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Checkbox(a.linia, null)
+                                    Text(a.nom, fontSize = 14.sp)
+                                }
+                            }
                         }
                     }
-                    Nota(stringResource(R.string.connecta_linia_aparells_nota))
                 }
             }
 
             Targeta {
                 TitolTargeta(stringResource(R.string.connecta_titol_nuvol))
-                Nota(stringResource(R.string.connecta_nuvol_nota))
-                Spacer(Modifier.height(6.dp))
+                OpcioAmbAjuda(stringResource(R.string.connecta_nuvol_opcional), stringResource(R.string.connecta_nuvol_nota)) {}
                 OutlinedTextField(
                     servidor, { servidor = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.connecta_servidor)) },
                     placeholder = { Text("shelly-00-eu.shelly.cloud") }, singleLine = true,
@@ -256,45 +357,14 @@ fun PantallaConnecta(vm: ConsumViewModel) {
                     ) { Text(stringResource(R.string.connecta_prova_nuvol)) }
                     if (provantNuvol) CircularProgressIndicator(Modifier.padding(start = 12.dp).size(24.dp), strokeWidth = 2.dp)
                 }
-                nuvol?.let { Text(it, Modifier.padding(top = 6.dp), color = if (nuvolOk) Ok else Desconegut, fontSize = 13.sp) }
+                nuvol?.let { Text(it, Modifier.padding(top = 6.dp), color = if (nuvolOk) Ok else DesconegutText, fontSize = 13.sp) }
             }
-
-            Targeta {
-                TitolTargeta(stringResource(R.string.connecta_titol_preu))
-                Text(resumTarifa(config.tarifa), fontSize = 14.sp)
-                if (config.configurat) {
-                    TextButton(onClick = { vm.pantalla = Pantalla.PREU }) { Text(stringResource(R.string.connecta_canvia_preu)) }
-                } else {
+            if (!config.configurat) {
+                Targeta {
+                    TitolTargeta(stringResource(R.string.connecta_titol_preu))
+                    Text(resumTarifa(config.tarifa), fontSize = 14.sp)
                     Nota(stringResource(R.string.connecta_preu_despres))
                 }
-            }
-            if (config.configurat) TargetaAvisPotencia(vm)
-            if (config.configurat) TargetaAvisInesperat(vm)
-            if (config.configurat) TargetaResumSetmana(vm)
-            if (config.configurat) TargetaExporta(vm)
-            if (config.teNuvol) TargetaNuvolHores(vm)
-            TargetaAspecte(vm)
-            // Abans d'Android 13 no hi ha idioma per app: fa com el mòbil
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) TargetaIdioma()
-            Targeta {
-                TitolTargeta(stringResource(R.string.connecta_actualitzacions))
-                val versio = remember { Actualitzacio.versioActual(context) }
-                Text(stringResource(R.string.connecta_versio_actual, versio), fontSize = 14.sp)
-                val nova = vm.versioNova
-                val progres = vm.progresActualitzacio
-                when {
-                    progres != null -> {
-                        Nota(stringResource(R.string.connecta_baixant, nova?.versio.orEmpty()), Modifier.padding(top = 6.dp))
-                        LinearProgressIndicator(progress = { progres }, Modifier.fillMaxWidth().padding(top = 4.dp))
-                    }
-                    nova != null -> {
-                        Text(stringResource(R.string.connecta_versio_nova, nova.versio), Modifier.padding(top = 4.dp), fontSize = 14.sp, color = Primari)
-                        Button(onClick = vm::actualitza, Modifier.padding(top = 6.dp)) { Text(stringResource(R.string.connecta_actualitza)) }
-                        Nota(stringResource(R.string.connecta_samsung), Modifier.padding(top = 6.dp))
-                    }
-                    else -> TextButton(onClick = { vm.comprovaVersio(forcat = true) }) { Text(stringResource(R.string.connecta_mira_noves)) }
-                }
-                vm.missatgeActualitzacio?.let { Nota(it.text(), Modifier.padding(top = 4.dp)) }
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -317,138 +387,194 @@ fun PantallaConnecta(vm: ConsumViewModel) {
             if (!potDesar) {
                 Nota(stringResource(R.string.connecta_prova_primer), Modifier.align(Alignment.CenterHorizontally))
             }
+        }
+    }
+}
 
+/** El preu de la llum i la potència contractada. */
+@Composable
+private fun SeccioPreu(vm: ConsumViewModel) {
+    val config = vm.config
+    val context = LocalContext.current
+    val tarifa = config.tarifa
+    var kw by rememberSaveable { mutableStateOf(tarifa.limitKw?.let { num(it, 2) } ?: "") }
+    // Es desa mig segon després de l'última tecla, no a cada una («5», «5,», «5,7»…), i la vigilància es reinicia un sol cop
+    LaunchedEffect(kw) {
+        val valor = llegeixNum(kw, milers = false)?.takeIf { it > 0 }
+        if (valor == tarifa.limitKw || (valor == null && kw.isNotBlank())) return@LaunchedEffect
+        kotlinx.coroutines.delay(600)
+        vm.desaPotencia(valor)
+    }
+    Pagina {
+        Targeta {
+            TitolTargeta(stringResource(R.string.connecta_titol_preu))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(resumTarifa(tarifa), Modifier.weight(1f), fontSize = 14.sp)
+                Enllac(stringResource(R.string.connecta_canvia_preu), icona = Icons.Outlined.ChevronRight) { vm.preuDesDeConfig = true; vm.pantalla = Pantalla.PREU }
+            }
+        }
+        Targeta {
+            TitolTargeta(stringResource(R.string.connecta_potencia_contractada))
+            OutlinedTextField(
+                kw, { kw = it },
+                Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.connecta_potencia_contractada)) },
+                suffix = { Text("kW") }, singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            )
+            Nota(stringResource(if (tarifa.pais == Pais.ES) R.string.connecta_potencia_es else R.string.connecta_potencia_nl), Modifier.padding(top = 4.dp))
         }
     }
 }
 
 /**
- * La potència contractada i l'avís quan se'n passa del 90 %: al moment (la vigilància, amb una notificació fixa)
- * o cada 15 minuts. Els canvis es desen de seguida.
+ * Els avisos: el de la potència contractada (al moment o cada 15 minuts), el de consum inesperat (a partir de quant i durant
+ * quant) i el resum de la setmana. Els canvis es desen de seguida; cada opció té la seva «i».
  */
 @Composable
-private fun TargetaAvisPotencia(vm: ConsumViewModel) {
+private fun SeccioAvisos(vm: ConsumViewModel) {
     val context = LocalContext.current
     val config = vm.config
     val tarifa = config.tarifa
-    var kw by rememberSaveable { mutableStateOf(tarifa.limitKw?.let { num(it, 2) } ?: "") }
     var avis by remember { mutableStateOf(config.avisPotencia) }
     var alMoment by remember { mutableStateOf(config.avisAlMoment) }
     val permis = rememberPermisAvisos { Vigilancia.actualitza(context) }
     fun aplica() = Vigilancia.actualitza(context)
+    var actiu by remember { mutableStateOf(config.avisInesperat) }
+    var llindar by remember { mutableStateOf(config.llindarInesperat) }
+    var minuts by remember { mutableStateOf(config.minutsInesperat) }
+    LaunchedEffect(actiu, llindar, minuts) { vm.ajustaInesperat(actiu, llindar, minuts) }
+    var resum by remember { mutableStateOf(config.resumSetmana) }
 
-    Targeta {
-        TitolTargeta(stringResource(R.string.connecta_titol_potencia))
-        OutlinedTextField(
-            kw, { nou ->
-                kw = nou
-                val valor = llegeixNum(nou, milers = false)?.takeIf { it > 0 }
-                if (valor != null || nou.isBlank()) {
-                    config.tarifa = config.tarifa.ambLimit(valor)
-                    aplica()
-                }
-            },
-            Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.connecta_potencia_contractada)) },
-            suffix = { Text("kW") }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        )
-        Nota(
-            stringResource(if (tarifa.pais == Pais.ES) R.string.connecta_potencia_es else R.string.connecta_potencia_nl),
-            Modifier.padding(top = 4.dp),
-        )
-        Row(
-            Modifier.fillMaxWidth().padding(top = 10.dp)
-                .toggleable(avis, role = Role.Switch) { avis = it; config.avisPotencia = it; aplica() },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(stringResource(R.string.connecta_avisa_90), Modifier.weight(1f), fontSize = 14.sp)
-            Switch(avis, null)
-        }
-        Nota(stringResource(R.string.connecta_colors_grafica))
-        if (avis) {
-            Text(stringResource(R.string.connecta_app_tancada), Modifier.padding(top = 10.dp), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            for ((opcio, titol, text) in listOf(
-                Triple(true, R.string.connecta_al_moment, R.string.connecta_al_moment_text),
-                Triple(false, R.string.connecta_cada_15, R.string.connecta_cada_15_text),
-            )) {
-                Row(
-                    Modifier.fillMaxWidth()
-                        .selectable(alMoment == opcio, role = Role.RadioButton) { alMoment = opcio; config.avisAlMoment = opcio; aplica() }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.Top,
+    Pagina {
+        Targeta {
+            TitolTargeta(stringResource(R.string.connecta_potencia_contractada))
+            val limit = tarifa.limitKw
+            OpcioAmbAjuda(
+                stringResource(R.string.connecta_avisa_90), stringResource(R.string.connecta_colors_grafica),
+                sota = if (limit != null) stringResource(R.string.connecta_avisa_90_sota, num(limit, 2)) else stringResource(R.string.connecta_sense_potencia),
+            ) {
+                Switch(avis, { avis = it; config.avisPotencia = it; aplica() })
+            }
+            if (avis) {
+                OpcioAmbAjuda(
+                    stringResource(R.string.connecta_app_tancada),
+                    stringResource(R.string.connecta_al_moment_text) + " " + stringResource(R.string.connecta_cada_15_text), apilat = true,
                 ) {
-                    RadioButton(alMoment == opcio, null, Modifier.padding(12.dp))
-                    Column(Modifier.padding(top = 12.dp)) {
-                        Text(stringResource(titol), fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        Nota(stringResource(text))
+                    Pestanyes(listOf(true, false), alMoment, { stringResource(if (it) R.string.connecta_al_moment else R.string.connecta_cada_15) }) {
+                        alMoment = it; config.avisAlMoment = it; aplica()
                     }
                 }
+                if (!permis.actius) {
+                    Nota(stringResource(R.string.connecta_cal_permis), Modifier.padding(top = 4.dp))
+                    Enllac(stringResource(R.string.entrena_activa_avisos), onClick = permis.demana)
+                }
             }
-            if (!permis.actius) {
-                Nota(stringResource(R.string.connecta_cal_permis), Modifier.padding(top = 4.dp))
-                TextButton(onClick = permis.demana) { Text(stringResource(R.string.entrena_activa_avisos)) }
+        }
+        Targeta {
+            TitolTargeta(stringResource(R.string.connecta_titol_inesperat))
+            val previsio = vm.previsioAvisos
+            val sota = when {
+                vm.previsioSenseDades -> stringResource(R.string.connecta_inesperat_sense_dades)
+                previsio == null -> null
+                previsio.isEmpty() -> stringResource(R.string.connecta_inesperat_cap)
+                else -> pluralStringResource(R.plurals.connecta_inesperat_previsio_curt, previsio.size, previsio.size)
+            }
+            OpcioAmbAjuda(
+                stringResource(R.string.connecta_avisa_inesperat), vm.fonsW?.let { stringResource(R.string.connecta_inesperat_normal, num(it)) },
+                sota = sota,
+            ) {
+                Switch(actiu, { actiu = it })
+            }
+            if (actiu) {
+                OpcioAmbAjuda(stringResource(R.string.connecta_quan_gasti), null, apilat = true) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (w in listOf(500.0, 1000.0, 2000.0, 3000.0)) {
+                            Xip("${num(w / 1000, if (w < 1000) 1 else 0)} kW", triat = llindar == w) { llindar = w }
+                        }
+                    }
+                }
+                OpcioAmbAjuda(stringResource(R.string.connecta_inesperat_durant), null, apilat = true) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (m in listOf(10, 30, 60)) {
+                            Xip(textMinuts(m), triat = minuts == m) { minuts = m }
+                        }
+                    }
+                }
+                // Quins avisos hauria donat la setmana passada, amb el que l'app sap ara
+                if (!previsio.isNullOrEmpty()) {
+                    val moments = previsio.take(3).map { (ts, w) -> momentAvis(ts, w) } +
+                        listOfNotNull((previsio.size - 3).takeIf { it > 0 }?.let { pluralStringResource(R.plurals.connecta_inesperat_mes, it, it) })
+                    Nota(moments.joinToString(", "), Modifier.padding(top = 2.dp))
+                }
+            }
+        }
+        Targeta {
+            TitolTargeta(stringResource(R.string.connecta_resum_titol))
+            OpcioAmbAjuda(stringResource(R.string.connecta_resum_dilluns), stringResource(R.string.connecta_resum_text)) {
+                Switch(resum, { resum = it; config.resumSetmana = it })
             }
         }
     }
 }
 
-/**
- * Els avisos de consum inesperat (maqueta 7): si n'hi ha, a partir de quant i durant quant. Mentre es tria, diu
- * quants avisos hauria donat la setmana passada amb el que l'app sap ara.
- */
-@OptIn(ExperimentalLayoutApi::class)
+/** Les dades: omplir el que falta amb el núvol per hores (maqueta 11), i exportar-les (maqueta 16). */
 @Composable
-private fun TargetaAvisInesperat(vm: ConsumViewModel) {
-    val config = vm.config
-    var actiu by remember { mutableStateOf(config.avisInesperat) }
-    var llindar by remember { mutableStateOf(config.llindarInesperat) }
-    var minuts by remember { mutableStateOf(config.minutsInesperat) }
-    LaunchedEffect(actiu, llindar, minuts) { vm.ajustaInesperat(actiu, llindar, minuts) }
+private fun SeccioDades(vm: ConsumViewModel) {
+    Pagina {
+        if (vm.config.teNuvol) TargetaNuvolHores(vm)
+        TargetaExporta(vm)
+    }
+}
 
-    Targeta {
-        TitolTargeta(stringResource(R.string.connecta_titol_inesperat))
-        Row(
-            Modifier.fillMaxWidth().toggleable(actiu, role = Role.Switch) { actiu = it },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(stringResource(R.string.connecta_avisa_inesperat), Modifier.weight(1f), fontSize = 14.sp)
-            Switch(actiu, null)
+/** L'aspecte (clar, fosc o com el mòbil) i l'idioma. */
+@Composable
+private fun SeccioAspecte(vm: ConsumViewModel) {
+    Pagina {
+        Targeta {
+            TitolTargeta(stringResource(R.string.connecta_aspecte))
+            Pestanyes(listOf(ASPECTE_MOBIL, ASPECTE_CLAR, ASPECTE_FOSC), vm.aspecte, { a ->
+                stringResource(
+                    when (a) {
+                        ASPECTE_CLAR -> R.string.connecta_aspecte_clar
+                        ASPECTE_FOSC -> R.string.connecta_aspecte_fosc
+                        else -> R.string.connecta_aspecte_mobil
+                    }
+                )
+            }) { vm.triaAspecte(it) }
         }
-        if (!actiu) return@Targeta
-        Text(stringResource(R.string.connecta_inesperat_quant), Modifier.padding(top = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (w in listOf(500.0, 1000.0, 2000.0, 3000.0)) {
-                FilterChip(llindar == w, { llindar = w }, label = { Text("${num(w / 1000, if (w < 1000) 1 else 0)} kW") })
+        // Abans d'Android 13 no hi ha idioma per app: fa com el mòbil
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) TargetaIdioma()
+    }
+}
+
+/** La versió i les actualitzacions. */
+@Composable
+private fun SeccioSobre(vm: ConsumViewModel) {
+    val context = LocalContext.current
+    Pagina {
+        Targeta {
+            TitolTargeta(stringResource(R.string.connecta_actualitzacions))
+            val versio = remember { Actualitzacio.versioActual(context) }
+            Text(stringResource(R.string.connecta_versio_actual, versio), fontSize = 14.sp)
+            val nova = vm.versioNova
+            val progres = vm.progresActualitzacio
+            when {
+                progres != null -> {
+                    Nota(stringResource(R.string.connecta_baixant, nova?.versio.orEmpty()), Modifier.padding(top = 6.dp))
+                    LinearProgressIndicator(progress = { progres }, Modifier.fillMaxWidth().padding(top = 4.dp))
+                }
+                nova != null -> {
+                    Text(stringResource(R.string.connecta_versio_nova, nova.versio), Modifier.padding(top = 4.dp), fontSize = 14.sp, color = Primari)
+                    Button(onClick = vm::actualitza, Modifier.padding(top = 6.dp)) { Text(stringResource(R.string.connecta_actualitza)) }
+                    Nota(stringResource(R.string.connecta_samsung), Modifier.padding(top = 6.dp))
+                }
+                else -> Enllac(stringResource(R.string.connecta_mira_noves)) { vm.comprovaVersio(forcat = true) }
             }
+            vm.missatgeActualitzacio?.let { Nota(it.text(), Modifier.padding(top = 4.dp)) }
         }
-        Text(stringResource(R.string.connecta_inesperat_durant), fontSize = 13.sp, fontWeight = FontWeight.Medium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (m in listOf(10, 30, 60)) {
-                FilterChip(minuts == m, { minuts = m }, label = {
-                    Text(if (m == 60) stringResource(R.string.connecta_inesperat_hora) else stringResource(R.string.connecta_inesperat_minuts, m))
-                })
-            }
-        }
-        vm.fonsW?.let { Nota(stringResource(R.string.connecta_inesperat_normal, num(it)), Modifier.padding(top = 2.dp)) }
-        val previsio = vm.previsioAvisos
-        val text = when {
-            vm.previsioSenseDades -> stringResource(R.string.connecta_inesperat_sense_dades)
-            previsio == null -> null
-            previsio.isEmpty() -> stringResource(R.string.connecta_inesperat_cap)
-            else -> {
-                // Com a molt 3, i si n'hi ha més, quants
-                val moments = previsio.take(3).map { (ts, w) -> momentAvis(ts, w) } +
-                    listOfNotNull((previsio.size - 3).takeIf { it > 0 }?.let { pluralStringResource(R.plurals.connecta_inesperat_mes, it, it) })
-                val llista = if (moments.size == 1) moments[0]
-                else moments.dropLast(1).joinToString(", ") + stringResource(R.string.comu_i) + moments.last()
-                pluralStringResource(R.plurals.connecta_inesperat_previsio, previsio.size, previsio.size, llista)
-            }
-        }
-        text?.let {
-            Text(
-                it, Modifier.padding(top = 8.dp).fillMaxWidth().background(PrimariFluix.copy(alpha = 0.5f), RoundedCornerShape(10.dp)).padding(10.dp),
-                fontSize = 13.sp, lineHeight = 18.sp,
-            )
+        Targeta {
+            TitolTargeta(stringResource(R.string.config_sobre))
+            Nota(stringResource(R.string.config_sobre_text))
         }
     }
 }
@@ -463,23 +589,18 @@ private fun TargetaNuvolHores(vm: ConsumViewModel) {
     LaunchedEffect(Unit) { vm.miraNuvol() }
     Targeta {
         TitolTargeta(stringResource(R.string.connecta_titol_nuvol_hores))
-        Row(
-            Modifier.fillMaxWidth().toggleable(actiu, role = Role.Switch) { actiu = it; vm.ajustaNuvol(it) },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(stringResource(R.string.connecta_omple_nuvol), Modifier.weight(1f), fontSize = 14.sp)
-            Switch(actiu, null)
+        OpcioAmbAjuda(stringResource(R.string.connecta_omple_nuvol), stringResource(R.string.connecta_nuvol_hores_text) + " " + stringResource(R.string.connecta_nuvol_quadra)) {
+            Switch(actiu, { actiu = it; vm.ajustaNuvol(it) })
         }
-        Nota(stringResource(R.string.connecta_nuvol_hores_text), Modifier.padding(top = 2.dp))
         if (!actiu) return@Targeta
         val r = vm.resumNuvol
         when {
-            vm.omplintNuvol -> Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            vm.omplintNuvol -> Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 Text("  " + stringResource(R.string.connecta_nuvol_omplint), fontSize = 13.sp, color = Suau)
             }
             r != null && r.first > 0 -> {
-                Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
                     Text(stringResource(R.string.connecta_nuvol_recuperat), Modifier.weight(1f), fontSize = 14.sp)
                     Text(pluralStringResource(R.plurals.connecta_nuvol_dies_kwh, r.first, r.first, num(r.second)), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
@@ -491,13 +612,8 @@ private fun TargetaNuvolHores(vm: ConsumViewModel) {
                     }
                 }
             }
-            r != null -> Nota(stringResource(R.string.connecta_nuvol_res), Modifier.padding(top = 6.dp))
+            r != null -> Nota(stringResource(R.string.connecta_nuvol_res), Modifier.padding(top = 4.dp))
         }
-        Text(
-            stringResource(R.string.connecta_nuvol_quadra), Modifier.padding(top = 8.dp).fillMaxWidth()
-                .background(PrimariFluix.copy(alpha = 0.5f), RoundedCornerShape(10.dp)).padding(10.dp),
-            fontSize = 13.sp, lineHeight = 18.sp,
-        )
     }
 }
 
@@ -515,7 +631,6 @@ private fun momentAvis(ts: Long, w: Double): String {
  * L'idioma de l'app: com el mòbil o una de les llengües que té traduïdes (les carpetes values-xx).
  * En triar-ne un, Android torna a crear l'activitat.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 private fun TargetaIdioma() {
@@ -536,13 +651,10 @@ private fun TargetaIdioma() {
 
     Targeta {
         TitolTargeta(stringResource(R.string.connecta_idioma))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            FilterChip(selected = triada == null, onClick = { tria(null) }, label = { Text(stringResource(R.string.connecta_idioma_mobil)) })
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Xip(stringResource(R.string.connecta_idioma_mobil), triat = triada == null) { tria(null) }
             llengues.forEach { l ->
-                FilterChip(
-                    selected = l == marcada, onClick = { tria(l) },
-                    label = { Text(l.getDisplayName(l).replaceFirstChar { it.titlecase(l) }) },
-                )
+                Xip(l.getDisplayName(l).replaceFirstChar { it.titlecase(l) }, triat = l == marcada) { tria(l) }
             }
         }
     }
@@ -552,24 +664,6 @@ private fun netejaServidor(s: String) = s.trim().removePrefix("https://").remove
 
 /** L'ID que fa servir el núvol és la MAC en minúscules: accepta "shellyemg3-dcb4…" o "DC:B4:…". */
 private fun netejaId(s: String) = s.trim().lowercase().substringAfterLast('-').replace(":", "")
-
-/** El resum de la setmana, els dilluns (maqueta 15): una notificació amb el total, qui ha gastat més i el que queda per fer. */
-@Composable
-private fun TargetaResumSetmana(vm: ConsumViewModel) {
-    var actiu by remember { mutableStateOf(vm.config.resumSetmana) }
-    Targeta {
-        Row(
-            Modifier.fillMaxWidth().toggleable(actiu, role = Role.Switch) { actiu = it; vm.config.resumSetmana = it },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.connecta_resum_titol), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Nota(stringResource(R.string.connecta_resum_text))
-            }
-            Switch(actiu, null)
-        }
-    }
-}
 
 /**
  * Exportar les dades (maqueta 16): un fitxer CSV per obrir amb un full de càlcul, del consum de cada hora, de cada vegada o de
@@ -592,14 +686,10 @@ private fun TargetaExporta(vm: ConsumViewModel) {
         if (uri != null && t != null) vm.exporta(t, periode, uri, capcaleres.getValue(t), textCom)
     }
     Targeta {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.Download, null, tint = Primari, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.exporta_titol), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        TitolTargeta(stringResource(R.string.exporta_titol))
+        OpcioAmbAjuda(stringResource(R.string.exporta_quin_periode), stringResource(R.string.exporta_text) + " " + stringResource(R.string.exporta_on), apilat = true) {
+            Pestanyes(PeriodeExport.entries, periode, { stringResource(it.nomId) }) { periode = it }
         }
-        Nota(stringResource(R.string.exporta_text), Modifier.padding(top = 4.dp))
-        Text(stringResource(R.string.exporta_quin_periode), Modifier.padding(top = 8.dp, bottom = 6.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium)
-        Pestanyes(PeriodeExport.entries, periode, { stringResource(it.nomId) }) { periode = it }
         val avui = java.time.LocalDate.now()
         val sufix = when (periode) {
             PeriodeExport.MES -> "%d-%02d".format(avui.year, avui.monthValue)
@@ -607,36 +697,19 @@ private fun TargetaExporta(vm: ConsumViewModel) {
             PeriodeExport.TOT -> "tot"
         }
         TipusExport.entries.forEach { t ->
+            Ratlla()
             Row(
                 Modifier.fillMaxWidth().clickable(enabled = !vm.exportant) { tipus = t; desa.launch("consum-${t.fitxer}-$sufix.csv") }.padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(t.nomId), fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                    Text(stringResource(t.textId), fontSize = 12.sp, color = Suau)
+                    Text(stringResource(t.nomId), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(t.textId), fontSize = 11.5.sp, color = Suau)
                 }
                 Icon(Icons.Outlined.Download, stringResource(R.string.exporta_desa), tint = Primari)
             }
         }
         if (vm.exportant) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))
         vm.missatgeExport?.let { Text(it.text(), Modifier.padding(top = 4.dp), fontSize = 13.sp, color = Primari) }
-        Nota(stringResource(R.string.exporta_on), Modifier.padding(top = 4.dp))
-    }
-}
-
-/** Clara, fosca o com el mòbil (maqueta 16). */
-@Composable
-private fun TargetaAspecte(vm: ConsumViewModel) {
-    Targeta {
-        TitolTargeta(stringResource(R.string.connecta_aspecte))
-        Pestanyes(listOf(ASPECTE_MOBIL, ASPECTE_CLAR, ASPECTE_FOSC), vm.aspecte, { a ->
-            stringResource(
-                when (a) {
-                    ASPECTE_CLAR -> R.string.connecta_aspecte_clar
-                    ASPECTE_FOSC -> R.string.connecta_aspecte_fosc
-                    else -> R.string.connecta_aspecte_mobil
-                }
-            )
-        }) { vm.triaAspecte(it) }
     }
 }

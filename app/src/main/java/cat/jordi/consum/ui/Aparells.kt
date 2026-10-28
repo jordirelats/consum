@@ -16,15 +16,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Checklist
-import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Power
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -37,54 +43,34 @@ import cat.jordi.consum.dades.FilaRanquing
 import cat.jordi.consum.dades.Funcionament
 
 /**
- * Els aparells (maqueta 13): cada un una sola vegada, amb el que ha gastat de debò aquest mes, de més a menys, i com el
- * coneix l'app. Els que encara no ha vist funcionar, a part: el que diu l'etiqueta no és consum. Tocant-ne un, la fitxa.
+ * Els aparells (maqueta 18): a dalt el que ha costat el mes; després cada aparell una fila, amb la barra relativa al primer, els
+ * kWh i els euros, i sense cap xip: una paraula en ambre sota el nom només quan encara l'està aprenent. Els sempre encesos i
+ * els que encara no ha vist funcionar, plegats a sota. Tocant-ne un, la fitxa.
  */
 @Composable
 fun PantallaAparells(vm: ConsumViewModel) {
     val mes = vm.resumMes
     val r = mes?.ranquing
-    // El preu mitjà que ha pagat la casa aquest mes; si encara no hi ha dades, el d'ara
-    val preu = mes?.preuMitja ?: vm.infoPreu?.ara?.preu ?: vm.config.tarifa.preuFix
+    val nomLinia = vm.config.nomLinia
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (mes != null) {
-            Text(stringResource(R.string.aparells_aquest_mes), fontSize = 14.sp, color = Suau)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(euros(mes.euros.total), fontSize = 40.sp, fontWeight = FontWeight.Light)
-                Text("  ${num(mes.total)} kWh", Modifier.padding(bottom = 7.dp), fontSize = 14.sp, color = Suau)
-            }
-            Text(consumIFixos(mes.euros.consum, mes.euros.fixos), fontSize = 13.sp, color = Suau)
-        }
-
-        val consells = buildList {
-            vm.fonsW?.takeIf { it >= 1 }?.let { w ->
-                add(stringResource(R.string.aparells_consell_fons, num(w), num(w * 24 * 365 / 1000 * preu)))
-            }
-            vm.consellLinia?.let { c ->
-                add(stringResource(R.string.aparells_consell_linia, vm.config.nomLinia, c.percentCar, euros(c.estalviMes)))
-            }
-            val perCompletar = vm.aparells.count { it.perCompletar }
-            if (perCompletar > 0) add(pluralStringResource(R.plurals.aparells_consell_tipics, perCompletar, perCompletar))
-        }
-        if (consells.isNotEmpty()) {
-            Targeta(color = DesconegutFluix) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.WarningAmber, null, tint = Desconegut, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    TitolTargeta(stringResource(R.string.aparells_que_pots_fer), Modifier.padding(top = 6.dp))
+            Column(Modifier.padding(horizontal = 3.dp)) {
+                Text(stringResource(R.string.aparells_aquest_mes), fontSize = 12.sp, color = Suau)
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(euros(mes.euros.total), style = EstilMitja)
+                    Text("  ${num(mes.total)} kWh", Modifier.padding(bottom = 6.dp), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Suau)
                 }
-                consells.forEach { Text(it, Modifier.padding(top = 2.dp), fontSize = 13.sp, lineHeight = 18.sp) }
             }
         }
 
         if (vm.aparells.isEmpty()) {
             Targeta {
-                TitolTargeta(stringResource(R.string.aparells_cap_aparell))
-                Nota(stringResource(R.string.aparells_comenca_questionari))
+                Text(stringResource(R.string.aparells_cap_aparell), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Nota(stringResource(R.string.aparells_comenca_questionari), Modifier.padding(top = 2.dp))
                 Spacer(Modifier.height(10.dp))
                 OutlinedButton(onClick = { vm.pantalla = Pantalla.QUESTIONARI }) {
                     Icon(Icons.Outlined.Checklist, null)
@@ -95,92 +81,103 @@ fun PantallaAparells(vm: ConsumViewModel) {
         } else {
             val mesurats = r?.aparells.orEmpty()
             if (mesurats.isNotEmpty()) Targeta {
-                TitolTargeta(stringResource(R.string.aparells_teus))
-                Nota(stringResource(R.string.aparells_teus_nota))
-                mesurats.forEach { f -> FilaAparell(vm, f) }
+                val maxim = mesurats.first().kwh.coerceAtLeast(0.001)
+                mesurats.forEachIndexed { i, f ->
+                    if (i > 0) Ratlla()
+                    FilaAparell(vm, f, f.kwh / maxim, nomLinia)
+                }
             }
             // Els sempre encesos van dins del que la casa gasta sempre
             val sempre = vm.aparells.filter { it.funciona == Funcionament.SEMPRE }
-            if (sempre.isNotEmpty()) Targeta {
-                TitolTargeta(stringResource(R.string.aparells_sempre_encesos))
-                Nota(stringResource(R.string.aparells_sempre_encesos_nota))
-                sempre.forEach { a ->
-                    FilaConsum(
-                        icona(a.categoria), SempreFluix, Sempre, a.nom, stringResource(a.font.nomId), "${num(a.wTipic)} W",
-                        modifier = Modifier.clickable { vm.obreAparell(a) },
-                    )
+            if (sempre.isNotEmpty()) {
+                Plegat(Icons.Outlined.Power, pluralStringResource(R.plurals.aparells_n_sempre, sempre.size, sempre.size, num(sempre.sumOf { it.wTipic }))) {
+                    sempre.forEach { a ->
+                        FilaPetita(icona(a.categoria), EstatIcona.GRIS, a.nom, nomLinia.takeIf { vm.config.teLinia && a.linia }, "${num(a.wTipic)} W") { vm.obreAparell(a) }
+                    }
                 }
             }
             val ambConsum = mesurats.mapNotNull { it.aparell?.id }.toSet()
             // Un aparell que es diu com la línia és la línia mateixa: si gasta, ja surt a dalt
             val senseMesurar = vm.aparells.filter {
-                it.funciona != Funcionament.SEMPRE && it.id !in ambConsum && !(vm.config.teLinia && it.nom.equals(vm.config.nomLinia, ignoreCase = true))
+                it.funciona != Funcionament.SEMPRE && it.id !in ambConsum && !(vm.config.teLinia && it.nom.equals(nomLinia, ignoreCase = true))
             }
-            if (senseMesurar.isNotEmpty()) Targeta {
-                TitolTargeta(stringResource(R.string.aparells_sense_mesurar))
-                Nota(stringResource(R.string.aparells_sense_mesurar_nota))
-                senseMesurar.forEach { a -> FilaSenseMesurar(vm, a) }
+            if (senseMesurar.isNotEmpty()) {
+                Plegat(Icons.Outlined.GridView, pluralStringResource(R.plurals.aparells_n_sense_mesurar, senseMesurar.size, senseMesurar.size)) {
+                    Nota(stringResource(R.string.aparells_sense_mesurar_nota), Modifier.padding(bottom = 4.dp))
+                    senseMesurar.forEach { a ->
+                        FilaPetita(
+                            icona(a.categoria), EstatIcona.NEUTRE, a.nom, nomLinia.takeIf { vm.config.teLinia && a.linia },
+                            stringResource(R.string.aparells_etiqueta_mes, num(a.kwhAny / 12)),
+                        ) { vm.obreAparell(a) }
+                    }
+                }
             }
-            TextButton(onClick = { vm.pantalla = Pantalla.QUESTIONARI }) { Text(stringResource(R.string.aparells_torna_questionari)) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Enllac(stringResource(R.string.aparells_torna_questionari)) { vm.pantalla = Pantalla.QUESTIONARI }
+            }
         }
-        Spacer(Modifier.height(80.dp))
+        // Perquè el botó d'afegir no tapi l'últim
+        Spacer(Modifier.height(72.dp))
     }
 }
 
-/** Com coneix l'app un aparell, en poques paraules (trobat sol, ensenyat, après de la pinça 2, après, aprenent), i si ja és segur. */
+/** Si l'app encara l'està aprenent (no és segur): la paraula en ambre sota el nom. */
 @Composable
-fun estatAparell(vm: ConsumViewModel, f: FilaRanquing): Pair<String, Boolean> {
-    val r = f.aparell?.let { vm.referencies[it.id] ?: vm.referenciesLinia[it.id] }
-    return when {
-        f.compressorW != null -> stringResource(R.string.estat_trobat_sol) to true
-        f.aparell == null -> stringResource(R.string.ranquing_linia_mesurada) to true
-        f.ensenyats > 0 -> stringResource(R.string.estat_ensenyat) to true
-        f.linia -> stringResource(R.string.estat_apres_pinca) to true
-        r?.apresa == true -> stringResource(R.string.estat_apres) to true
-        else -> stringResource(R.string.estat_aprenent) to false
-    }
+private fun aprenent(vm: ConsumViewModel, f: FilaRanquing): Boolean {
+    if (f.compressorW != null || f.aparell == null || f.ensenyats > 0 || f.linia) return false
+    val r = vm.referencies[f.aparell.id] ?: vm.referenciesLinia[f.aparell.id]
+    return r?.apresa != true
 }
 
 @Composable
-private fun FilaAparell(vm: ConsumViewModel, f: FilaRanquing) {
-    val color = if (f.linia) Linia else Primari
-    val (estat, ok) = estatAparell(vm, f)
+private fun FilaAparell(vm: ConsumViewModel, f: FilaRanquing, part: Double, nomLinia: String) {
     Row(
         Modifier.fillMaxWidth().then(if (f.aparell != null) Modifier.clickable { vm.obreAparell(f.aparell) } else Modifier).padding(vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Bombolla(f.aparell?.let { icona(it.categoria) } ?: Icons.Outlined.Bolt, if (f.linia) LiniaFluix else PrimariFluix, color)
-        Spacer(Modifier.width(12.dp))
+        Cercle(f.aparell?.let { icona(it.categoria) } ?: Icons.Outlined.Bolt, EstatIcona.SAP, 34.dp)
+        Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(f.nom.ifBlank { stringResource(R.string.pinca2_xip) }, Modifier.weight(1f, fill = false), fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (f.linia) XipPinca()
+                Text(f.nom.ifBlank { nomLinia }, Modifier.weight(1f, fill = false), fontSize = 13.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (f.linia) Etiqueta(nomLinia.ifBlank { stringResource(R.string.pinca2_xip) })
             }
-            Row(Modifier.padding(top = 2.dp)) { XipEstat(estat, ok) }
+            if (aprenent(vm, f)) ParaulaAmbre(stringResource(R.string.aparells_nou))
+            Spacer(Modifier.height(4.dp))
+            BarraPart(part)
         }
+        Spacer(Modifier.width(10.dp))
         Column(horizontalAlignment = Alignment.End) {
-            Text("${num(f.kwh, 1)} kWh", fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Text(euros(f.euros), fontSize = 12.sp, color = Suau)
+            Text("${num(f.kwh, 1)} kWh", style = EstilNumero)
+            Text(euros(f.euros), fontSize = 11.sp, color = Suau)
         }
     }
 }
 
+/** Una targeta plegada: una icona, un text i la fletxa; tocant-la s'obre el que hi ha a dins. */
 @Composable
-private fun FilaSenseMesurar(vm: ConsumViewModel, a: Aparell) {
-    val linia = vm.config.teLinia && a.linia
-    Row(
-        Modifier.fillMaxWidth().clickable { vm.obreAparell(a) }.padding(vertical = 7.dp).alpha(0.6f),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Bombolla(icona(a.categoria), SempreFluix, Sempre)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(a.nom, Modifier.weight(1f, fill = false), fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (linia) XipPinca()
-            }
-            Text(stringResource(R.string.aparells_sense_mesurar_fila, num(a.kwhAny / 12)), fontSize = 12.sp, color = Suau, maxLines = 1, overflow = TextOverflow.Ellipsis)
+private fun Plegat(icona: ImageVector, text: String, contingut: @Composable () -> Unit) {
+    var obert by rememberSaveable { mutableStateOf(false) }
+    Targeta {
+        Row(Modifier.fillMaxWidth().clickable { obert = !obert }, verticalAlignment = Alignment.CenterVertically) {
+            Cercle(icona, EstatIcona.NEUTRE, 28.dp)
+            Spacer(Modifier.width(10.dp))
+            Text(text, Modifier.weight(1f), fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
+            Icon(if (obert) Icons.Outlined.ExpandLess else Icons.Outlined.ChevronRight, null, Modifier.size(18.dp), tint = Suau)
         }
-        Text("—", fontSize = 15.sp, color = Suau)
+        if (obert) Column(Modifier.padding(top = 6.dp)) { contingut() }
+    }
+}
+
+@Composable
+private fun FilaPetita(icona: ImageVector, estat: EstatIcona, nom: String, etiqueta: String?, valor: String, obre: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = obre).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Cercle(icona, estat, 28.dp)
+        Spacer(Modifier.width(10.dp))
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(nom, Modifier.weight(1f, fill = false), fontSize = 13.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (etiqueta != null) Etiqueta(etiqueta)
+        }
+        Text(valor, fontSize = 12.sp, color = Suau)
     }
 }

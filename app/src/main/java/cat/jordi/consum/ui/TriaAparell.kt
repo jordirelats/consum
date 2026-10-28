@@ -58,7 +58,7 @@ import cat.jordi.consum.dades.Funcionament
 @Composable
 fun TriaAparell(
     subtitol: String, suggerits: List<Aparell>, tots: List<Aparell>, teLinia: Boolean,
-    tria: (Aparell) -> Unit, nou: (Aparell) -> Unit, tanca: () -> Unit, senseLinia: Boolean = false,
+    tria: (Aparell) -> Unit, nou: (Aparell) -> Unit, tanca: () -> Unit, senseLinia: Boolean = false, nomLinia: String = "",
 ) {
     val estat = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var afegint by rememberSaveable { mutableStateOf(false) }
@@ -70,7 +70,7 @@ fun TriaAparell(
                     tanca()
                 }
             } else {
-                Llista(subtitol, suggerits, tots, teLinia, senseLinia, { a -> tria(a); tanca() }) { afegint = true }
+                Llista(subtitol, suggerits, tots, teLinia, senseLinia, nomLinia, { a -> tria(a); tanca() }) { afegint = true }
             }
         }
     }
@@ -78,8 +78,10 @@ fun TriaAparell(
 
 @Composable
 private fun Llista(
-    subtitol: String, suggerits: List<Aparell>, tots: List<Aparell>, teLinia: Boolean, senseLinia: Boolean, tria: (Aparell) -> Unit, afegeix: () -> Unit,
+    subtitol: String, suggerits: List<Aparell>, tots: List<Aparell>, teLinia: Boolean, senseLinia: Boolean, nomLinia0: String,
+    tria: (Aparell) -> Unit, afegeix: () -> Unit,
 ) {
+    val nomLinia = nomLinia0.ifBlank { stringResource(R.string.pinca2_xip) }
     var cerca by rememberSaveable { mutableStateOf("") }
     val context = LocalContext.current
     val buscat = pla(cerca)
@@ -96,11 +98,11 @@ private fun Llista(
     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp).padding(top = 6.dp)) {
         if (primers.isNotEmpty()) {
             item { Seccio(stringResource(R.string.tria_sassemblen)) }
-            items(primers, key = { "s${it.id}" }) { a -> FilaAparell(a, teLinia) { tria(a) } }
+            items(primers, key = { "s${it.id}" }) { a -> FilaAparell(a, teLinia, nomLinia) { tria(a) } }
         }
         if (resta.isNotEmpty()) {
             item { Seccio(stringResource(R.string.tria_tots_titol)) }
-            items(resta, key = { "t${it.id}" }) { a -> FilaAparell(a, teLinia) { tria(a) } }
+            items(resta, key = { "t${it.id}" }) { a -> FilaAparell(a, teLinia, nomLinia) { tria(a) } }
         }
         if (primers.isEmpty() && resta.isEmpty()) item { Nota(stringResource(R.string.tria_cap), Modifier.padding(vertical = 8.dp)) }
         if (senseLinia) item { Nota(stringResource(R.string.tria_sense_linia), Modifier.padding(top = 8.dp)) }
@@ -124,15 +126,15 @@ private fun Seccio(text: String) {
 }
 
 @Composable
-private fun FilaAparell(a: Aparell, teLinia: Boolean, tria: () -> Unit) {
+private fun FilaAparell(a: Aparell, teLinia: Boolean, nomLinia: String, tria: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = tria).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Bombolla(icona(a.categoria), if (teLinia && a.linia) LiniaFluix else PrimariFluix, if (teLinia && a.linia) Linia else Primari)
+        Cercle(icona(a.categoria), EstatIcona.NEUTRE, 34.dp)
         Spacer(Modifier.width(12.dp))
         Text(a.nom, Modifier.weight(1f, fill = false), fontSize = 15.sp)
         Spacer(Modifier.width(6.dp))
         when {
-            teLinia && a.linia -> XipPinca()
-            a.funciona == Funcionament.SEMPRE -> XipEstat(stringResource(R.string.espera_sempre_ences), ok = false)
+            teLinia && a.linia -> Etiqueta(nomLinia)
+            a.funciona == Funcionament.SEMPRE -> Etiqueta(stringResource(R.string.espera_sempre_ences))
         }
     }
 }

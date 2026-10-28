@@ -63,7 +63,6 @@
     <!-- Les pestanyes de baix -->
     <string name="pestanya_ara">Nu</string>
     <string name="pestanya_aparells">Apparaten</string>
-    <string name="pestanya_entrena">Aanleren</string>
     <string name="pestanya_historial">Geschiedenis</string>
 
     <!-- Els períodes de l'historial -->
@@ -121,34 +120,16 @@
     <string name="ara_falta_clau">Niet thuis: vul de Cloud Key in om het te zien</string>
     <string name="ara_versio_nova">Er is een nieuwe versie van de app (%1$s).</string>
     <string name="ara_actualitza">Bijwerken</string>
-    <string name="ara_resum_amb_preu">Nu %1$s per uur · vandaag %2$s kWh, %3$s</string>
-    <string name="ara_resum">Vandaag %1$s kWh, %2$s</string>
-    <string name="ara_resum_amb_preu_aprox">Nu %1$s per uur · vandaag zo\'n %2$s kWh, %3$s</string>
-    <string name="ara_resum_aprox">Vandaag zo\'n %1$s kWh, %2$s</string>
-    <string name="ara_ultimes_24h">Afgelopen 24 uur</string>
     <string name="ara_dades_wifi">De gegevens worden van de Shelly opgehaald als je telefoon thuis op de wifi zit.</string>
     <string name="ara_dades_nuvol">Op afstand wordt het verbruik berekend met de meterstand uit de Shelly Cloud: over een paar minuten verschijnen de eerste gegevens.</string>
     <string name="ara_aproximat">De stippellijn is een schatting: op afstand geeft de Shelly Cloud alleen de meterstand, niet het verbruik per minuut.</string>
     <string name="ara_mes_barat_avui">Wanneer is het vandaag het goedkoopst</string>
-    <string name="ara_que_hi_ha_ences">Wat staat er nu aan</string>
-    <string name="ara_linia_subtitol">%1$s W · tweede meetklem, gemeten</string>
     <string name="ara_sempre_ences">Altijd aan</string>
-    <string name="ara_sempre_subtitol">%1$s W · apparaten op stand-by, opladers…</string>
-    <string name="ara_sempre_aparell">%1$s W · in werking, altijd aan</string>
-    <string name="ara_altres_espera">%1$s W · altijd aan: opladers, tv’s…</string>
-    <string name="ara_compressor">%1$s W · de compressor draait</string>
-    <string name="ara_linia_apagat">%1$s W · tweede meetklem, nu uit</string>
-    <string name="ara_aparell_apres">%1$s W · aangeleerd</string>
-    <string name="ara_aparell_aprenent">%1$s W · wordt nog aangeleerd</string>
     <string name="ara_sense_identificar">Niet herkend</string>
-    <string name="ara_residu_sense_fons">%1$s W · na een dag gegevens weet ik het basisverbruik</string>
-    <string name="ara_residu_entrena">%1$s W · leer de app je apparaten aan</string>
     <string name="ara_euros_hora">%1$s/u</string>
     <string name="ara_detall">Nu: %1$s VA · arbeidsfactor %2$s · %3$s V</string>
     <string name="ara_comprova_wifi">Controleer of je telefoon thuis op de wifi zit en of het adres van de Shelly klopt (Instellingen).</string>
     <string name="ara_franja_fins_a">%1$s tot %2$d uur</string>
-    <string name="ara_pastilla_preu">%1$s · € %2$s per kWh</string>
-    <string name="ara_pastilla_sense_preu">%1$s · nog geen prijs</string>
     <string name="ara_ja_barat">Dit is al een van de goedkope uren.</string>
     <string name="ara_mes_barata">Het goedkoopste uur van de komende 24 uur is om %1$d uur: € %2$s/kWh (%3$s%% minder).</string>
     <string name="ara_avis_car_titol">Hoog verbruik in een duur uur</string>
@@ -162,20 +143,10 @@
     <string name="historial_sempre_ences">Altijd aan</string>
     <string name="historial_cal_un_dia">een dag aan gegevens nodig</string>
     <string name="historial_sense_identificar">Niet herkend</string>
-    <string name="historial_costos_fixos">Vaste kosten</string>
-    <string name="historial_no_depenen_us">los van je verbruik</string>
     <string name="historial_aproximat">Een deel is een schatting: berekend op afstand, met de meterstand uit de Shelly Cloud.</string>
 
     <!-- Pantalla Aparells -->
     <string name="aparells_aquest_mes">Deze maand tot nu toe</string>
-    <string name="aparells_consell_fons">Altijd aan: %1$s W dag en nacht kost € %2$s per jaar. Kijk welke apparaten op stand-by blijven staan.</string>
-    <string name="aparells_consell_linia">%1$s: %2$d%% van het verbruik valt in de dure uren. In de goedkope uren had het deze maand zo\'n %3$s minder gekost.</string>
-    <plurals name="aparells_consell_tipics">
-        <item quantity="one">%1$d apparaat heeft een gemiddelde waarde. Scan het energielabel, dan wordt het getal betrouwbaarder.</item>
-        <item quantity="other">%1$d apparaten hebben een gemiddelde waarde. Scan hun energielabel, dan wordt het getal betrouwbaarder.</item>
-    </plurals>
-    <string name="aparells_que_pots_fer">Wat je kunt doen</string>
-    <string name="aparells_sempre_ences">Altijd aan</string>
     <string name="aparells_cap_aparell">Nog geen apparaten</string>
     <string name="aparells_comenca_questionari">Begin met de vragenlijst: we lopen ruimte voor ruimte langs, zodat je er geen vergeet.</string>
     <string name="aparells_revisem_casa">Je huis doorlopen</string>
@@ -194,9 +165,7 @@
 
     <!-- Pantalla Entrena -->
     <string name="entrena_avisos_titol">Meldingen bij onverwacht verbruik</string>
-    <string name="entrena_avisos_nota">Gaat er iets aan dat ik niet herken en duurt het langer dan 10 minuten, dan vraag ik je met een melding wat het is.</string>
     <string name="entrena_activa_avisos">Meldingen aanzetten</string>
-    <string name="entrena_en_directe">Live aanleren</string>
     <string name="entrena_instruccions">Zet een apparaat aan of uit en tik meteen op de knop. De app meet de sprong in een halve minuut; het liefst gaat er intussen niets anders aan.</string>
     <string name="entrena_ara_w">Nu %1$s W</string>
     <string name="entrena_ara_w_sense_pinca">Nu %1$s W zonder meetklem 2</string>
@@ -212,15 +181,10 @@
     <string name="entrena_mesurant">Meten…</string>
     <string name="entrena_he_apagat">Ik heb het uitgezet</string>
     <string name="entrena_he_ences">Ik heb het aangezet</string>
-    <string name="entrena_pregunta">Vraag</string>
-    <string name="entrena_que_era">Wat was dit?</string>
     <string name="entrena_pregunta_text">Sinds %1$s · +%2$s W die ik niet herkende</string>
-    <string name="entrena_un_altre">Iets anders…</string>
     <string name="entrena_no_ho_se">Weet ik niet</string>
 
     <!-- Pantalla Afegir -->
-    <string name="afegir_via_qr">Label</string>
-    <string name="afegir_via_placa">Typeplaatje</string>
     <string name="afegir_qr_no_etiqueta">Deze QR-code hoort niet bij een Europees energielabel.</string>
     <string name="afegir_error_eprel">Ik kon de gegevens van EPREL niet ophalen</string>
     <string name="afegir_qr_titol">Scan de QR-code op het energielabel</string>
@@ -486,7 +450,6 @@
     <string name="grafiques_kwh">%1$s kWh</string>
     <string name="grafiques_exacte">exact</string>
     <string name="grafiques_aproximat">schatting (cloud)</string>
-    <string name="ara_part_contractada">%1$s%% van het maximum (%2$s kW)</string>
     <string name="ara_limit_a_prop">Bijna aan het maximum</string>
     <string name="ara_limit_passat">Boven het maximale vermogen</string>
     <string name="ara_potencia_titol">Welk vermogen heb je gecontracteerd?</string>
@@ -494,7 +457,6 @@
     <string name="ara_potencia_ara_no">Niet nu</string>
     <string name="ara_potencia_factura">Lees het van de factuur</string>
     <string name="ara_limit_text">Zet je nog iets aan, dan kan de hoofdzekering eruit springen. Hieronder zie je wat er nu aan staat.</string>
-    <string name="connecta_titol_potencia">Maximaal vermogen en meldingen</string>
     <string name="connecta_potencia_contractada">Maximaal vermogen</string>
     <string name="connecta_potencia_es">Staat op de rekening (‘Potencia contratada’).</string>
     <string name="connecta_potencia_nl">Dat is je aansluiting: 1×25 A is 5,8 kW, 1×35 A is 8 kW en 3×25 A is 17 kW.</string>
@@ -508,7 +470,6 @@
     <string name="connecta_cal_permis">Om je te waarschuwen heeft de app toestemming voor meldingen nodig.</string>
 
     <!-- Pantalla Afegir, pestanya Marca i model -->
-    <string name="marca_via">Model</string>
     <string name="marca_marca">Merk</string>
     <string name="marca_model">Modelnummer</string>
     <string name="marca_on_trobo">Waar vind ik het modelnummer?</string>
@@ -601,19 +562,14 @@
     <string name="funciona_sol">Gaat vanzelf aan</string>
     <string name="funciona_sol_text">Koelkast, vriezer, warmtepomp, boiler… De app herkent hem in de gegevens.</string>
     <string name="funciona_jo">Zet ik zelf aan</string>
-    <string name="funciona_jo_text">Wasmachine, oven, auto… De app leert het vermogen bij Aanleren.</string>
+    <string name="funciona_jo_text">Wasmachine, oven, auto… De app leert het vermogen bij «Te doen».</string>
 
     <string name="connecta_titol_inesperat">Meldingen bij onverwacht verbruik</string>
     <string name="connecta_avisa_inesperat">Waarschuw me als het verbruik flink stijgt</string>
-    <string name="connecta_inesperat_quant">Als het huis meer verbruikt dan normaal</string>
     <string name="connecta_inesperat_durant">gedurende</string>
     <string name="connecta_inesperat_minuts">%1$d min</string>
     <string name="connecta_inesperat_hora">1 uur</string>
     <string name="connecta_inesperat_normal">Normaal is wat het huis altijd verbruikt (%1$s W), wat vanzelf aangaat en de apparaten die de app al kent.</string>
-    <plurals name="connecta_inesperat_previsio">
-        <item quantity="one">Vorige week had je %1$d melding gekregen: %2$s.</item>
-        <item quantity="other">Vorige week had je %1$d meldingen gekregen: %2$s.</item>
-    </plurals>
     <plurals name="connecta_inesperat_mes">
         <item quantity="one">nog %1$d</item>
         <item quantity="other">nog %1$d</item>
@@ -621,23 +577,17 @@
     <string name="connecta_inesperat_cap">Vorige week had je geen enkele melding gekregen.</string>
     <string name="connecta_inesperat_sense_dades">Zodra de app een dag aan gegevens van thuis heeft, zie je hier hoeveel meldingen je had gekregen.</string>
     <string name="connecta_inesperat_moment">%1$s om %2$s (+%3$s)</string>
-    <string name="comu_i">" en "</string>
 
-    <string name="entrena_sol_text">Waarschuw me niet als het aangaat</string>
     <string name="entrena_nota_sense_entrenar">Apparaten die altijd aan zijn of vanzelf aangaan, hoef je niet aan te leren.</string>
 
     <string name="aparells_altres_espera">Overig op stand-by</string>
     <string name="aparells_com_funciona">Hoe het werkt</string>
 
-    <string name="afegir_via_sense">Alleen type</string>
     <string name="afegir_sense_com">Hoe werkt het?</string>
     <string name="afegir_sense_potencia_nota">Typisch voor dit soort apparaat. Weet je het vermogen van het jouwe (op de adapter of het typeplaatje), pas het dan aan.</string>
     <string name="afegir_sense_any">Per jaar</string>
     <string name="afegir_sense_any_valor">%1$s kWh · %2$s per maand</string>
     <string name="principal_estona_passada">Een eerder moment</string>
-    <string name="entrena_passat_titol">Leer het aan met een eerder moment</string>
-    <string name="entrena_passat_text">Weet je wanneer een apparaat aanstond (bijvoorbeeld de vaatwasser gisteren van 17 tot 21 uur), dan zoekt de app het op in de gegevens en leert het vermogen.</string>
-    <string name="entrena_passat_boto">Kies apparaat en tijd</string>
     <string name="passat_quin_aparell">Welk apparaat was het?</string>
     <string name="passat_quin_dia">Welke dag?</string>
     <string name="passat_avui">Vandaag</string>
@@ -706,7 +656,6 @@
     <string name="historial_seguent">Volgende periode</string>
     <string name="historial_mirant">Je bekijkt %1$s</string>
     <string name="historial_mirant_any">%1$d</string>
-    <string name="historial_torna_avui">Terug naar vandaag</string>
     <string name="historial_comp_dia_ara">Gisteren</string>
     <string name="historial_comp_dia_abans">De dag ervoor</string>
     <string name="historial_comp_setmana_ara">Vorige week</string>
@@ -715,7 +664,6 @@
     <string name="historial_comp_mes_abans">De maand ervoor</string>
     <string name="historial_comp_any_ara">Vorig jaar</string>
     <string name="historial_comp_any_abans">Het jaar ervoor</string>
-    <string name="historial_comp">%1$s: %2$s kWh.</string>
     <string name="historial_comp_sense">%1$s: daar had de app nog niet alle gegevens van.</string>
     <string name="historial_sense_dades">Van deze periode zijn er nog geen gegevens: de app heeft ze sinds %1$s.</string>
     <string name="historial_sense_dades_cap">De app heeft nog geen gegevens van thuis.</string>
@@ -731,8 +679,7 @@
     <string name="connecta_nuvol_des_de">Sinds</string>
     <string name="connecta_nuvol_res">Nog niet nodig: er ontbreekt niets wat de cloud heeft.</string>
     <string name="connecta_nuvol_quadra">De kWh en euro’s van deze uren kloppen met die van de Shelly. Er zijn geen minuutgegevens: die dagen hebben geen piekmomenten of apparaten.</string>
-    <string name="historial_del_nuvol">uit de cloud, per uur</string>
-    <string name="historial_nuvol_nota">Wat paars is, komt uit de cloud: zonder piekmomenten of apparaten.</string>
+    <string name="historial_nuvol_nota">Wat gearceerd is komt uit de cloud: zonder piekmomenten en apparaten.</string>
 
     <!-- Maqueta 12: beter herkennen. De «handtekening» van een apparaat: hoe het vermogen eruitziet als het aan staat -->
     <string name="forma_constant">constant, springt direct aan</string>
@@ -751,52 +698,18 @@
         <item quantity="one">%d keer</item>
         <item quantity="other">%d keer</item>
     </plurals>
-    <string name="repetit_detall">%1$s · %2$s–%3$s W · %4$s kWh per week</string>
     <string name="repetit_tira">De %1$d keer van de afgelopen week</string>
-    <string name="repetit_que_es">Wat is het?</string>
-    <string name="ara_a_la_linia">%1$s W · op groep «%2$s»</string>
 
     <!-- Maqueta 13: de statistieken zonder alles door elkaar. De ranglijst van apparaten van een periode -->
     <string name="ranquing_titol">Wie verbruikte het meest</string>
-    <string name="ranquing_resta_titol">De rest</string>
-    <plurals name="ranquing_cops">
-        <item quantity="one">%d keer</item>
-        <item quantity="other">%d keer</item>
-    </plurals>
-    <plurals name="ranquing_ensenyats">
-        <item quantity="one">%d door jou aangeleerd</item>
-        <item quantity="other">%d door jou aangeleerd</item>
-    </plurals>
-    <string name="ranquing_compressor">de compressor, %1$s W, zelf gevonden</string>
-    <string name="ranquing_linia_mesurada">gemeten met meetklem 2</string>
     <string name="pinca2_xip">meetklem 2</string>
     <string name="ranquing_sempre">Altijd aan</string>
-    <string name="ranquing_sempre_text">%1$s W dag en nacht: router, apparaten op stand-by…</string>
     <string name="ranquing_petits">Kleine verbruikers</string>
     <string name="ranquing_petits_text">minder dan 250 W: lampen, tv, opladers…</string>
-    <string name="ranquing_sense_id">Niet herkend</string>
-    <string name="ranquing_sense_id_text">keren dat de app niet weet van wie ze zijn · bij Aanleren</string>
     <string name="ranquing_linia_altres">%1$s, overig</string>
     <string name="ranquing_linia_altres_text">op meetklem 2, geen van zijn apparaten</string>
-    <string name="ranquing_sense_detall">Zonder detail</string>
-    <string name="ranquing_sense_detall_text">van buitenshuis of uit de cloud: niet bekend van wie</string>
-    <string name="ranquing_llegenda_aparells">apparaten %1$s%%</string>
-    <string name="ranquing_llegenda_sempre">altijd aan %1$s%%</string>
-    <string name="ranquing_llegenda_petits">klein %1$s%%</string>
-    <string name="ranquing_llegenda_sense">niet herkend %1$s%%</string>
-    <string name="ranquing_cap">Nog geen enkele keer van een bekend apparaat. Leer ze aan bij Aanleren.</string>
-    <string name="aparells_teus">Je apparaten</string>
-    <string name="aparells_teus_nota">Elk één keer, met wat het deze maand echt verbruikte.</string>
-    <string name="estat_trobat_sol">zelf gevonden</string>
-    <string name="estat_apres_pinca">geleerd van meetklem 2</string>
-    <string name="estat_ensenyat">aangeleerd</string>
-    <string name="estat_apres">geleerd</string>
-    <string name="estat_aprenent">aan het leren</string>
-    <string name="aparells_sense_mesurar">Nog niet gemeten</string>
+    <string name="ranquing_cap">Nog geen enkele keer van een bekend apparaat. Leer ze aan bij «Te doen».</string>
     <string name="aparells_sense_mesurar_nota">Wat ze volgens het label zouden verbruiken, apart: het is niet wat ze verbruiken.</string>
-    <string name="aparells_sense_mesurar_fila">nog niet · label: %1$s kWh/maand</string>
-    <string name="aparells_sempre_encesos">Altijd aan</string>
-    <string name="aparells_sempre_encesos_nota">Zitten in wat het huis altijd verbruikt.</string>
     <string name="fitxa_aquest_mes">deze maand</string>
     <plurals name="fitxa_cops_mes">
         <item quantity="one">deze maand · %d keer</item>
@@ -837,11 +750,8 @@
     <string name="ara_sembla_ell_des_de">%1$s · aan het vermogen te zien is hij het</string>
     <string name="ara_a_la_pinca">meetklem 2 · %1$s</string>
     <string name="ara_acaba_encendre_no_se">net aangezet · ik weet nog niet wat het is</string>
-    <string name="ara_no_se_que_es">%1$s · ik weet niet wat het is: zeg het bij Aanleren</string>
+    <string name="ara_no_se_que_es">%1$s · ik weet niet wat het is: zeg het bij «Te doen»</string>
     <string name="ara_nomes_potencia">Van buitenaf ziet de app alleen het totale vermogen, en wat hij zegt is op basis van het vermogen. Thuis, met het detail van elke minuut, weet hij het zeker.</string>
-    <string name="sense_nom_titol">Wat het meest verbruikt en nog geen naam heeft</string>
-    <string name="sense_nom_text">De afgelopen 7 dagen %1$s kWh niet herkend: %2$s %% van alles. Deze keren zijn het grootste deel. Wat waren ze?</string>
-    <string name="sense_nom_nota">Beantwoord er één: de keren die erop lijken worden ook van hem, en de volgende herkent de app zelf.</string>
     <string name="sense_nom_quan">%1$s · %2$s</string>
     <string name="sense_nom_detall">%1$s · %2$s kW</string>
     <string name="durada_h_min">%1$d u %2$d min</string>
@@ -863,11 +773,8 @@
     <string name="espera_sense_nom">Nog zonder naam: %1$s W.</string>
     <string name="espera_no_ho_saps">onbekend</string>
     <string name="espera_que_has_apagat">Wat heb je uitgezet?</string>
-    <string name="resum_setmana_titol">De week van %1$s tot %2$s</string>
-    <string name="resum_sense_nom">%1$s %% heeft nog geen naam: bij Aanleren zeg je het met één tik.</string>
+    <string name="resum_sense_nom">%1$s %% heeft nog geen naam: bij «Te doen» zeg je het met één tik.</string>
     <string name="resum_sempre">Altijd aan is %1$s %% ervan: spoor het op.</string>
-    <string name="resum_per_fer">Te doen</string>
-    <string name="resum_mira">Bekijk de week</string>
     <string name="resum_d_acord">Oké</string>
     <string name="avis_canal_resum">Weekoverzicht</string>
     <string name="avis_canal_resum_descripcio">Op maandag het verbruik van vorige week.</string>
@@ -876,8 +783,8 @@
     <string name="connecta_resum_titol">Het weekoverzicht</string>
     <string name="connecta_resum_text">Op maandag een melding met wat het huis verbruikte, wat het meest en wat er nog te doen is.</string>
     <plurals name="resum_repetits">
-        <item quantity="one">Eén ding herhaalt zich en heeft nog geen naam: bij Aanleren.</item>
-        <item quantity="other">%d dingen herhalen zich en hebben nog geen naam: bij Aanleren.</item>
+        <item quantity="one">Eén ding herhaalt zich en heeft nog geen naam: bij «Te doen».</item>
+        <item quantity="other">%d dingen herhalen zich en hebben nog geen naam: bij «Te doen».</item>
     </plurals>
 
     <!-- Maqueta 16 -->
@@ -960,4 +867,114 @@
         <item quantity="one">wat zich herhaalt · %1$d keer</item>
         <item quantity="other">wat zich herhaalt · %1$d keer</item>
     </plurals>
+
+    <!-- Maqueta 18: la identitat nova, «Per fer», l'Historial, Aparells, Afegir en dos passos i la Configuració per seccions -->
+    <string name="comu_mes_info">Meer informatie</string>
+    <string name="pestanya_per_fer">Te doen</string>
+    <string name="aparells_afegeix">Toevoegen</string>
+    <string name="config_connexio">Verbinding</string>
+    <string name="config_preu">Prijs en vermogen</string>
+    <string name="config_avisos">Meldingen</string>
+    <string name="config_dades">Gegevens</string>
+    <string name="config_aspecte">Weergave en taal</string>
+    <string name="config_sobre">Over de app</string>
+    <string name="config_sobre_text">Consum volgt het verbruik van een huis met een Shelly EM, zonder server: de gegevens blijven op de telefoon. Het is vrije software (GPL-3.0), op github.com/jordirelats/consum.</string>
+    <string name="config_shelly_a">Shelly %1$s</string>
+    <string name="config_nomes_nuvol">alleen via de cloud</string>
+    <string name="config_nuvol_ok">cloud</string>
+    <string name="config_avis_90_al_moment" formatted="false">90 % direct</string>
+    <string name="config_avis_90_cada15" formatted="false">90 % elke 15 min</string>
+    <string name="config_inesperat_valor">%1$s kW, %2$s</string>
+    <string name="config_avisos_apagats">uit</string>
+    <string name="config_nuvol_hores_si">cloud per uur ✓</string>
+    <string name="config_nuvol_hores_no">zonder de cloud per uur</string>
+    <string name="config_exportar">exporteren</string>
+    <string name="config_versio">versie %1$s</string>
+    <string name="config_versio_nova_curt">er is %1$s</string>
+    <string name="connecta_nuvol_opcional">Optioneel</string>
+    <string name="connecta_avisa_90_sota">van %1$s kW · oranje vanaf 80 %%</string>
+    <string name="connecta_sense_potencia">vul het gecontracteerde vermogen in bij «Prijs en vermogen»</string>
+    <string name="connecta_quan_gasti">Als het meer verbruikt dan</string>
+    <string name="connecta_resum_dilluns">Op maandag een melding</string>
+    <string name="perfer_avisos_text">Zonder toestemming kan de app je niet waarschuwen.</string>
+    <string name="perfer_activa">Inschakelen</string>
+    <string name="perfer_res">Niets te doen</string>
+    <string name="perfer_res_text">De app herkent alles al. Als er iets opduikt dat ze niet kent, vraagt ze het hier.</string>
+    <string name="perfer_ensenya">Leer het zelf aan</string>
+    <string name="perfer_ensenya_text">als je weet wat er aan stond</string>
+    <string name="perfer_estona">Een eerdere periode</string>
+    <string name="perfer_directe">Live</string>
+    <string name="perfer_posa_nom">Geef een naam</string>
+    <string name="perfer_es_repeteix">Herhaalt zich</string>
+    <string name="perfer_avis">Melding</string>
+    <string name="perfer_avis_detall">%1$s kW meer dan normaal</string>
+    <string name="perfer_la_setmana">per week</string>
+    <string name="ara_avui">Vandaag</string>
+    <string name="ara_ara">Nu</string>
+    <string name="ara_sense_preu">%1$s · nog geen prijs</string>
+    <string name="ara_preu_unic">enkel tarief, %1$s €/kWh</string>
+    <string name="ara_preu_franja">%1$s · %2$s €/kWh</string>
+    <string name="ara_arc_de">van %1$s kW</string>
+    <string name="ara_setmana_passada">Vorige week: %1$s kWh · %2$s</string>
+    <string name="ara_veure">Bekijk</string>
+    <string name="ara_ences_ara">Nu aan</string>
+    <string name="ara_detalls">Details</string>
+    <string name="ara_compressor_text">de compressor draait</string>
+    <string name="ara_linia_apagat_text">tweede klem · nu uit</string>
+    <string name="ara_linia_text">tweede klem, gemeten</string>
+    <string name="ara_sempre_aparell_text">in werking, altijd aan</string>
+    <string name="ara_sempre_text">router, apparaten in stand-by</string>
+    <string name="ara_altres_espera_text">opladers, tv\'s…</string>
+    <string name="ara_residu_sense_fons_text">een dag gegevens nodig om het basisverbruik te kennen</string>
+    <string name="grafiques_ara">nu</string>
+    <string name="grafiques_nuvol">uit de cloud</string>
+    <string name="historial_fixos_peu">Vaste kosten: %1$s · onafhankelijk van het verbruik</string>
+    <string name="historial_llegenda_altres">Andere apparaten</string>
+    <string name="historial_llegenda_sense">Zonder naam</string>
+    <string name="historial_avui">Vandaag</string>
+    <string name="historial_vs">t.o.v. %1$s</string>
+    <string name="ranquing_menys">Minder</string>
+    <string name="ranquing_i_mes">en %1$d meer · %2$s kWh</string>
+    <string name="ranquing_compressor_curt">de compressor</string>
+    <string name="ranquing_sempre_sub">%1$s W, dag en nacht</string>
+    <string name="ranquing_no_sap">De app weet niet van wie het is</string>
+    <string name="ranquing_no_sap_sense_nom">zonder naam %1$s</string>
+    <string name="ranquing_no_sap_petits">kleine verbruikers %1$s</string>
+    <string name="ranquing_no_sap_linia">%1$s, overige %2$s</string>
+    <string name="ranquing_no_sap_fora">van buitenshuis %1$s</string>
+    <string name="aparells_etiqueta_mes">het label: %1$s kWh/maand</string>
+    <string name="aparells_nou">nieuw</string>
+    <string name="afegir_via_qr_titol">Scan het label</string>
+    <string name="afegir_via_qr_text">de Europese fiche, met het verbruik</string>
+    <string name="afegir_via_placa_titol">Foto van het typeplaatje</string>
+    <string name="afegir_via_placa_text">het vermogen, gelezen van de foto</string>
+    <string name="afegir_via_marca_titol">Merk en model</string>
+    <string name="afegir_via_marca_text">zoekt het in de Europese database</string>
+    <string name="afegir_via_sense_titol">Alleen het type</string>
+    <string name="afegir_via_sense_text">het echte verbruik meet de app</string>
+    <string name="afegir_pas1_aparell">Stap 1 · het apparaat</string>
+    <string name="afegir_pas2_titol">Hoe wil je het toevoegen?</string>
+    <string name="afegir_pas_de">Stap %1$d van %2$d</string>
+    <string name="afegir_busca_tipus">Zoek: koelkast, kookplaat, step…</string>
+    <string name="afegir_o_tria">Of kies het</string>
+    <string name="afegir_trobats">Gevonden</string>
+    <string name="afegir_tots_tipus">Staat het er niet bij? Alle types</string>
+    <string name="afegir_recomanat">Aanbevolen</string>
+    <plurals name="perfer_pendents">
+        <item quantity="one">%d te doen</item>
+        <item quantity="other">%d te doen</item>
+    </plurals>
+    <plurals name="aparells_n_sempre">
+        <item quantity="one">%1$d apparaat altijd aan · %2$s W</item>
+        <item quantity="other">%1$d apparaten altijd aan · %2$s W</item>
+    </plurals>
+    <plurals name="aparells_n_sense_mesurar">
+        <item quantity="one">%1$d apparaat nog niet gemeten</item>
+        <item quantity="other">%1$d apparaten nog niet gemeten</item>
+    </plurals>
+    <plurals name="connecta_inesperat_previsio_curt">
+        <item quantity="one">vorige week: %d melding</item>
+        <item quantity="other">vorige week: %d meldingen</item>
+    </plurals>
+    <string name="afegir_tipus_diferent">Het label is van een «%1$s»; het wordt opgeslagen als «%2$s», wat je gekozen hebt.</string>
 </resources>

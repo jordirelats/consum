@@ -9,14 +9,15 @@ App d'Android per saber què gasta cada aparell de casa i quant costa, amb un me
 - **Ara:** el consum en directe, el preu del kWh d'aquesta hora i què hi ha encès.
   - Amb la potència contractada, quina part se'n fa servir. A la gràfica, en taronja des del 80 % i en vermell des del 90 %.
   - Un avís quan la casa passa del 90 %. Amb l'app tancada, al moment (amb una notificació fixa) o cada 15 minuts.
-- **Historial:** el consum per dies, setmanes, mesos i anys, en kWh i en euros, amb fletxes i un calendari per anar als períodes anteriors (que surten d'un altre color) i la comparació amb l'anterior.
+- **Historial:** el consum per dies, setmanes, mesos i anys, en kWh i en euros, amb fletxes i un calendari per anar als períodes anteriors i la comparació amb l'anterior. Les barres de cada dia van amb els mateixos colors que el rànquing d'aparells.
   - Els moments punta: el minut de més consum i els 5 que gastaven més, amb des de quan eren encesos. Si un salt no s'assembla a cap aparell conegut, l'app pregunta què era i ho aprèn.
 - **Aparells:** el consum de cada aparell, comparat amb el que diu la seva etiqueta energètica.
   - Els aparells s'afegeixen amb un qüestionari estança per estança, escanejant el QR de l'etiqueta (la base de dades europea EPREL), buscant-ne la marca i el model a l'EPREL, fent una foto de la placa de característiques o, sense cap dada, només amb el tipus.
   - Cada aparell diu com funciona: sempre encès (router), s'engega sol (nevera, bomba de calor, termo) o l'engega l'usuari. Només aquests últims s'entrenen. El compressor de la nevera, l'app el troba sola a les dades de les nits.
   - Una ajuda diu on és la placa amb el model a cada tipus d'aparell. Una fitxa de l'EPREL, una foto o un PDF es poden compartir amb l'app des d'una altra.
   - L'app llegeix la potència de la foto de la placa amb Tesseract, dins del mòbil.
-- **Entrena:** li ensenyes quan encens o apagues un aparell, i l'app n'aprèn la potència.
+- **Per fer:** tot el que l'app et pregunta, en un sol lloc: el que més gasta i encara no té nom, el que es repeteix i els avisos de consum inesperat. Cada cosa es contesta d'un toc amb els aparells que s'hi assemblen, o amb qualsevol altre.
+  - «Ensenya-li tu»: en directe, li dius quan encens o apagues un aparell, i l'app n'aprèn la potència.
   - També amb una estona passada: «el rentaplats va funcionar ahir de 17 a 21 h». L'app hi busca els salts, te'ls ensenya en una gràfica i tu marques els que eren l'aparell.
   - Si el consum es dispara i l'app no sap què és, t'ho pregunta amb una notificació. Tu tries a partir de quant (de 0,5 a 3 kW) i durant quant, i l'app et diu quants avisos t'hauria donat la setmana passada.
   - D'un aparell que s'engega sol i no gasta sempre igual (una bomba de calor inverter), n'aprèn l'interval de potència amb una sola resposta, i no te'n torna a preguntar.
@@ -108,3 +109,7 @@ Fa servir aquestes llibreries i dades, totes amb llicència Apache-2.0:
 Install the APK from [Releases](../../releases). Licence: GPL-3.0. Not affiliated with Shelly (Allterco Robotics).
 
 **Languages:** Catalan and Dutch. To add one, copy `app/src/main/res/values/strings.xml` to `app/src/main/res/values-<code>/strings.xml`, translate the texts (keep the names and the `%1$s` placeholders), set `codi_idioma` to your language code and open a pull request. Nothing else needs changing; untranslated texts fall back to Catalan.
+
+## La lletra
+
+L'app fa servir la lletra [Inter](https://rsms.me/inter/), de Rasmus Andersson, amb la llicència SIL Open Font License 1.1 (`LLICENCIES/Inter-OFL.txt`). Els fitxers de `app/src/main/res/font/` són un subconjunt (el llatí) dels pesos que l'app fa servir.

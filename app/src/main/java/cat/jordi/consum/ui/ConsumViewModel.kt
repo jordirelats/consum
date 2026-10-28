@@ -61,7 +61,13 @@ import java.time.LocalDate
 enum class Pantalla { CONNECTA, PRINCIPAL, AFEGIR, QUESTIONARI, PREU, PASSAT, APARELL, ESPERA }
 
 enum class Pestanya(@StringRes val nomId: Int) {
-    ARA(R.string.pestanya_ara), APARELLS(R.string.pestanya_aparells), ENTRENA(R.string.pestanya_entrena), HISTORIAL(R.string.pestanya_historial)
+    ARA(R.string.pestanya_ara), APARELLS(R.string.pestanya_aparells), PER_FER(R.string.pestanya_per_fer), HISTORIAL(R.string.pestanya_historial)
+}
+
+/** Les seccions de la Configuració (maqueta 18): cadascuna una pantalla, amb el seu títol a dalt. */
+enum class SeccioConfig(@StringRes val nomId: Int) {
+    CONNEXIO(R.string.config_connexio), PREU(R.string.config_preu), AVISOS(R.string.config_avisos), DADES(R.string.config_dades),
+    ASPECTE(R.string.config_aspecte), SOBRE(R.string.config_sobre),
 }
 
 class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : AndroidViewModel(app) {
@@ -86,6 +92,30 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
             pestanyaEstat = v
             desat["pestanya"] = v.name
         }
+
+    /** La secció de la Configuració que hi ha oberta (maqueta 18); null, la llista de seccions. */
+    private var seccioEstat by mutableStateOf(desat.get<String>("seccio")?.let { runCatching { SeccioConfig.valueOf(it) }.getOrNull() })
+    var seccioConfig: SeccioConfig?
+        get() = seccioEstat
+        set(v) {
+            seccioEstat = v
+            desat["seccio"] = v?.name
+        }
+
+    /** El preu de la llum s'ha obert des de la Configuració: en tornar, s'hi torna (i no a la pantalla principal). */
+    var preuDesDeConfig by mutableStateOf(false)
+
+    /** Enrere des d'una pantalla que no és la principal: la secció de la Configuració, el preu obert des d'allà, o el principal. */
+    fun enrere() {
+        when {
+            pantalla == Pantalla.CONNECTA && seccioConfig != null && config.configurat -> seccioConfig = null
+            pantalla == Pantalla.PREU && preuDesDeConfig -> { preuDesDeConfig = false; pantalla = Pantalla.CONNECTA }
+            else -> pantalla = Pantalla.PRINCIPAL
+        }
+    }
+
+    /** Quantes coses hi ha a «Per fer»: el globus de la pestanya. */
+    val pendents: Int get() = (senseNom?.vegades?.size ?: 0) + preguntes.size + repetits.size
 
     /** La lectura en directe; null si ara mateix no s'arriba al Shelly ni pel núvol. */
     var lectura by mutableStateOf<Lectura?>(null)
@@ -722,7 +752,7 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
             missatgeDe = null
             missatgeEntrena = if (r != null) TextRecurs(R.string.passat_desat, aparell.nom, num(if (r.wMin != null) r.max else r.w)) else null
             pantalla = Pantalla.PRINCIPAL
-            pestanya = Pestanya.ENTRENA
+            pestanya = Pestanya.PER_FER
         }
     }
 
@@ -868,9 +898,11 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     }
 
     /** La potència contractada, des de la pregunta de la pantalla Ara. */
-    fun desaPotencia(kw: Double) {
+    /** La potència contractada (null per treure-la): la tarifa, la vigilància, i els euros de nou (a Espanya és el terme fix). */
+    fun desaPotencia(kw: Double?) {
         config.tarifa = config.tarifa.ambLimit(kw)
         Vigilancia.actualitza(getApplication())
+        refresca()
     }
 
     /** Mentre es tornen a calcular els euros amb una tarifa nova (la roda de dalt). */
@@ -885,7 +917,8 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         config.tarifa = t
         generacioTarifa++
         Vigilancia.actualitza(getApplication())
-        pantalla = Pantalla.PRINCIPAL
+        pantalla = if (preuDesDeConfig) Pantalla.CONNECTA else Pantalla.PRINCIPAL
+        preuDesDeConfig = false
         resumCalculat = 0
         viewModelScope.launch {
             recalculant = true
@@ -923,7 +956,8 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
 
     /** Després de canviar la configuració: torna a començar les lectures. */
     fun configuracioDesada() {
-        pantalla = Pantalla.PRINCIPAL
+        // El primer cop, a la pantalla principal; després, a la llista de seccions de la Configuració
+        if (seccioConfig != null && config.configurat) seccioConfig = null else pantalla = Pantalla.PRINCIPAL
         lectura = null
         haLlegit = false
         enPrimerPla(true)
@@ -937,4 +971,7 @@ data class Baixada(val ts: Long, val w: Double, val aparellId: Long? = null, val
  * L'avís per desfer l'última resposta o entrenament (maqueta 17): què s'ha desat, com desfer-ho, i què cal tornar com era a
  * la pantalla.
  */
-class AvisDesfer(val text: TextRecurs, val accio: Desfer, val desfetALaPantalla: (() -> Unit)? = null)
+class AvisDesfer(val text: TextRecurs, val accio: Desfer, val desfetALaPantalla: (() -> Unit)? = null) {
+    /** Quan s'ha creat: l'avís dura uns 10 segons, també si es gira la pantalla. */
+    val creat: Long = System.currentTimeMillis()
+}

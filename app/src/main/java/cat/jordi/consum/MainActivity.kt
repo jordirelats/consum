@@ -1,18 +1,5 @@
 package cat.jordi.consum
 
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.remember
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarDuration
-import cat.jordi.consum.dades.ASPECTE_FOSC
-import cat.jordi.consum.dades.ASPECTE_CLAR
-import cat.jordi.consum.ui.Superficie
-import cat.jordi.consum.ui.SobrePrimari
-import cat.jordi.consum.ui.Aspecte
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.isSystemInDarkTheme
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -24,6 +11,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
@@ -33,11 +21,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Devices
+import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -47,41 +37,60 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import androidx.core.content.IntentCompat
+import cat.jordi.consum.dades.ASPECTE_CLAR
+import cat.jordi.consum.dades.ASPECTE_FOSC
 import cat.jordi.consum.dades.Eprel
 import cat.jordi.consum.dades.Idioma
+import cat.jordi.consum.dades.Periode
+import cat.jordi.consum.ui.Aspecte
 import cat.jordi.consum.ui.Compartit
 import cat.jordi.consum.ui.ConsumViewModel
+import cat.jordi.consum.ui.Desconegut
 import cat.jordi.consum.ui.Fons
 import cat.jordi.consum.ui.Pantalla
 import cat.jordi.consum.ui.PantallaAfegir
 import cat.jordi.consum.ui.PantallaAparells
 import cat.jordi.consum.ui.PantallaAra
 import cat.jordi.consum.ui.PantallaConnecta
-import cat.jordi.consum.ui.PantallaEntrena
 import cat.jordi.consum.ui.PantallaEspera
 import cat.jordi.consum.ui.PantallaFitxa
 import cat.jordi.consum.ui.PantallaHistorial
 import cat.jordi.consum.ui.PantallaPassat
-import cat.jordi.consum.ui.Sepia
+import cat.jordi.consum.ui.PantallaPerFer
 import cat.jordi.consum.ui.PantallaPreu
 import cat.jordi.consum.ui.PantallaQuestionari
 import cat.jordi.consum.ui.Pestanya
+import cat.jordi.consum.ui.Pestanyes
 import cat.jordi.consum.ui.Primari
 import cat.jordi.consum.ui.PrimariFluix
 import cat.jordi.consum.ui.Rebut
+import cat.jordi.consum.ui.SobrePrimari
+import cat.jordi.consum.ui.Suau
+import cat.jordi.consum.ui.Superficie
 import cat.jordi.consum.ui.TemaConsum
+import cat.jordi.consum.ui.TextPrincipal
 
 class MainActivity : ComponentActivity() {
     private val vm: ConsumViewModel by viewModels()
@@ -122,11 +131,11 @@ class MainActivity : ComponentActivity() {
         rep(intent)
     }
 
-    /** Des d'un avís, l'app s'obre a Entrena, on hi ha la pregunta. */
+    /** Des d'un avís, l'app s'obre a «Per fer», on hi ha la pregunta. */
     private fun obre(intent: Intent?) {
         if (intent?.getStringExtra(Avisos.OBRE) == Avisos.ENTRENA && vm.config.configurat) {
             vm.pantalla = Pantalla.PRINCIPAL
-            vm.pestanya = Pestanya.ENTRENA
+            vm.pestanya = Pestanya.PER_FER
             vm.refresca()
         }
     }
@@ -174,10 +183,15 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun Arrel(vm: ConsumViewModel) {
     val principal = vm.pantalla == Pantalla.PRINCIPAL
-    BackHandler(enabled = !principal && vm.config.configurat) { vm.pantalla = Pantalla.PRINCIPAL }
+    // Dins d'una secció de la Configuració, enrere torna a la llista de seccions
+    BackHandler(enabled = !principal && vm.config.configurat) { vm.enrere() }
 
     val titol = when (vm.pantalla) {
-        Pantalla.CONNECTA -> stringResource(if (vm.config.configurat) R.string.principal_configuracio else R.string.principal_connecta)
+        Pantalla.CONNECTA -> when {
+            !vm.config.configurat -> stringResource(R.string.principal_connecta)
+            vm.seccioConfig != null -> stringResource(vm.seccioConfig!!.nomId)
+            else -> stringResource(R.string.principal_configuracio)
+        }
         Pantalla.AFEGIR -> stringResource(R.string.principal_afegeix_aparell)
         Pantalla.QUESTIONARI -> stringResource(R.string.principal_revisem_casa)
         Pantalla.PREU -> stringResource(R.string.principal_preu_llum)
@@ -186,39 +200,56 @@ private fun Arrel(vm: ConsumViewModel) {
         Pantalla.ESPERA -> stringResource(R.string.ranquing_sempre)
         Pantalla.PRINCIPAL -> stringResource(if (vm.pestanya == Pestanya.ARA) R.string.principal_casa else vm.pestanya.nomId)
     }
-    // Un període anterior de l'Historial té la pàgina d'un altre color (maqueta 10)
-    val fons = if (principal && vm.pestanya == Pestanya.HISTORIAL && vm.resum?.actual == false) Sepia else Fons
     // L'avís per desfer l'última resposta (maqueta 17): uns 10 segons
     val avisos = remember { SnackbarHostState() }
     val context = LocalContext.current
     val desfer = vm.desfer
     LaunchedEffect(desfer) {
         if (desfer == null) return@LaunchedEffect
+        // En girar la pantalla l'avís es tornaria a ensenyar de nou: si ja fa 10 segons que hi era, s'acaba
+        if (System.currentTimeMillis() - desfer.creat > 10_000) {
+            vm.oblidaDesfer(desfer)
+            return@LaunchedEffect
+        }
         val r = avisos.showSnackbar(desfer.text.text(context), context.getString(R.string.desfer_accio), duration = SnackbarDuration.Long)
         if (r == SnackbarResult.ActionPerformed) vm.desfes(desfer) else vm.oblidaDesfer(desfer)
     }
+    val pendents = vm.pendents
     Scaffold(
-        containerColor = fons,
+        containerColor = Fons,
         snackbarHost = { SnackbarHost(avisos) },
         topBar = {
             TopAppBar(
-                title = { Text(titol) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = fons),
+                title = {
+                    // A l'Historial, el període va a la barra de dalt (maqueta 18)
+                    if (principal && vm.pestanya == Pestanya.HISTORIAL) {
+                        Box(Modifier.padding(end = 8.dp)) { Pestanyes(Periode.entries, vm.periode, { stringResource(it.nomId) }, vm::triaPeriode) }
+                    } else {
+                        Text(titol, fontSize = 21.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.01).em, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Fons, titleContentColor = TextPrincipal, actionIconContentColor = Suau, navigationIconContentColor = TextPrincipal),
                 navigationIcon = {
                     if (!principal && vm.config.configurat) {
-                        IconButton(onClick = { vm.pantalla = Pantalla.PRINCIPAL }) {
+                        IconButton(onClick = vm::enrere) {
                             Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.principal_enrere))
                         }
                     }
                 },
                 actions = {
                     if (principal) {
-                        if (vm.sincronitzant || vm.recalculant) {
-                            Box(Modifier.padding(12.dp)) { CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) }
-                        } else {
-                            IconButton(onClick = vm::sincronitza) { Icon(Icons.Outlined.Sync, stringResource(R.string.principal_recull_dades)) }
+                        if (vm.pestanya == Pestanya.PER_FER && pendents > 0) {
+                            Text(pluralStringResource(R.plurals.perfer_pendents, pendents, pendents), Modifier.padding(end = 4.dp), fontSize = 13.sp, color = Suau)
                         }
-                        IconButton(onClick = { vm.pantalla = Pantalla.CONNECTA }) { Icon(Icons.Outlined.Settings, stringResource(R.string.principal_configuracio)) }
+                        // A l'Historial el període ocupa el títol: el botó de sincronitzar no hi cap amb un mòbil estret (es pot fer des de les altres pestanyes)
+                        if (vm.pestanya != Pestanya.HISTORIAL) {
+                            if (vm.sincronitzant || vm.recalculant) {
+                                Box(Modifier.padding(12.dp)) { CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) }
+                            } else {
+                                IconButton(onClick = vm::sincronitza) { Icon(Icons.Outlined.Sync, stringResource(R.string.principal_recull_dades)) }
+                            }
+                        }
+                        IconButton(onClick = { vm.seccioConfig = null; vm.pantalla = Pantalla.CONNECTA }) { Icon(Icons.Outlined.Settings, stringResource(R.string.principal_configuracio)) }
                     }
                 },
             )
@@ -231,7 +262,7 @@ private fun Arrel(vm: ConsumViewModel) {
                     onClick = { vm.pantalla = Pantalla.AFEGIR },
                     modifier = Modifier.semantics { contentDescription = afegeix },
                     containerColor = Primari, contentColor = SobrePrimari,
-                    icon = { Icon(Icons.Outlined.Add, null) }, text = { Text(afegeix) },
+                    icon = { Icon(Icons.Outlined.Add, null) }, text = { Text(stringResource(R.string.aparells_afegeix)) },
                 )
             }
         },
@@ -243,19 +274,25 @@ private fun Arrel(vm: ConsumViewModel) {
                             selected = vm.pestanya == p,
                             onClick = { vm.pestanya = p },
                             icon = {
-                                Icon(
-                                    when (p) {
-                                        Pestanya.ARA -> Icons.Outlined.Home
-                                        Pestanya.APARELLS -> Icons.Outlined.Devices
-                                        Pestanya.ENTRENA -> Icons.Outlined.School
-                                        Pestanya.HISTORIAL -> Icons.Outlined.BarChart
-                                    },
-                                    null,
-                                )
+                                val icona = when (p) {
+                                    Pestanya.ARA -> Icons.Outlined.Home
+                                    Pestanya.APARELLS -> Icons.AutoMirrored.Outlined.FormatListBulleted
+                                    Pestanya.PER_FER -> Icons.Outlined.Inbox
+                                    Pestanya.HISTORIAL -> Icons.Outlined.BarChart
+                                }
+                                // El globus de «Per fer»: quantes coses hi ha per contestar (maqueta 18)
+                                if (p == Pestanya.PER_FER && pendents > 0) {
+                                    BadgedBox(badge = { Badge(containerColor = Desconegut, contentColor = androidx.compose.ui.graphics.Color.White) { Text("$pendents") } }) { Icon(icona, null) }
+                                } else {
+                                    Icon(icona, null)
+                                }
                             },
                             // Una sola línia: amb la lletra gran, «Geschiedenis» es partia en dues
                             label = { Text(stringResource(p.nomId), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            colors = NavigationBarItemDefaults.colors(selectedIconColor = Primari, indicatorColor = PrimariFluix),
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Primari, selectedTextColor = Primari, indicatorColor = PrimariFluix,
+                                unselectedIconColor = Suau, unselectedTextColor = Suau,
+                            ),
                         )
                     }
                 }
@@ -276,7 +313,7 @@ private fun Arrel(vm: ConsumViewModel) {
                 Pantalla.PRINCIPAL -> when (vm.pestanya) {
                     Pestanya.ARA -> PantallaAra(vm)
                     Pestanya.APARELLS -> PantallaAparells(vm)
-                    Pestanya.ENTRENA -> PantallaEntrena(vm)
+                    Pestanya.PER_FER -> PantallaPerFer(vm)
                     Pestanya.HISTORIAL -> PantallaHistorial(vm)
                 }
             }

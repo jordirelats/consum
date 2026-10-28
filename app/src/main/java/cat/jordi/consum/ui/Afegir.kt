@@ -15,7 +15,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,7 +42,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.QrCodeScanner
@@ -55,6 +60,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -71,6 +77,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -80,6 +87,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -107,19 +115,35 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.Normalizer
 
-private enum class Via(@StringRes val nomId: Int) {
-    QR(R.string.afegir_via_qr), PLACA(R.string.afegir_via_placa), MARCA(R.string.marca_via), SENSE(R.string.afegir_via_sense)
+/** Com s'afegeix un aparell: l'etiqueta (el QR), la placa, la marca i el model, o només el tipus. */
+private enum class Via(@StringRes val nomId: Int, @StringRes val textId: Int, val icona: ImageVector) {
+    QR(R.string.afegir_via_qr_titol, R.string.afegir_via_qr_text, Icons.Outlined.QrCodeScanner),
+    PLACA(R.string.afegir_via_placa_titol, R.string.afegir_via_placa_text, Icons.Outlined.PhotoCamera),
+    MARCA(R.string.afegir_via_marca_titol, R.string.afegir_via_marca_text, Icons.Outlined.Keyboard),
+    SENSE(R.string.afegir_via_sense_titol, R.string.afegir_via_sense_text, Icons.Outlined.GridView),
 }
 
+/** Els tipus que es proposen d'entrada al pas 1; els altres, amb el cercador o «Tots els tipus». */
+private val tipusHabituals = listOf(
+    Categoria.NEVERA, Categoria.RENTADORA, Categoria.RENTAPLATS, Categoria.FORN, Categoria.PLACA, Categoria.MICROONES,
+    Categoria.BULLIDOR, Categoria.AIRE, Categoria.ESTUFA, Categoria.TERMO, Categoria.COTXE, Categoria.TELEVISOR,
+)
+
+/**
+ * Afegir un aparell, en dos passos (maqueta 18): primer quin aparell és (el tipus), i després com es vol afegir. El que s'ha
+ * compartit amb Consum (un enllaç de l'EPREL, una foto) salta el primer pas: el tipus ve de la fitxa, o es tria dins.
+ */
 @Composable
 fun PantallaAfegir(vm: ConsumViewModel) {
-    var via by rememberSaveable { mutableStateOf(if (Compartit.rebut is Rebut.Fitxer) Via.PLACA else Via.QR) }
-    // El que s'ha compartit amb Consum va a la pestanya que el llegeix, i aquella el recull
+    var categoria by rememberSaveable { mutableStateOf<Categoria?>(null) }
+    var via by rememberSaveable { mutableStateOf<Via?>(null) }
+    var compartit by rememberSaveable { mutableStateOf(false) }
+    // El que s'ha compartit amb Consum va a la via que el llegeix, i aquella el recull
     val rebut = Compartit.rebut
     LaunchedEffect(rebut) {
         when (rebut) {
-            is Rebut.Registre -> via = Via.QR
-            is Rebut.Fitxer -> via = Via.PLACA
+            is Rebut.Registre -> { categoria = null; via = Via.QR; compartit = true }
+            is Rebut.Fitxer -> { categoria = null; via = Via.PLACA; compartit = true }
             null -> {}
         }
     }
@@ -128,22 +152,117 @@ fun PantallaAfegir(vm: ConsumViewModel) {
         vm.pantalla = Pantalla.PRINCIPAL
         vm.pestanya = Pestanya.APARELLS
     }
+    val c = categoria
+    // La via que es mostra: la triada si val per a aquest tipus; si no, la recomanada (no s'escriu l'estat durant la composició)
+    val vies = if (c != null) Via.entries.filter { it != Via.QR && it != Via.MARCA || Eprel.grups(c).isNotEmpty() } else Via.entries
+    val recomanada = if (c == null || Eprel.grups(c).isNotEmpty()) Via.QR else Via.SENSE
+    val viaActiva = if (c != null) via?.takeIf { it in vies } ?: recomanada else via
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Pestanyes(Via.entries, via, { stringResource(it.nomId) }) { via = it }
-        when (via) {
-            Via.QR -> AmbQr(acaba)
-            Via.PLACA -> AmbPlaca(acaba)
-            Via.MARCA -> AmbMarca(acaba) { via = Via.PLACA }
-            Via.SENSE -> AmbTipus(vm.resumMes?.preuMitja ?: vm.infoPreu?.ara?.preu ?: vm.config.tarifa.preuFix, acaba)
+        if (c == null && !compartit) {
+            Pas1 { categoria = it; via = null }
+            return@Column
+        }
+        if (c != null) {
+            // El que s'ha triat al pas 1, amb «Canvia»
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(PrimariFluix).padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Cercle(icona(c), EstatIcona.SAP, 30.dp)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.afegir_pas1_aparell), fontSize = 10.5.sp, color = Suau)
+                    Text(stringResource(c.nomId), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
+                Enllac(stringResource(R.string.cerca_tipus_canvia)) { categoria = null; via = null; compartit = false }
+            }
+            Pas(stringResource(R.string.afegir_pas2_titol), stringResource(R.string.afegir_pas_de, 2, 2))
+            // Les opcions, de dues en dues
+            vies.chunked(2).forEach { parell ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    parell.forEach { v -> OpcioVia(v, v == viaActiva, v == recomanada, Modifier.weight(1f)) { via = v } }
+                    if (parell.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+        when (viaActiva) {
+            Via.QR -> AmbQr(c, acaba)
+            Via.PLACA -> AmbPlaca(c, acaba)
+            Via.MARCA -> if (c != null) AmbMarca(c, acaba) { via = Via.PLACA }
+            Via.SENSE -> if (c != null) AmbTipus(c, vm.resumMes?.preuMitja ?: vm.infoPreu?.ara?.preu ?: vm.config.tarifa.preuFix, acaba)
+            null -> {}
+        }
+    }
+}
+
+/** «Quin aparell és?  Pas 1 de 2». */
+@Composable
+private fun Pas(titol: String, pas: String) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.Bottom) {
+        Text(titol, Modifier.weight(1f), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text(pas, fontSize = 11.5.sp, color = Suau)
+    }
+}
+
+/** El pas 1: el cercador del tipus i, a sota, els habituals per triar d'un toc; «Tots els tipus» obre la llista sencera. */
+@Composable
+private fun Pas1(tria: (Categoria) -> Unit) {
+    val context = LocalContext.current
+    var cerca by rememberSaveable { mutableStateOf("") }
+    var tots by rememberSaveable { mutableStateOf(false) }
+    Pas(stringResource(R.string.afegir_quin_aparell), stringResource(R.string.afegir_pas_de, 1, 2))
+    OutlinedTextField(
+        cerca, { cerca = it }, Modifier.fillMaxWidth(), placeholder = { Text(stringResource(R.string.afegir_busca_tipus)) },
+        leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, shape = RoundedCornerShape(14.dp),
+        trailingIcon = {
+            if (cerca.isNotEmpty()) IconButton(onClick = { cerca = "" }) { Icon(Icons.Outlined.Close, stringResource(R.string.cerca_tipus_esborra)) }
+        },
+    )
+    val buscat = pla(cerca)
+    val llista = when {
+        buscat.isNotEmpty() -> Categoria.entries.filter { c ->
+            val noms = listOf(context.getString(c.nomId)) + (paraules[c]?.let { context.getString(it).split(',') } ?: emptyList())
+            noms.any { pla(it).contains(buscat) }
+        }
+        tots -> Categoria.entries
+        else -> tipusHabituals
+    }
+    Text(
+        stringResource(if (buscat.isEmpty()) R.string.afegir_o_tria else R.string.afegir_trobats).uppercase(Idioma.locale),
+        Modifier.padding(start = 2.dp, top = 2.dp), fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = Suau, letterSpacing = 0.05.em,
+    )
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        llista.forEach { c -> Xip(stringResource(c.nomId), icona = icona(c)) { tria(c) } }
+        // Si no en surt cap, sempre hi ha «Un altre»
+        if (llista.isEmpty()) Xip(stringResource(Categoria.ALTRES.nomId), icona = icona(Categoria.ALTRES)) { tria(Categoria.ALTRES) }
+    }
+    if (llista.isEmpty()) Nota(stringResource(R.string.cerca_tipus_cap))
+    if (buscat.isEmpty() && !tots) {
+        Enllac(stringResource(R.string.afegir_tots_tipus), icona = Icons.Outlined.ChevronRight) { tots = true }
+    }
+}
+
+/** Una de les maneres d'afegir-lo: una targeta amb la icona, el títol (i «Recomanat») i una línia. */
+@Composable
+private fun OpcioVia(v: Via, triada: Boolean, recomanada: Boolean, modifier: Modifier, tria: () -> Unit) {
+    Surface(
+        modifier.clickable(onClick = tria), shape = RoundedCornerShape(14.dp), color = Superficie,
+        border = BorderStroke(if (triada) 1.5.dp else 1.dp, if (triada) Primari else Vora),
+    ) {
+        Column(Modifier.padding(10.dp)) {
+            Cercle(v.icona, if (triada) EstatIcona.SAP else EstatIcona.NEUTRE, 30.dp)
+            Text(stringResource(v.nomId), Modifier.padding(top = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, lineHeight = 16.sp)
+            if (recomanada) Text(stringResource(R.string.afegir_recomanat).uppercase(Idioma.locale), fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Primari, letterSpacing = 0.06.em)
+            Text(stringResource(v.textId), Modifier.padding(top = 2.dp), fontSize = 11.sp, color = Suau, lineHeight = 14.sp)
         }
     }
 }
 
 @Composable
-private fun ColumnScope.AmbQr(acaba: (Aparell) -> Unit) {
+private fun ColumnScope.AmbQr(categoria: Categoria?, acaba: (Aparell) -> Unit) {
     val context = LocalContext.current
     val abast = rememberCoroutineScope()
     var buscant by remember { mutableStateOf(false) }
@@ -166,7 +285,7 @@ private fun ColumnScope.AmbQr(acaba: (Aparell) -> Unit) {
         abast.launch {
             val r = withContext(Dispatchers.IO) { runCatching { Eprel.fitxa(numero) } }
             buscant = false
-            r.onSuccess { fitxa = it; nom = context.getString(it.categoria.nomId) }
+            r.onSuccess { fitxa = it; nom = context.getString((categoria ?: it.categoria).nomId) }
                 .onFailure { error = it.missatge(context) ?: context.getString(R.string.afegir_error_eprel) }
         }
     }
@@ -184,7 +303,7 @@ private fun ColumnScope.AmbQr(acaba: (Aparell) -> Unit) {
     }
 
     Targeta {
-        TitolTargeta(stringResource(R.string.afegir_qr_titol))
+        Text(stringResource(R.string.afegir_qr_titol), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         Nota(stringResource(R.string.afegir_qr_nota))
         Spacer(Modifier.height(10.dp))
         Button(onClick = {
@@ -209,11 +328,16 @@ private fun ColumnScope.AmbQr(acaba: (Aparell) -> Unit) {
     }
     if (buscant) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
     error?.let { Text(it, color = DesconegutText, fontSize = 14.sp) }
-    fitxa?.let { f ->
+    fitxa?.let { f0 ->
+        val f = if (categoria != null) f0.copy(categoria = categoria) else f0
         Targeta {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Check, null, tint = Ok, modifier = Modifier.padding(end = 6.dp))
                 Text(stringResource(R.string.afegir_trobat_eprel, f.numero), color = Ok, fontSize = 13.sp)
+            }
+            // L'etiqueta és d'un altre tipus del que s'ha triat al pas 1: mana el que ha triat l'usuari, però es diu
+            if (categoria != null && f0.categoria != categoria) {
+                Text(stringResource(R.string.afegir_tipus_diferent, stringResource(f0.categoria.nomId), stringResource(categoria.nomId)), Modifier.padding(top = 4.dp), fontSize = 13.sp, color = DesconegutText)
             }
             Text(
                 if (f.classe.isNotBlank()) stringResource(R.string.afegir_tipus_i_classe, stringResource(f.categoria.nomId), f.classe)
@@ -246,11 +370,10 @@ private data class CercaMarca(val grups: List<String>, val variants: VariantsMod
  * Si no hi surt, es pot buscar a internet, fer una foto de la placa o afegir-lo amb el consum a mà.
  */
 @Composable
-private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
+private fun ColumnScope.AmbMarca(categoria: Categoria, acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
     val context = LocalContext.current
     val abast = rememberCoroutineScope()
     val teclat = LocalSoftwareKeyboardController.current
-    var categoria by rememberSaveable { mutableStateOf<Categoria?>(null) }
     var marca by rememberSaveable { mutableStateOf("") }
     var model by rememberSaveable { mutableStateOf("") }
     var ajuda by rememberSaveable { mutableStateOf(false) }
@@ -265,16 +388,16 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
     var nomTrobat by remember { mutableStateOf("") }
     // El nom del formulari a mà: mentre no s'escriu, «<Marca> <Model>» o el tipus d'aparell
     var nom by rememberSaveable { mutableStateOf<String?>(null) }
-    var kwh by rememberSaveable { mutableStateOf("") }
+    var kwh by rememberSaveable { mutableStateOf(num(categoria.kwhAnyTipic)) }
     var tocat by rememberSaveable { mutableStateOf(false) }
     val buscant = cerca != null || llegint
     val text = "${marca.trim()} ${model.trim()}".trim()
-    val c = categoria
-    val grups = c?.let(Eprel::grups).orEmpty()
+    val c: Categoria = categoria
+    val grups = Eprel.grups(c)
 
     fun busca() {
         val v = variantsModel(model)
-        if (c == null || grups.isEmpty() || v.models.isEmpty() || buscant) return
+        if (grups.isEmpty() || v.models.isEmpty() || buscant) return
         teclat?.hide()
         fitxes = emptyList()
         trobat = null
@@ -316,19 +439,6 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
         return
     }
     Targeta {
-        TitolTargeta(stringResource(R.string.afegir_quin_aparell))
-        TriaCategoria(categoria) { nova ->
-            if (nova != categoria) {
-                categoria = nova
-                cerca = null
-                feina?.cancel()
-                fitxes = emptyList()
-                noTrobat = false
-                error = null
-                if (!tocat) kwh = num(nova.kwhAnyTipic)
-            }
-        }
-        Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             marca, { marca = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.marca_marca)) }, singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
@@ -360,7 +470,7 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
             }
         }
     }
-    if (buscant && c != null) {
+    if (buscant) {
         Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
             cerca?.let { cr -> key(cr) { CercaEprelWeb(cr.grups, cr.variants.models, cr.variants.exactes) { trobats(it, c) } } }
             CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
@@ -368,7 +478,7 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
         }
     }
     val t = trobat
-    if (c != null && t != null && fitxes.isNotEmpty()) {
+    if (t != null && fitxes.isNotEmpty()) {
         Targeta {
             // Si no s'ha hagut d'escurçar: l'ha trobat (potser sense el «/01»); si no, són els que s'hi assemblen
             TitolTargeta(stringResource(if (t.exacte) R.string.marca_trobat else R.string.marca_potser))
@@ -386,7 +496,7 @@ private fun ColumnScope.AmbMarca(acaba: (Aparell) -> Unit, aPlaca: () -> Unit) {
     val noSurt = grups.isEmpty() || noTrobat || error != null || aproximat
     // Qui no en sap el model també l'ha de poder afegir, amb el valor típic
     val senseModel = !noSurt && model.isBlank() && fitxes.isEmpty() && !buscant
-    if (c != null && (noSurt || senseModel)) {
+    if (noSurt || senseModel) {
         Targeta {
             TitolTargeta(stringResource(if (aproximat) R.string.marca_cap_daquests else if (noSurt) R.string.marca_no_surt else R.string.marca_sense_model))
             if (noSurt) {
@@ -620,7 +730,7 @@ internal fun TriaCategoria(triada: Categoria?, enTriar: (Categoria) -> Unit) {
  * Tesseract i en treu la potència. L'usuari la pot corregir i diu quantes hores al dia funciona l'aparell.
  */
 @Composable
-private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
+private fun ColumnScope.AmbPlaca(categoria0: Categoria?, acaba: (Aparell) -> Unit) {
     val context = LocalContext.current
     val abast = rememberCoroutineScope()
     var foto by remember { mutableStateOf<Bitmap?>(null) }
@@ -628,8 +738,8 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
     var lectura by remember { mutableStateOf<LecturaPlaca?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var w by rememberSaveable { mutableStateOf("") }
-    var categoria by rememberSaveable { mutableStateOf<Categoria?>(null) }
-    var nom by rememberSaveable { mutableStateOf("") }
+    var categoria by rememberSaveable { mutableStateOf(categoria0) }
+    var nom by rememberSaveable { mutableStateOf(categoria0?.let { context.getString(it.nomId) } ?: "") }
     var hores by rememberSaveable { mutableStateOf("") }
     // Mentre l'usuari no les toqui, les hores surten del consum típic del tipus d'aparell i de la potència
     var horesTocades by rememberSaveable { mutableStateOf(false) }
@@ -709,7 +819,7 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
     }
 
     Targeta {
-        TitolTargeta(stringResource(R.string.afegir_placa_titol))
+        Text(stringResource(R.string.afegir_placa_titol), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         Nota(stringResource(R.string.afegir_placa_nota))
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -751,8 +861,9 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
             }
             if (veureText) Nota(if (l.text.isBlank()) stringResource(R.string.afegir_res) else l.text)
         }
-        Targeta {
-            TitolTargeta(stringResource(R.string.afegir_quin_aparell))
+        // Si la foto ha vingut compartida, el tipus es tria aquí
+        if (categoria0 == null) Targeta {
+            Text(stringResource(R.string.afegir_quin_aparell), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             TriaCategoria(categoria) { c ->
                 categoria = c
                 if (nom.isBlank() || Categoria.entries.any { context.getString(it.nomId) == nom }) nom = context.getString(c.nomId)
@@ -827,22 +938,11 @@ private fun ColumnScope.AmbPlaca(acaba: (Aparell) -> Unit) {
  * tipus, a escala amb la potència. [preu]: €/kWh, per dir quant costa.
  */
 @Composable
-private fun ColumnScope.AmbTipus(preu: Double, acaba: (Aparell) -> Unit) {
+private fun ColumnScope.AmbTipus(c: Categoria, preu: Double, acaba: (Aparell) -> Unit) {
     val context = LocalContext.current
-    var categoria by rememberSaveable { mutableStateOf<Categoria?>(null) }
-    var nom by rememberSaveable { mutableStateOf("") }
-    var funciona by rememberSaveable { mutableStateOf(Funcionament.JO) }
-    var w by rememberSaveable { mutableStateOf("") }
-    Targeta {
-        TitolTargeta(stringResource(R.string.afegir_quin_aparell))
-        TriaCategoria(categoria) { c ->
-            categoria = c
-            if (nom.isBlank() || Categoria.entries.any { context.getString(it.nomId) == nom }) nom = context.getString(c.nomId)
-            funciona = c.funciona
-            w = num(c.wTipic)
-        }
-    }
-    val c = categoria ?: return
+    var nom by rememberSaveable { mutableStateOf(context.getString(c.nomId)) }
+    var funciona by rememberSaveable { mutableStateOf(c.funciona) }
+    var w by rememberSaveable { mutableStateOf(num(c.wTipic)) }
     Targeta {
         OutlinedTextField(nom, { nom = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.afegir_nom)) }, singleLine = true)
         Text(stringResource(R.string.afegir_sense_com), Modifier.padding(top = 10.dp, bottom = 2.dp), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)

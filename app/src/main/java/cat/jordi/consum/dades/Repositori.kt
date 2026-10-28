@@ -28,7 +28,11 @@ enum class Periode(@StringRes val nomId: Int) {
 data class Estona(val desDe: Long, val finsA: Long, val punts: List<Punt>, val trams: List<TramPassat>, val aproximada: Boolean)
 
 /** Una barra de l'historial: una hora o un dia. */
-data class Barra(val etiqueta: String, val hora: Hora)
+/**
+ * Una barra de l'historial: una hora, un dia o un mes. [perAparell]: els kWh de cada aparell dins de la barra (per id), de les
+ * seves vegades, repartides pel temps que hi cauen (maqueta 18: les barres amb els colors del rànquing).
+ */
+data class Barra(val etiqueta: String, val hora: Hora, val perAparell: Map<Long, Double> = emptyMap())
 
 /** Els euros d'un període: cada kWh al preu de la seva hora, i els costos fixos dels dies del període a part. */
 data class Euros(val sempre: Double, val linia: Double, val desconegut: Double, val fixos: Double) {
@@ -309,11 +313,25 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         val llista = if (finsA > desDe) perHores(desDe, finsA, fons) else emptyList()
         fun suma(hores: List<Hora>, ts: Long) =
             Hora(ts, hores.sumOf { it.sempre }, hores.sumOf { it.linia }, hores.sumOf { it.desconegut }, hores.sumOf { it.nuvol })
+        // Les vegades del període, un sol cop: per a les barres (les que tenen aparell, repartides pel temps que hi cauen) i el rànquing
+        val totesVegades = if (finsA > desDe) bd.vegades(desDe, finsA) else emptyList()
+        val ambAparell = totesVegades.filter { it.aparellId != null }
+        fun perAparell(t0: Long, t1: Long): Map<Long, Double> {
+            val m = HashMap<Long, Double>()
+            for (v in ambAparell) {
+                val vf = v.fi + 60
+                val solap = minOf(vf, t1) - maxOf(v.ts, t0)
+                if (solap <= 0) continue
+                val a = v.aparellId!!
+                m[a] = (m[a] ?: 0.0) + v.kwh * solap / (vf - v.ts).coerceAtLeast(1)
+            }
+            return m
+        }
         val barres = when (periode) {
             Periode.DIA -> {
                 val hores = llista.associateBy { it.ts }
                 (desDe until iniciDia(fi) step 3600L).map { ts ->
-                    Barra("${Instant.ofEpochSecond(ts).atZone(zona).hour}", hores[ts] ?: Hora(ts, 0.0, 0.0, 0.0))
+                    Barra("${Instant.ofEpochSecond(ts).atZone(zona).hour}", hores[ts] ?: Hora(ts, 0.0, 0.0, 0.0), perAparell(ts, ts + 3600))
                 }
             }
             Periode.SETMANA, Periode.MES -> {
@@ -322,13 +340,17 @@ class Repositori(val config: Config, private val bd: BaseDades) {
                     val etiqueta = if (periode == Periode.SETMANA)
                         d.dayOfWeek.getDisplayName(TextStyle.SHORT, Idioma.locale).removeSuffix(".")
                     else d.dayOfMonth.toString()
-                    Barra(etiqueta, suma(perDia[d].orEmpty(), iniciDia(d)))
+                    Barra(etiqueta, suma(perDia[d].orEmpty(), iniciDia(d)), perAparell(iniciDia(d), iniciDia(d.plusDays(1))))
                 }.toList()
             }
             Periode.ANY -> {
                 val perMes = llista.groupBy { Instant.ofEpochSecond(it.ts).atZone(zona).monthValue }
                 (1..12).map { m ->
-                    Barra(primer.withMonth(m).month.getDisplayName(TextStyle.NARROW_STANDALONE, Idioma.locale).uppercase(Idioma.locale), suma(perMes[m].orEmpty(), iniciDia(primer.withMonth(m))))
+                    val mes = primer.withMonth(m)
+                    Barra(
+                        mes.month.getDisplayName(TextStyle.NARROW_STANDALONE, Idioma.locale).uppercase(Idioma.locale), suma(perMes[m].orEmpty(), iniciDia(mes)),
+                        perAparell(iniciDia(mes), iniciDia(mes.plusMonths(1))),
+                    )
                 }
             }
         }
@@ -348,7 +370,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             barres, sempre, linia, desconegut,
             fons.takeIf { it > 0 }?.times(60), euros, finsA > desDe && bd.teAproximats(desDe, finsA),
             primer, fi, !avui.isBefore(primer) && avui.isBefore(fi), anteriorKwh, primerDades,
-            if (finsA > desDe) ranquing(desDe, finsA, fons, sempre, linia, desconegut, euros, preus) else null,
+            if (finsA > desDe) ranquing(desDe, finsA, fons, sempre, linia, desconegut, euros, preus, totesVegades) else null,
         )
     }
 
@@ -377,6 +399,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
      */
     private fun ranquing(
         desDe: Long, finsA: Long, fonsWh: Double, sempre: Double, linia: Double, desconegut: Double, euros: Euros, p: Preus,
+        vegades: List<Vegada> = bd.vegades(desDe, finsA),
     ): Ranquing {
         val tots = bd.aparells()
         val perId = tots.associateBy { it.id }
@@ -386,7 +409,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
         var senseIdEuros = 0.0
         var ep0 = 0.0
         var liniaAssignada = 0.0
-        for (v in bd.vegades(desDe, finsA)) {
+        for (v in vegades) {
             // Una vegada que passa de mitjanit (el cotxe, de les 19:54 a les 3:00) es reparteix entre els dos dies
             val kwh = v.kwh * part(v, desDe, finsA)
             if (v.canal == 0) ep0 += kwh
@@ -426,7 +449,7 @@ class Repositori(val config: Config, private val bd: BaseDades) {
             // La línia sense aparells surt sencera, com un més; si hi ha un aparell amb el seu nom (d'abans de la 0.25), és ell.
             // Sense nom (s'ha tret la pinça 2 però hi ha dades d'abans), la pantalla hi posa «pinça 2»
             val ella = tots.firstOrNull { esLinia(it) }
-            files += FilaRanquing(ella, ella?.nom ?: config.nomLinia, linia, euros.linia, 0, 0, true)
+            files += FilaRanquing(ella, ella?.nom ?: config.nomLinia, linia, euros.linia, 0, 0, true, esLinia = true)
         }
         val liniaAltres = if (ambAparells) max(linia - liniaAssignada - liniaAprox, 0.0) else 0.0
         val preuLinia = if (linia > 0.01) euros.linia / linia else preuResta

@@ -206,6 +206,7 @@ private fun ElementDelPic(vm: ConsumViewModel, e: ElementPic, total: Double) {
                     // Un aparell nou d'una vegada de la pinça 2 és de la pinça 2
                     nou = { vm.responVegada(e.vegada, null, it.copy(linia = e.vegada.canal == 1)) },
                     senseLinia = e.vegada.canal == 0 && vm.config.teLinia && e.suggerits.none { it.linia } && vm.aparellsLinia.isNotEmpty(),
+                    nomLinia = vm.config.nomLinia,
                 )
             }
         }
