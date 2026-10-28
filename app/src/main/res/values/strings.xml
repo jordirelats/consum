@@ -1212,4 +1212,31 @@
     <string name="credits_zxing">l\'escàner del QR de l\'etiqueta</string>
     <string name="credits_compose">la interfície i les icones</string>
     <string name="credits_kotlin">el llenguatge de programació</string>
+
+    <!-- Privadesa i exactitud (1.0.2) -->
+    <string name="privadesa_titol">Privadesa i exactitud</string>
+    <string name="privadesa_text">Les dades del consum queden al mòbil: l\'app no té cap servidor, no envia estadístiques i no demana cap compte. Només parla amb el Shelly (a casa, o pel núvol de Shelly amb la teva clau, que no surt del mòbil), amb l\'EPREL quan afegeixes un aparell, amb EnergyZero o Red Eléctrica per baixar els preus, i amb GitHub per mirar si hi ha una versió nova.</string>
+    <string name="exactitud_text">El total de la casa és el que mesura el Shelly. El repartiment per aparells és una estimació: amb una pinça per a tota la casa, els aparells de potència semblant o que s\'encenen alhora es poden confondre. Els euros surten de la tarifa que hi posis, no de la factura.</string>
+
+    <!-- La còpia de seguretat i el pas a Wakker (1.0.2) -->
+    <string name="copia_titol">Còpia de seguretat</string>
+    <string name="copia_text">La base de dades i la configuració en un fitxer: per canviar de mòbil, o per passar a Wakker.</string>
+    <string name="copia_desa">Desa una còpia</string>
+    <string name="copia_desa_text">a Baixades, al Drive, on vulguis</string>
+    <string name="copia_restaura">Restaura una còpia</string>
+    <string name="copia_restaura_text">substitueix tot el que hi ha ara</string>
+    <string name="copia_confirma">Vols restaurar la còpia? Tot el que hi ha ara a l\'app (les dades, els aparells, el que has ensenyat i la configuració) se substituirà pel que hi havia a la còpia.</string>
+    <string name="copia_desada">Còpia desada.</string>
+    <string name="copia_restaurada">Còpia restaurada: la del %1$s.</string>
+    <string name="copia_error">No s\'ha pogut: %1$s</string>
+    <string name="copia_no_valida">Aquest fitxer no és una còpia de Consum.</string>
+    <string name="copia_massa_nova">La còpia és d\'una versió més nova de l\'app: actualitza l\'app primer.</string>
+    <string name="copia_primera">Tens una còpia de seguretat? Restaura-la</string>
+    <string name="copia_restaurant">Restaurant la còpia…</string>
+    <string name="copia_desant">Desant la còpia…</string>
+    <string name="wakker_titol">Consum ara es diu Wakker</string>
+    <string name="wakker_text">És la mateixa app amb un nom nou. Fes una còpia de seguretat (Configuració → Dades), instal·la Wakker, restaura-hi la còpia i després desinstal·la Consum.</string>
+    <string name="wakker_copia">Fes la còpia</string>
+    <string name="wakker_installa">Instal·la Wakker</string>
+    <string name="config_copia">còpia de seguretat</string>
 </resources>

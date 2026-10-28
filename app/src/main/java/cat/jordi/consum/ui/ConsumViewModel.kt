@@ -1,5 +1,6 @@
 package cat.jordi.consum.ui
 
+import cat.jordi.consum.dades.ErrorUsuari
 import cat.jordi.consum.dades.TipusExport
 import cat.jordi.consum.dades.PeriodeExport
 import cat.jordi.consum.dades.Com
@@ -242,6 +243,10 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     var missatgeActualitzacio by mutableStateOf<TextRecurs?>(null)
         private set
 
+    /** Wakker, l'app que substitueix Consum (1.0.2), si ja té alguna versió publicada: l'avís d'Ara i «Instal·la Wakker». */
+    var wakker by mutableStateOf<VersioNova?>(null)
+        private set
+
     private var bucles: Job? = null
 
     init {
@@ -257,6 +262,8 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
         viewModelScope.launch {
             val r = withContext(Dispatchers.IO) { runCatching { Actualitzacio.comprova(getApplication()) } }
             config.darreraComprovacio = ara
+            // I si Wakker ja hi és (no fa res si no hi arriba)
+            wakker = withContext(Dispatchers.IO) { runCatching { Actualitzacio.wakker() }.getOrNull() }
             r.onSuccess {
                 versioNova = it
                 if (forcat && it == null) missatgeActualitzacio = TextRecurs(R.string.vm_ultima_versio)
@@ -267,8 +274,9 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
     }
 
     /** Baixa la versió nova i obre l'instal·lador. El primer cop cal permetre que Consum instal·li apps. */
-    fun actualitza() {
-        val v = versioNova ?: return
+    /** Baixa i instal·la una versió: la nova de Consum, o Wakker (que s'instal·la al costat, com una app nova). */
+    fun actualitza(versio: VersioNova? = versioNova) {
+        val v = versio ?: return
         val context = getApplication<Application>()
         if (!Actualitzacio.potInstallar(context)) {
             missatgeActualitzacio = TextRecurs(R.string.vm_permet_installar)
@@ -282,6 +290,56 @@ class ConsumViewModel(app: Application, private val desat: SavedStateHandle) : A
             progresActualitzacio = null
             r.onSuccess { Actualitzacio.installa(context, it) }
                 .onFailure { missatgeActualitzacio = TextRecurs(R.string.vm_no_s_ha_pogut_baixar, it.missatge(context).orEmpty()) }
+        }
+    }
+
+    // ---------- La còpia de seguretat (1.0.2) ----------
+    var copiant by mutableStateOf(false)
+        private set
+    var missatgeCopia by mutableStateOf<TextRecurs?>(null)
+        private set
+
+    /** Desa la còpia (la base de dades i la configuració) al fitxer que ha triat l'usuari. */
+    fun desaCopia(uri: Uri) {
+        val context = getApplication<Application>()
+        viewModelScope.launch {
+            copiant = true
+            missatgeCopia = TextRecurs(R.string.copia_desant)
+            val r = withContext(Dispatchers.IO) {
+                runCatching {
+                    (context.contentResolver.openOutputStream(uri, "wt") ?: throw ErrorUsuari(R.string.exporta_error)).use { repo.copiaSeguretat(context, Actualitzacio.versioActual(context), it) }
+                }
+            }
+            copiant = false
+            missatgeCopia = r.fold({ TextRecurs(R.string.copia_desada) }, { TextRecurs(R.string.copia_error, it.missatge(context).orEmpty()) })
+        }
+    }
+
+    /** Restaura una còpia en lloc del que hi ha, i torna a començar com si s'acabés d'obrir l'app. */
+    fun restauraCopia(uri: Uri) {
+        val context = getApplication<Application>()
+        viewModelScope.launch {
+            copiant = true
+            missatgeCopia = TextRecurs(R.string.copia_restaurant)
+            val r = withContext(Dispatchers.IO) {
+                runCatching {
+                    (context.contentResolver.openInputStream(uri) ?: throw ErrorUsuari(R.string.exporta_error)).use { repo.restauraCopia(context, it) }
+                }
+            }
+            copiant = false
+            r.onSuccess { m ->
+                missatgeCopia = TextRecurs(R.string.copia_restaurada, m.data)
+                lectura = null
+                haLlegit = false
+                resumCalculat = 0
+                aspecte = config.aspecte
+                Vigilancia.actualitza(context)
+                if (config.configurat) {
+                    pantalla = Pantalla.PRINCIPAL
+                    pestanya = Pestanya.ARA
+                }
+                enPrimerPla(true)
+            }.onFailure { missatgeCopia = TextRecurs(R.string.copia_error, it.missatge(context).orEmpty()) }
         }
     }
 

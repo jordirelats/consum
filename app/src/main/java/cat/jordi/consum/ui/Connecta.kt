@@ -38,6 +38,7 @@ import androidx.compose.material.icons.outlined.Euro
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AssistChip
@@ -152,6 +153,7 @@ private fun LlistaSeccions(vm: ConsumViewModel) {
     ).ifEmpty { listOf(stringResource(R.string.config_avisos_apagats)) }.joinToString(" · ")
     val dades = listOfNotNull(
         if (config.teNuvol) stringResource(if (config.nuvolHores) R.string.config_nuvol_hores_si else R.string.config_nuvol_hores_no) else null,
+        stringResource(R.string.config_copia),
         stringResource(R.string.config_exportar),
     ).joinToString(" · ")
     val aspecte = stringResource(
@@ -367,6 +369,24 @@ private fun SeccioConnexio(vm: ConsumViewModel) {
                     Text(resumTarifa(config.tarifa), fontSize = 14.sp)
                     Nota(stringResource(R.string.connecta_preu_despres))
                 }
+                // Qui ve d'un altre mòbil, o de Consum: la còpia de seguretat, en lloc de tornar-ho a configurar
+                var perConfirmar by remember { mutableStateOf<android.net.Uri?>(null) }
+                val obre = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) perConfirmar = uri }
+                Targeta {
+                    FilaAccio(Icons.Outlined.Restore, stringResource(R.string.copia_primera), stringResource(R.string.copia_restaura_text), !vm.copiant) {
+                        obre.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                    }
+                    if (vm.copiant) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))
+                    vm.missatgeCopia?.let { Text(it.text(), Modifier.padding(top = 4.dp), fontSize = 13.sp, color = Primari) }
+                }
+                perConfirmar?.let { uri ->
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { perConfirmar = null },
+                        text = { Text(stringResource(R.string.copia_confirma)) },
+                        confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.restauraCopia(uri); perConfirmar = null }) { Text(stringResource(R.string.copia_restaura)) } },
+                        dismissButton = { androidx.compose.material3.TextButton(onClick = { perConfirmar = null }) { Text(stringResource(R.string.escaneig_cancella)) } },
+                    )
+                }
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -533,8 +553,56 @@ private fun SeccioAvisos(vm: ConsumViewModel) {
 @Composable
 private fun SeccioDades(vm: ConsumViewModel) {
     Pagina {
+        TargetaCopia(vm)
         if (vm.config.teNuvol) TargetaNuvolHores(vm)
         TargetaExporta(vm)
+    }
+}
+
+/**
+ * La còpia de seguretat (1.0.2): desar-ne una (un zip amb la base de dades i la configuració, on triï l'usuari) i restaurar-ne
+ * una, que substitueix tot el que hi ha (es demana confirmació).
+ */
+@Composable
+private fun TargetaCopia(vm: ConsumViewModel) {
+    var perConfirmar by remember { mutableStateOf<android.net.Uri?>(null) }
+    val desa = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> if (uri != null) vm.desaCopia(uri) }
+    val obre = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) perConfirmar = uri }
+    Targeta {
+        TitolTargeta(stringResource(R.string.copia_titol))
+        Nota(stringResource(R.string.copia_text))
+        Ratlla()
+        FilaAccio(Icons.Outlined.Download, stringResource(R.string.copia_desa), stringResource(R.string.copia_desa_text), !vm.copiant) {
+            desa.launch("consum-copia-${java.time.LocalDate.now()}.zip")
+        }
+        Ratlla()
+        FilaAccio(Icons.Outlined.Restore, stringResource(R.string.copia_restaura), stringResource(R.string.copia_restaura_text), !vm.copiant) {
+            obre.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+        }
+        if (vm.copiant) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))
+        vm.missatgeCopia?.let { Text(it.text(), Modifier.padding(top = 4.dp), fontSize = 13.sp, color = Primari) }
+    }
+    perConfirmar?.let { uri ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { perConfirmar = null },
+            text = { Text(stringResource(R.string.copia_confirma)) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.restauraCopia(uri); perConfirmar = null }) { Text(stringResource(R.string.copia_restaura)) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { perConfirmar = null }) { Text(stringResource(R.string.escaneig_cancella)) } },
+        )
+    }
+}
+
+/** Una fila que fa una cosa en tocar-la: la icona, el títol, una línia i la fletxa. */
+@Composable
+private fun FilaAccio(icona: ImageVector, titol: String, text: String, actiu: Boolean = true, accio: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(enabled = actiu, onClick = accio).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Cercle(icona, EstatIcona.NEUTRE, 32.dp)
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(titol, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(text, fontSize = 11.5.sp, color = Suau)
+        }
+        Icon(Icons.Outlined.ChevronRight, null, Modifier.size(18.dp), tint = Suau)
     }
 }
 
@@ -590,6 +658,12 @@ private fun SeccioSobre(vm: ConsumViewModel) {
             Text(stringResource(R.string.credits_autor), Modifier.padding(top = 8.dp), fontSize = 13.5.sp, lineHeight = 19.sp)
             Text(stringResource(R.string.credits_claude), Modifier.padding(top = 4.dp), fontSize = 13.5.sp, lineHeight = 19.sp)
             Enllac(stringResource(R.string.credits_codi), Modifier.padding(top = 4.dp), icona = Icons.Outlined.ChevronRight) { obreWeb(context, "https://github.com/jordirelats/consum") }
+        }
+        // Què surt del mòbil i què no, i que el repartiment per aparells és aproximat
+        Targeta {
+            TitolTargeta(stringResource(R.string.privadesa_titol))
+            Text(stringResource(R.string.privadesa_text), fontSize = 13.5.sp, lineHeight = 19.sp)
+            Text(stringResource(R.string.exactitud_text), Modifier.padding(top = 8.dp), fontSize = 13.5.sp, lineHeight = 19.sp)
         }
         Targeta {
             TitolTargeta(stringResource(R.string.credits_dades))

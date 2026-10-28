@@ -48,6 +48,28 @@ class Config(context: Context) {
     private var tarifaText: String? = null
     private var tarifaLlegida: Tarifa? = null
 
+    /** Totes les preferències, per a la còpia de seguretat. */
+    fun totes(): Map<String, Any?> = p.all
+
+    /** Posa totes les preferències d'una còpia en lloc de les d'ara, i oblida la tarifa llegida. */
+    fun posaTotes(valors: Map<String, Any>) {
+        p.edit().clear().apply {
+            for ((clau, v) in valors) {
+                when (v) {
+                    is String -> putString(clau, v)
+                    is Boolean -> putBoolean(clau, v)
+                    is Int -> putInt(clau, v)
+                    is Long -> putLong(clau, v)
+                    is Float -> putFloat(clau, v)
+                }
+            }
+        }.commit()
+        synchronized(this) {
+            tarifaText = null
+            tarifaLlegida = null
+        }
+    }
+
     /**
      * Els avisos de consum inesperat: si n'hi ha, a partir de quants W sense explicar i durant quants minuts. Fins a la
      * 0.19 eren 300 W durant 10 minuts, fixos, i saltaven massa (24 vegades en una setmana a Guíxols).

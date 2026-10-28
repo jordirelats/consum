@@ -997,4 +997,31 @@
     <string name="credits_zxing">de QR-scanner van het label</string>
     <string name="credits_compose">de interface en de iconen</string>
     <string name="credits_kotlin">de programmeertaal</string>
+
+    <!-- Privadesa i exactitud (1.0.2) -->
+    <string name="privadesa_titol">Privacy en nauwkeurigheid</string>
+    <string name="privadesa_text">De verbruiksgegevens blijven op de telefoon: de app heeft geen server, stuurt geen statistieken en vraagt geen account. Ze praat alleen met de Shelly (thuis, of via de Shelly-cloud met jouw sleutel, die de telefoon niet verlaat), met EPREL als je een apparaat toevoegt, met EnergyZero of Red Eléctrica om de prijzen op te halen, en met GitHub om te kijken of er een nieuwe versie is.</string>
+    <string name="exactitud_text">Het totaal van het huis is wat de Shelly meet. De verdeling per apparaat is een schatting: met één klem voor het hele huis kunnen apparaten met een vergelijkbaar vermogen, of die tegelijk aangaan, door elkaar gehaald worden. De euro\'s komen uit het tarief dat je invult, niet van de rekening.</string>
+
+    <!-- La còpia de seguretat i el pas a Wakker (1.0.2) -->
+    <string name="copia_titol">Back-up</string>
+    <string name="copia_text">De database en de instellingen in één bestand: om van telefoon te wisselen, of om over te stappen op Wakker.</string>
+    <string name="copia_desa">Back-up maken</string>
+    <string name="copia_desa_text">in Downloads, Drive, waar je wilt</string>
+    <string name="copia_restaura">Back-up terugzetten</string>
+    <string name="copia_restaura_text">vervangt alles wat er nu is</string>
+    <string name="copia_confirma">Wil je de back-up terugzetten? Alles wat nu in de app staat (de gegevens, de apparaten, wat je hebt aangeleerd en de instellingen) wordt vervangen door wat in de back-up stond.</string>
+    <string name="copia_desada">Back-up opgeslagen.</string>
+    <string name="copia_restaurada">Back-up teruggezet: die van %1$s.</string>
+    <string name="copia_error">Het is niet gelukt: %1$s</string>
+    <string name="copia_no_valida">Dit bestand is geen back-up van Consum.</string>
+    <string name="copia_massa_nova">De back-up is van een nieuwere versie van de app: werk de app eerst bij.</string>
+    <string name="copia_primera">Heb je een back-up? Zet die terug</string>
+    <string name="copia_restaurant">Back-up wordt teruggezet…</string>
+    <string name="copia_desant">Back-up wordt opgeslagen…</string>
+    <string name="wakker_titol">Consum heet nu Wakker</string>
+    <string name="wakker_text">Het is dezelfde app met een nieuwe naam. Maak een back-up (Instellingen → Gegevens), installeer Wakker, zet de back-up daar terug en verwijder daarna Consum.</string>
+    <string name="wakker_copia">Back-up maken</string>
+    <string name="wakker_installa">Wakker installeren</string>
+    <string name="config_copia">back-up</string>
 </resources>

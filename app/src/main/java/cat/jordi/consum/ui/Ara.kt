@@ -105,6 +105,19 @@ fun PantallaAra(vm: ConsumViewModel) {
             vm.config.teNuvol -> LiniaEstat(stringResource(R.string.ara_sense_connexio), Desconegut, Modifier.padding(start = 2.dp))
             else -> LiniaEstat(stringResource(R.string.ara_falta_clau), Desconegut, Modifier.padding(start = 2.dp))
         }
+        // Consum passa a dir-se Wakker (1.0.2): quan Wakker ja és publicada, com passar-hi
+        vm.wakker?.let { w ->
+            Targeta(color = DesconegutFluix) {
+                Text(stringResource(R.string.wakker_titol), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.wakker_text), Modifier.padding(top = 4.dp), fontSize = 13.sp, lineHeight = 18.sp)
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Enllac(stringResource(R.string.wakker_copia)) { vm.seccioConfig = SeccioConfig.DADES; vm.pantalla = Pantalla.CONNECTA }
+                    Enllac(stringResource(R.string.wakker_installa)) { vm.actualitza(w) }
+                }
+                vm.progresActualitzacio?.let { androidx.compose.material3.LinearProgressIndicator(progress = { it }, Modifier.fillMaxWidth().padding(top = 6.dp)) }
+                vm.missatgeActualitzacio?.let { Nota(it.text(), Modifier.padding(top = 4.dp)) }
+            }
+        }
         vm.versioNova?.let { v ->
             Targeta(color = PrimariFluix) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

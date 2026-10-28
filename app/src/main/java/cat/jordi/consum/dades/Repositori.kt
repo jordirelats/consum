@@ -1,5 +1,6 @@
 package cat.jordi.consum.dades
 
+import android.content.Context
 import androidx.annotation.StringRes
 import cat.jordi.consum.R
 import cat.jordi.consum.shelly.Lectura
@@ -538,6 +539,20 @@ class Repositori(val config: Config, private val bd: BaseDades) {
 
     private fun haCanviat() {
         calReassignar = true
+    }
+
+    /** La còpia de seguretat (1.0.2): la base de dades i la configuració en un zip. Ningú no escriu mentrestant. */
+    @Synchronized
+    fun copiaSeguretat(context: Context, versioApp: String, sortida: java.io.OutputStream) {
+        synchronized(bloqueigVegades) { synchronized(bloqueigResum) { Copia.escriu(context, bd, config, versioApp, sortida) } }
+    }
+
+    /** Restaura una còpia en lloc del que hi ha. Després, tot es torna a mirar (les vegades, el resum, els avisos). */
+    @Synchronized
+    fun restauraCopia(context: Context, entrada: java.io.InputStream): Copia.Manifest {
+        val m = synchronized(bloqueigVegades) { synchronized(bloqueigResum) { Copia.llegeix(context, bd, config, entrada) } }
+        haCanviat()
+        return m
     }
 
     /** Després de posar o treure la pinça 2: la propera vegada, totes les vegades de nou. */

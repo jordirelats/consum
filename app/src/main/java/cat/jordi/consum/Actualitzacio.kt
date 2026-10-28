@@ -21,6 +21,9 @@ data class VersioNova(val versio: String, val url: String, val notes: String)
 object Actualitzacio {
     const val REPO = "jordirelats/consum"
 
+    /** L'app nova que substitueix Consum (1.0.2): si té alguna versió publicada, Consum ho diu i ajuda a passar-hi. */
+    const val REPO_WAKKER = "jordirelats/wakker"
+
     fun versioActual(context: Context): String =
         context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0"
 
@@ -37,8 +40,14 @@ object Actualitzacio {
     }
 
     /** L'última versió publicada, si és més nova que la instal·lada. */
-    fun comprova(context: Context): VersioNova? {
-        val c = URL("https://api.github.com/repos/$REPO/releases/latest").openConnection() as HttpURLConnection
+    fun comprova(context: Context): VersioNova? = darrera(REPO) { esMesNova(it, versioActual(context)) }
+
+    /** L'última versió de Wakker, si n'hi ha cap. */
+    fun wakker(): VersioNova? = darrera(REPO_WAKKER) { true }
+
+    /** L'última versió publicada d'un repositori, si [val] la dona per bona; null si no n'hi ha cap. */
+    private fun darrera(repo: String, val_: (String) -> Boolean): VersioNova? {
+        val c = URL("https://api.github.com/repos/$repo/releases/latest").openConnection() as HttpURLConnection
         c.connectTimeout = 8000
         c.readTimeout = 8000
         c.setRequestProperty("Accept", "application/vnd.github+json")
@@ -50,7 +59,7 @@ object Actualitzacio {
             c.disconnect()
         }
         val versio = o.getString("tag_name").removePrefix("v")
-        if (!esMesNova(versio, versioActual(context))) return null
+        if (!val_(versio)) return null
         val actius = o.getJSONArray("assets")
         val apk = (0 until actius.length()).map { actius.getJSONObject(it) }.firstOrNull { it.getString("name").endsWith(".apk") }
             ?: return null

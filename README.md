@@ -81,6 +81,12 @@ L'app és en català i en neerlandès. Si el mòbil és en neerlandès, surt en 
 
 Si deixes textos sense traduir, l'app els ensenya en català.
 
+## Privadesa i exactitud
+
+- **Les dades queden al mòbil.** L'app no té cap servidor, no envia estadístiques i no demana cap compte. Només parla amb el Shelly (a casa, o pel núvol de Shelly amb la clau de l'usuari, que no surt del mòbil), amb l'EPREL quan s'afegeix un aparell, amb EnergyZero o Red Eléctrica per baixar els preus, i amb GitHub per mirar si hi ha una versió nova. Cap d'aquestes connexions porta dades del consum, només la petició.
+- **El total és exacte; el repartiment, no.** El total de la casa és el que mesura el Shelly. El repartiment per aparells és una estimació: amb una pinça per a tota la casa, els aparells de potència semblant o que s'encenen alhora es poden confondre. Els euros surten de la tarifa que s'hi posa, no de la factura.
+- L'app no està afiliada a Shelly (Allterco Robotics), ni a l'EPREL, EnergyZero o Red Eléctrica.
+
 ## Llicència
 
 [GPL-3.0](LICENSE).
